@@ -1,0 +1,79 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>@ViewData["Title"] </title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+
+<body>
+
+<!-- TOP BAR 1 (WHITE) -->
+<nav class="navbar navbar-light bg-white border-bottom">
+    <div class="container-fluid">
+        <span class="navbar-brand fw-bold">HR Management System</span>
+    </div>
+</nav>
+
+<!-- TOP BAR 2 (DARK BLUE - MODULES) -->
+<nav class="navbar navbar-expand navbar-dark" style="background-color:#0b1c3d;">
+    <div class="container-fluid">
+        <ul class="navbar-nav">
+            <li class="nav-item"><a class="nav-link" asp-controller="Home" asp-action="Index">Home</a></li>
+            <li class="nav-item"><a class="nav-link" asp-controller="Employee" asp-action="Index">Employees</a></li>
+            <li class="nav-item"><a class="nav-link" asp-controller="Payroll" asp-action="Index">Payroll</a></li>
+            <li class="nav-item"><a class="nav-link" asp-controller="Attendance" asp-action="Index">Attendance</a></li>
+            <li class="nav-item"><a class="nav-link" asp-controller="LMS" asp-action="Index">LMS</a></li>
+            <li class="nav-item"><a class="nav-link" asp-controller="Tax" asp-action="Index">Tax</a></li>
+        </ul>
+    </div>
+</nav>
+
+<!-- MAIN AREA -->
+<div class="container-fluid">
+    <div class="row">
+
+        <!-- SIDEBAR (20%) -->
+        <aside class="col-2 bg-light vh-100 p-3">
+           <strong class="text-white">Menu</strong>
+            <hr />
+            <ul class="nav flex-column">
+                <li class="nav-item"><a class="nav-link" href="#">Link 1</a></li>
+                <li class="nav-item"><a class="nav-link" href="#">Link 2</a></li>
+                <li class="nav-item"><a class="nav-link" href="#">Link 3</a></li>
+            </ul>
+
+
+            <hr class="text-white" />
+
+<ul class="nav flex-column">
+    <li class="nav-item">
+        <a class="nav-link" asp-controller="Account" asp-action="Login">Login</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" asp-controller="Account" asp-action="Logout">Logout</a>
+    </li>
+</ul>
+
+        </aside>
+
+        <!-- MAIN CONTENT (80%) -->
+        <main class="col-10 p-4">
+            @RenderBody()
+        </main>
+
+    </div>
+</div>
+
+<footer class="border-top footer text-muted text-center py-2">
+    © 2025 - HRMBT ------------
+</footer>
+
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+@await RenderSectionAsync("Scripts", required: false)
+
+</body>
+</html>

@@ -1,0 +1,60 @@
+@model IEnumerable<HRMBT.Web.Models.TaxRule>
+
+@{
+    ViewData["Title"] = "Tax Management";
+}
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+            <h1>Tax Management</h1>
+            <p>
+                <a asp-action="Create" class="btn btn-primary">Create New Tax Rule</a>
+            </p>
+            <table class="table table-striped table-bordered">
+                <thead>
+                    <tr>
+                        <th>
+                            @Html.DisplayNameFor(model => model.Id)
+                        </th>
+                        <th>
+                            @Html.DisplayNameFor(model => model.MinSalary)
+                        </th>
+                        <th>
+                            @Html.DisplayNameFor(model => model.MaxSalary)
+                        </th>
+                        <th>
+                            @Html.DisplayNameFor(model => model.TaxPercentage)
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>
+                                @Html.DisplayFor(modelItem => item.Id)
+                            </td>
+                            <td>
+                                @Html.DisplayFor(modelItem => item.MinSalary)
+                            </td>
+                            <td>
+                                @Html.DisplayFor(modelItem => item.MaxSalary)
+                            </td>
+                            <td>
+                                @Html.DisplayFor(modelItem => item.TaxPercentage)%
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            @if (!Model.Any())
+            {
+                <div class="alert alert-info">
+                    No tax rules found. <a asp-action="Create">Create a new tax rule</a> to get started.
+                </div>
+            }
+        </div>
+    </div>
+</div>
+

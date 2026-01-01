@@ -1,0 +1,64 @@
+@{
+    var activeModule = ViewData["Module"]?.ToString() ?? "Home";
+    var sidebarLinks = new Dictionary<string, List<(string Text, string Action, string Controller)>>
+    {
+        ["Home"] = new List<(string, string, string)>
+        {
+            ("Login", "Login", "Home"),
+            ("Logout", "Logout", "Home")
+        },
+        ["Employees"] = new List<(string, string, string)>
+        {
+            ("Add Employees", "Create", "Employee"),
+            ("View Employees", "Index", "Employee"),
+            ("Active Employees", "Index", "Employee"),
+            ("Employees Reports", "Index", "Employee")
+        },
+        ["Payroll"] = new List<(string, string, string)>
+        {
+            ("Run Payroll", "Create", "Payroll"),
+            ("Payroll History", "Index", "Payroll"),
+            ("Payslips", "Index", "Payroll"),
+            ("Payroll Reports", "Index", "Payroll")
+        },
+        ["Attendance"] = new List<(string, string, string)>
+        {
+            ("Attendance Today", "Index", "Attendance"),
+            ("Attendance By Department", "Index", "Attendance"),
+            ("Attendance Summary", "Index", "Attendance")
+        },
+        ["LMS"] = new List<(string, string, string)>
+        {
+            ("Add Leave", "Create", "LMS"),
+            ("View Leaves", "Index", "LMS"),
+            ("Leave Balance", "Index", "LMS"),
+            ("Leave Reports", "Index", "LMS")
+        },
+        ["Tax"] = new List<(string, string, string)>
+        {
+            ("Tax Slabs", "Index", "Tax"),
+            ("Employee Tax", "Index", "Tax"),
+            ("Tax Reports", "Index", "Tax")
+        }
+    };
+
+    var links = sidebarLinks.ContainsKey(activeModule) ? sidebarLinks[activeModule] : new List<(string, string, string)>();
+}
+
+@if (links.Any())
+{
+    <h5 class="mb-3">@activeModule</h5>
+    <nav class="nav flex-column">
+        @foreach (var link in links)
+        {
+            <a class="nav-link" asp-controller="@link.Item3" asp-action="@link.Item2">@link.Item1</a>
+        }
+    </nav>
+
+    
+}
+else
+{
+    <p class="text-muted">Select a module to see navigation options...</p>
+}
+

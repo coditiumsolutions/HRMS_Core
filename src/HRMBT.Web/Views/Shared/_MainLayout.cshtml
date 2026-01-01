@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"]</title>
+    <script type="importmap"></script>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/HRMBT.Web.styles.css" asp-append-version="true" />
+    <style>
+        .navbar-top-1 {
+            background-color: white;
+            border-bottom: 1px solid #dee2e6;
+            padding-top: 0.25rem;
+            padding-bottom: 0.25rem;
+            min-height: auto;
+        }
+        .navbar-top-1 .navbar-brand {
+            padding-top: 0.25rem;
+            padding-bottom: 0.25rem;
+            font-size: 1rem;
+        }
+        .navbar-top-1 .navbar-text {
+            padding-top: 0.25rem;
+            padding-bottom: 0.25rem;
+        }
+        .navbar-top-2 {
+            background-color: #00203F;
+        }
+        .navbar-top-2 .nav-link {
+            color: white !important;
+        }
+        .navbar-top-2 .nav-link:hover {
+            color: #f0f0f0 !important;
+        }
+        .sidebar {
+            background-color: #00203F;
+            min-height: calc(100vh - 120px);
+            padding: 20px;
+            border-right: 1px solid #dee2e6;
+        }
+        .sidebar h5 {
+            color: white;
+        }
+        .sidebar .nav-link {
+            color: white !important;
+            padding: 10px 15px;
+            margin-bottom: 5px;
+            border-radius: 4px;
+        }
+        .sidebar .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white !important;
+        }
+        .sidebar .text-muted {
+            color: rgba(255, 255, 255, 0.7) !important;
+        }
+        .main-content {
+            padding: 20px;
+        }
+        .main-content h1 {
+            font-size: 1.75rem;
+        }
+        .main-content h2 {
+            font-size: 1.5rem;
+        }
+        .main-content h3 {
+            font-size: 1.25rem;
+        }
+        .main-content h4 {
+            font-size: 1.1rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Navigation Bar 2 (Dark Blue) -->
+    <nav class="navbar navbar-expand-sm navbar-top-2">
+        <div class="container-fluid">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#moduleNavbar" aria-controls="moduleNavbar"
+                    aria-expanded="false" aria-label="Toggle navigation" style="border-color: white;">
+                <span class="navbar-toggler-icon" style="filter: invert(1);"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="moduleNavbar">
+                <ul class="navbar-nav flex-grow-1">
+                    <li class="nav-item">
+                        <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" asp-area="" asp-controller="Employee" asp-action="Index">Employees</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" asp-area="" asp-controller="Payroll" asp-action="Index">Payroll</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" asp-area="" asp-controller="Attendance" asp-action="Index">Attendance</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" asp-area="" asp-controller="LMS" asp-action="Index">LMS</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" asp-area="" asp-controller="Tax" asp-action="Index">Tax</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Top Navigation Bar 1 (White) -->
+    <nav class="navbar navbar-expand-sm navbar-top-1">
+        <div class="container-fluid">
+            <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">HR Management Bahria Town</a>
+            <div class="navbar-nav ms-auto">
+                @{
+                    var currentDate = DateTime.Now.ToString("dd MMM yyyy HH:mm");
+                }
+                <span class="navbar-text">you are logged in as Mohammad Shahid on @currentDate</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Area with Sidebar -->
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar (20% width) -->
+            <div class="col-2 sidebar">
+                @await Html.PartialAsync("_Sidebar")
+            </div>
+            
+            <!-- Main Content (80% width) -->
+            <div class="col-10 main-content">
+                <main role="main">
+                    @RenderBody()
+                </main>
+            </div>
+        </div>
+    </div>
+
+    <footer class="border-top footer text-muted mt-4">
+        <div class="container-fluid">
+            &copy; 2026 - HRMBT.Web - Bahria Town - -- <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+        </div>
+    </footer>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
+
+

@@ -1,0 +1,42 @@
+@model HRMBT.Web.Models.TaxRule
+
+@{
+    ViewData["Title"] = "Tax Rule Details";
+}
+
+<h1>Tax Rule Details</h1>
+
+<div>
+    <hr />
+    <dl class="row">
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Id)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Id)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.MinSalary)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.MinSalary)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.MaxSalary)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.MaxSalary)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.TaxPercentage)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.TaxPercentage)%
+        </dd>
+    </dl>
+</div>
+<div>
+    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">Edit</a>
+    <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+</div>
+

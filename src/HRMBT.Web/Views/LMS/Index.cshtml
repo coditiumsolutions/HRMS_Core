@@ -1,0 +1,72 @@
+@model IEnumerable<HRMBT.Web.Models.LeaveRequest>
+
+@{
+    ViewData["Title"] = "Leave Management";
+}
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+            <h1>Leave Management System</h1>
+            <p>
+                <a asp-action="Create" class="btn btn-primary">Create New Leave Request</a>
+            </p>
+            <table class="table table-striped table-bordered">
+                <thead>
+                    <tr>
+                        <th>
+                            @Html.DisplayNameFor(model => model.Id)
+                        </th>
+                        <th>
+                            @Html.DisplayNameFor(model => model.EmployeeId)
+                        </th>
+                        <th>
+                            @Html.DisplayNameFor(model => model.LeaveType)
+                        </th>
+                        <th>
+                            @Html.DisplayNameFor(model => model.FromDate)
+                        </th>
+                        <th>
+                            @Html.DisplayNameFor(model => model.ToDate)
+                        </th>
+                        <th>
+                            @Html.DisplayNameFor(model => model.Status)
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>
+                                @Html.DisplayFor(modelItem => item.Id)
+                            </td>
+                            <td>
+                                @Html.DisplayFor(modelItem => item.EmployeeId)
+                            </td>
+                            <td>
+                                @Html.DisplayFor(modelItem => item.LeaveType)
+                            </td>
+                            <td>
+                                @Html.DisplayFor(modelItem => item.FromDate)
+                            </td>
+                            <td>
+                                @Html.DisplayFor(modelItem => item.ToDate)
+                            </td>
+                            <td>
+                                @Html.DisplayFor(modelItem => item.Status)
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            @if (!Model.Any())
+            {
+                <div class="alert alert-info">
+                    No leave requests found. <a asp-action="Create">Create a new leave request</a> to get started.
+                </div>
+            }
+        </div>
+    </div>
+</div>
+

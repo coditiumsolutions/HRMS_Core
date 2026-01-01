@@ -1,0 +1,164 @@
+﻿@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1>HR Management Dashboard</h1>
+            <p class="text-muted">Welcome to Bahria Town HR Management System</p>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row g-3 mb-4">
+        <!-- Total Employees Card -->
+        <div class="col-md-4 col-sm-6">
+            <div class="card border-primary h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 text-muted">Total Employees</h6>
+                            <h2 class="card-title mb-0">@ViewData["TotalEmployees"]</h2>
+                        </div>
+                        <div class="text-primary" style="font-size: 2.5rem; font-weight: bold;">
+                            👥
+                        </div>
+                    </div>
+                    <a asp-controller="Employee" asp-action="Index" class="btn btn-sm btn-outline-primary mt-3">View All</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Employees Card -->
+        <div class="col-md-4 col-sm-6">
+            <div class="card border-success h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 text-muted">Active Employees</h6>
+                            <h2 class="card-title mb-0">@ViewData["ActiveEmployees"]</h2>
+                        </div>
+                        <div class="text-success" style="font-size: 2.5rem; font-weight: bold;">
+                            ✓
+                        </div>
+                    </div>
+                    <a asp-controller="Employee" asp-action="Index" class="btn btn-sm btn-outline-success mt-3">View Active</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Today's Attendance Card -->
+        <div class="col-md-4 col-sm-6">
+            <div class="card border-info h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 text-muted">Today's Attendance</h6>
+                            <h2 class="card-title mb-0">@ViewData["TodayAttendance"]</h2>
+                        </div>
+                        <div class="text-info" style="font-size: 2.5rem; font-weight: bold;">
+                            📅
+                        </div>
+                    </div>
+                    <a asp-controller="Attendance" asp-action="Index" class="btn btn-sm btn-outline-info mt-3">View Attendance</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pending Leaves Card -->
+        <div class="col-md-4 col-sm-6">
+            <div class="card border-warning h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 text-muted">Pending Leave Requests</h6>
+                            <h2 class="card-title mb-0">@ViewData["PendingLeaves"]</h2>
+                        </div>
+                        <div class="text-warning" style="font-size: 2.5rem; font-weight: bold;">
+                            ⏳
+                        </div>
+                    </div>
+                    <a asp-controller="LMS" asp-action="Index" class="btn btn-sm btn-outline-warning mt-3">View Leaves</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Payrolls Card -->
+        <div class="col-md-4 col-sm-6">
+            <div class="card border-secondary h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 text-muted">Total Payroll Records</h6>
+                            <h2 class="card-title mb-0">@ViewData["TotalPayrolls"]</h2>
+                        </div>
+                        <div class="text-secondary" style="font-size: 2.5rem; font-weight: bold;">
+                            💰
+                        </div>
+                    </div>
+                    <a asp-controller="Payroll" asp-action="Index" class="btn btn-sm btn-outline-secondary mt-3">View Payroll</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tax Rules Card -->
+        <div class="col-md-4 col-sm-6">
+            <div class="card border-danger h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 text-muted">Tax Rules</h6>
+                            <h2 class="card-title mb-0">@ViewData["TotalTaxRules"]</h2>
+                        </div>
+                        <div class="text-danger" style="font-size: 2.5rem; font-weight: bold;">
+                            📋
+                        </div>
+                    </div>
+                    <a asp-controller="Tax" asp-action="Index" class="btn btn-sm btn-outline-danger mt-3">View Tax Rules</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-2">
+                        <div class="col-md-3 col-sm-6">
+                            <a asp-controller="Employee" asp-action="Create" class="btn btn-primary w-100">Add New Employee</a>
+                        </div>
+                        <div class="col-md-3 col-sm-6">
+                            <a asp-controller="Payroll" asp-action="Create" class="btn btn-success w-100">Run Payroll</a>
+                        </div>
+                        <div class="col-md-3 col-sm-6">
+                            <a asp-controller="Attendance" asp-action="Create" class="btn btn-info w-100">Mark Attendance</a>
+                        </div>
+                        <div class="col-md-3 col-sm-6">
+                            <a asp-controller="LMS" asp-action="Create" class="btn btn-warning w-100">Request Leave</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        transition: transform 0.2s;
+    }
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .card-title {
+        font-size: 2.5rem;
+        font-weight: bold;
+    }
+</style>

@@ -1,0 +1,42 @@
+@model HRMBT.Web.Models.TaxRule
+
+@{
+    ViewData["Title"] = "Edit Tax Rule";
+}
+
+<h1>Edit Tax Rule</h1>
+
+<hr />
+<div class="row">
+    <div class="col-md-6">
+        <form asp-action="Edit">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <input type="hidden" asp-for="Id" />
+            <div class="form-group mb-3">
+                <label asp-for="MinSalary" class="control-label"></label>
+                <input asp-for="MinSalary" class="form-control" type="number" step="0.01" min="0" />
+                <span asp-validation-for="MinSalary" class="text-danger"></span>
+            </div>
+            <div class="form-group mb-3">
+                <label asp-for="MaxSalary" class="control-label"></label>
+                <input asp-for="MaxSalary" class="form-control" type="number" step="0.01" min="0" />
+                <small class="form-text text-muted">Leave empty for unlimited maximum salary</small>
+                <span asp-validation-for="MaxSalary" class="text-danger"></span>
+            </div>
+            <div class="form-group mb-3">
+                <label asp-for="TaxPercentage" class="control-label"></label>
+                <input asp-for="TaxPercentage" class="form-control" type="number" step="0.01" min="0" max="100" />
+                <span asp-validation-for="TaxPercentage" class="text-danger"></span>
+            </div>
+            <div class="form-group mb-3">
+                <input type="submit" value="Save" class="btn btn-primary" />
+                <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}
+
