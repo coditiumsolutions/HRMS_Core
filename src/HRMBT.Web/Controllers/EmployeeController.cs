@@ -16,26 +16,18 @@ public class EmployeeController : Controller
     }
 
     // GET: Employee
-    public async Task<IActionResult> Index(string? department, string? designation, int? year2024, string? applyTax)
+    public async Task<IActionResult> Index(string? department, string? designation, string? employeeName, string? employeeID, int page = 1, int pageSize = 20)
     {
         ViewData["Module"] = "Employees";
         
         try
         {
-            // Get total count first for debugging
-            int totalCount = 0;
-            try
-            {
-                totalCount = await _context.Employees.CountAsync();
-            }
-            catch (Exception countEx)
-            {
-                ViewBag.CountError = countEx.Message;
-                ViewBag.CountStackTrace = countEx.StackTrace;
-            }
-            ViewBag.TotalEmployeeCount = totalCount;
+            // Ensure valid pagination parameters
+            if (page < 1) page = 1;
+            if (pageSize < 1) pageSize = 20;
+            if (pageSize > 100) pageSize = 100; // Max page size limit
 
-            // Start with a simple query to get all employees
+            // Start with a query
             var query = _context.Employees.AsQueryable();
 
             // Apply filters only if they have values
@@ -49,74 +41,23 @@ public class EmployeeController : Controller
                 query = query.Where(e => e.Designation == designation);
             }
 
-            if (year2024.HasValue)
+            // Filter by Employee Name (partial match)
+            if (!string.IsNullOrEmpty(employeeName))
             {
-                query = query.Where(e => e.Year2024 == year2024.Value);
+                query = query.Where(e => e.EmployeeName != null && e.EmployeeName.Contains(employeeName));
             }
 
-            // Only filter by ApplyTax if explicitly provided
-            // ApplyTax is stored as string "1" or "0" in database
-            if (!string.IsNullOrEmpty(applyTax))
+            // Filter by Employee ID (partial match)
+            if (!string.IsNullOrEmpty(employeeID))
             {
-                query = query.Where(e => e.ApplyTax == applyTax);
+                query = query.Where(e => e.EmployeeID != null && e.EmployeeID.Contains(employeeID));
             }
 
-            // Execute the query and get all results
-            List<Employee> employees = new List<Employee>();
-            try
-            {
-                employees = await query.ToListAsync();
-            }
-            catch (Exception queryEx)
-            {
-                ViewBag.QueryError = queryEx.Message;
-                ViewBag.QueryStackTrace = queryEx.StackTrace;
-                // Log the full exception details
-                ViewBag.QueryInnerException = queryEx.InnerException?.Message;
-            }
-            ViewBag.FilteredEmployeeCount = employees.Count;
-            ViewBag.QueryExecuted = true;
+            // Order by EmployeeID for consistent pagination
+            query = query.OrderBy(e => e.EmployeeID);
 
-            // Test direct SQL query to verify record count from Employee table (singular)
-            var connection = _context.Database.GetDbConnection();
-            int sqlCount = 0;
-            string dbName = "";
-            try
-            {
-                await connection.OpenAsync();
-                dbName = connection.Database;
-                using (var cmd = connection.CreateCommand())
-                {
-                    // Use fully qualified table name with schema
-                    cmd.CommandText = "SELECT COUNT(*) FROM dbo.Employee";
-                    var result = await cmd.ExecuteScalarAsync();
-                    sqlCount = Convert.ToInt32(result);
-                }
-                
-                // Also check if Employees table exists and its count
-                int employeesTableCount = 0;
-                try
-                {
-                    using (var cmd2 = connection.CreateCommand())
-                    {
-                        cmd2.CommandText = "SELECT COUNT(*) FROM dbo.Employees";
-                        var result2 = await cmd2.ExecuteScalarAsync();
-                        employeesTableCount = Convert.ToInt32(result2);
-                    }
-                }
-                catch { }
-                ViewBag.EmployeesTableCount = employeesTableCount;
-            }
-            catch (Exception sqlEx)
-            {
-                ViewBag.SqlError = sqlEx.Message;
-            }
-            finally
-            {
-                await connection.CloseAsync();
-            }
-            ViewBag.SqlRecordCount = sqlCount;
-            ViewBag.DatabaseName = dbName;
+            // Get paginated results
+            var paginatedEmployees = await PaginatedList<Employee>.CreateAsync(query, page, pageSize);
 
             // Get filter options
             ViewBag.Departments = await _context.Employees.Select(e => e.Department).Distinct().Where(d => d != null).OrderBy(d => d).ToListAsync();
@@ -125,17 +66,21 @@ public class EmployeeController : Controller
             // Preserve filter values
             ViewBag.CurrentDepartment = department;
             ViewBag.CurrentDesignation = designation;
-            ViewBag.CurrentYear2024 = year2024;
-            ViewBag.CurrentApplyTax = applyTax;
+            ViewBag.CurrentEmployeeName = employeeName;
+            ViewBag.CurrentEmployeeID = employeeID;
+            ViewBag.CurrentPageSize = pageSize;
 
-            return View(employees);
+            // Page size options
+            ViewBag.PageSizeOptions = new List<int> { 10, 20, 50, 100 };
+
+            return View(paginatedEmployees);
         }
         catch (Exception ex)
         {
             ViewBag.ErrorMessage = ex.Message;
             ViewBag.ErrorStackTrace = ex.StackTrace;
-            // Return empty list on error so page still loads
-            return View(new List<Employee>());
+            // Return empty paginated list on error
+            return View(new PaginatedList<Employee>(new List<Employee>(), 0, 1, pageSize));
         }
     }
 
@@ -185,7 +130,7 @@ public class EmployeeController : Controller
 
         if (ModelState.IsValid)
         {
-            employee.ModifiedOn = DateTime.Now;
+            employee.ModifiedOn = DateTime.Now.ToString();
             _context.Add(employee);
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
@@ -236,7 +181,7 @@ public class EmployeeController : Controller
         {
             try
             {
-                employee.ModifiedOn = DateTime.Now;
+                employee.ModifiedOn = DateTime.Now.ToString();
                 _context.Update(employee);
                 await _context.SaveChangesAsync();
             }

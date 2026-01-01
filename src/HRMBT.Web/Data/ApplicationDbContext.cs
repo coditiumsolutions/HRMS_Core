@@ -19,9 +19,26 @@ namespace HRMBT.Web.Data
             base.OnModelCreating(modelBuilder);
 
             // Map to the Employee table (singular) in dbo schema - this table has 848 records
-            // The "Employees" table (plural) only has 1 record and should be ignored
-            modelBuilder.Entity<Employee>().ToTable("Employee", "dbo");
-            // EmployeeStatus property maps to EmployeeStatus column in database (no mapping needed)
+            modelBuilder.Entity<Employee>(entity =>
+            {
+                entity.ToTable("Employee", "dbo");
+                
+                // Explicit column type mappings to match actual database schema
+                // Database has: float columns -> C# double
+                entity.Property(e => e.CarryForwardLeaves).HasColumnType("float");
+                entity.Property(e => e.CarryForwardLeaves1).HasColumnType("float");
+                entity.Property(e => e.Year2022).HasColumnType("float");
+                entity.Property(e => e.Year2023).HasColumnType("float");
+                
+                // Database has: decimal columns -> C# decimal
+                entity.Property(e => e.Year2023New).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.BasicSalary).HasColumnType("decimal(18,2)");
+                
+                // Database has: int columns -> C# int
+                entity.Property(e => e.AdjustedAjusted).HasColumnType("int");
+                entity.Property(e => e.Year2024).HasColumnType("int");
+            });
+            
             modelBuilder.Entity<Payroll>().ToTable("Payrolls");
             modelBuilder.Entity<Attendance>().ToTable("Attendances");
             modelBuilder.Entity<LeaveRequest>().ToTable("LeaveRequests");
