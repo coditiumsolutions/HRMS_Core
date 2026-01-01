@@ -1,32 +1,16 @@
-# Tasks: Employee Management
+# Tasks: Employee Module
 
-## Task 1 – Create Employee Model
-- Create Employee.cs
-- Map fields from existing table
+## Task 1 – Model
+- Confirm Employee class contains all required fields
 
-## Task 2 – Update DbContext
-- Add DbSet<Employee>
+## Task 2 – Controller
+- Update EmployeeController CRUD actions
 
-## Task 3 – Create Migration
-- dotnet ef migrations add CreateEmployeeTable
-- dotnet ef database update
+## Task 3 – Views
+- Update Index, Create, Edit pages to match spec
+- Add filtering and sorting UI
 
-## Task 4 – Create EmployeeController
-- Index
-- Create
-- Edit
-- Details
-- Delete
-
-## Task 5 – Create Views
-- Razor views for CRUD
-
-## Task 6 – Validation
-- EmployeeID uniqueness
-- Required fields
-
-## Task 7 – UI Integration
-- Add Employees link in top bar
-
-## Status
-✅ Completed
+## Task 4 – Testing
+- Verify existing 800+ records display correctly
+- Test Add/Edit/Delete
+- Test filtering and sorting

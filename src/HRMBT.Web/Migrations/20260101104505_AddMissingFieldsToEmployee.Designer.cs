@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace HRMBT.Web.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251231072842_CreateAttendance")]
-    partial class CreateAttendance
+    [Migration("20260101104505_AddMissingFieldsToEmployee")]
+    partial class AddMissingFieldsToEmployee
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -50,7 +50,7 @@ namespace HRMBT.Web.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Attendances");
+                    b.ToTable("Attendances", (string)null);
                 });
 
             modelBuilder.Entity("HRMBT.Web.Models.Employee", b =>
@@ -61,6 +61,9 @@ namespace HRMBT.Web.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("uid"));
 
+                    b.Property<int?>("AdjustedAjusted")
+                        .HasColumnType("int");
+
                     b.Property<bool>("ApplyTax")
                         .HasColumnType("bit");
 
@@ -70,6 +73,15 @@ namespace HRMBT.Web.Migrations
                     b.Property<string>("CNIC")
                         .HasMaxLength(15)
                         .HasColumnType("nvarchar(15)");
+
+                    b.Property<decimal?>("CarryForwardLeaves")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("CarryForwardLeaves1")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("DOB")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("DateOfJoining")
                         .HasColumnType("datetime2");
@@ -82,6 +94,9 @@ namespace HRMBT.Web.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<string>("Details")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("EmployeeID")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
@@ -91,13 +106,76 @@ namespace HRMBT.Web.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<string>("EmployeeStatus")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("Status");
+
+                    b.Property<string>("FatherName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("MobileNo")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("ModifiedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Project")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal?>("Year2022")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("Year2023")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("Year2023New")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("Year2024")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("uid");
+
+                    b.ToTable("Employee", (string)null);
+                });
+
+            modelBuilder.Entity("HRMBT.Web.Models.LeaveRequest", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("EmployeeId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("FromDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LeaveType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<string>("Status")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.HasKey("uid");
+                    b.Property<DateTime>("ToDate")
+                        .HasColumnType("datetime2");
 
-                    b.ToTable("Employee");
+                    b.HasKey("Id");
+
+                    b.ToTable("LeaveRequests", (string)null);
                 });
 
             modelBuilder.Entity("HRMBT.Web.Models.Payroll", b =>
@@ -122,7 +200,29 @@ namespace HRMBT.Web.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Payrolls");
+                    b.ToTable("Payrolls", (string)null);
+                });
+
+            modelBuilder.Entity("HRMBT.Web.Models.TaxRule", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal?>("MaxSalary")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("MinSalary")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TaxPercentage")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("TaxRules", (string)null);
                 });
 #pragma warning restore 612, 618
         }

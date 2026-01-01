@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace HRMBT.Web.Models;
 
+
 public class Attendance
 {
     [Key]

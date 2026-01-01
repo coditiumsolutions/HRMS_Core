@@ -39,6 +39,7 @@
             min-height: calc(100vh - 120px);
             padding: 20px 10px;
             border-right: 1px solid #dee2e6;
+            margin-bottom: 0;
         }
         .sidebar h5 {
             color: white;
@@ -60,6 +61,10 @@
         }
         .main-content {
             padding: 20px;
+            margin-bottom: 0;
+        }
+        .container-fluid .row {
+            margin-bottom: 0;
         }
         .main-content h1 {
             font-size: 1.75rem;
@@ -72,6 +77,51 @@
         }
         .main-content h4 {
             font-size: 1.1rem;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            border-top: 2px solid #336B87;
+            padding: 15px 0;
+            margin-top: 0;
+        }
+        .footer h6 {
+            color: #336B87;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+        .footer a {
+            color: #6c757d;
+            text-decoration: none;
+            transition: color 0.3s;
+            font-size: 0.85rem;
+        }
+        .footer a:hover {
+            color: #336B87;
+            text-decoration: underline;
+        }
+        .footer .footer-links {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .footer .footer-links li {
+            margin-bottom: 4px;
+        }
+        .footer .copyright {
+            color: #6c757d;
+            font-size: 0.85rem;
+            margin-bottom: 0;
+        }
+        .footer .divider {
+            color: #dee2e6;
+            margin: 0 10px;
+        }
+        .footer .row {
+            text-align: center;
+        }
+        .footer .col-md-4 {
+            margin-bottom: 10px;
         }
     </style>
 </head>
@@ -138,9 +188,59 @@
         </div>
     </div>
 
-    <footer class="border-top footer text-muted mt-4">
+    <footer class="footer">
         <div class="container-fluid">
-            &copy; 2026 - HRMBT.Web - Bahria Town - -- <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+            <div class="row">
+                <div class="col-md-4 mb-2 mb-md-0">
+                    <h6>HR Management System</h6>
+                    <p class="copyright mb-0">
+                        &copy; 2026 HRMBT.Web - Bahria Town<br>
+                        <small>All rights reserved</small>
+                    </p>
+                </div>
+                <div class="col-md-4 mb-2 mb-md-0">
+                    <h6>Quick Links</h6>
+                    <ul class="footer-links">
+                        <li>
+                            <a href="mailto:support@hrmbt.com?subject=Technical Support">
+                                <span style="margin-right: 5px;">🔧</span>Technical Support
+                            </a>
+                        </li>
+                        <li>
+                            <a href="mailto:suggestions@hrmbt.com?subject=Suggestion">
+                                <span style="margin-right: 5px;">💡</span>Suggestion
+                            </a>
+                        </li>
+                        <li>
+                            <a href="mailto:discussion@hrmbt.com?subject=Discussion">
+                                <span style="margin-right: 5px;">💬</span>Discussion
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="col-md-4">
+                    <h6>Legal</h6>
+                    <ul class="footer-links">
+                        <li>
+                            <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy Policy</a>
+                        </li>
+                        <li>
+                            <a href="#">Terms of Service</a>
+                        </li>
+                        <li>
+                            <a href="#">Contact Us</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <hr style="border-color: #dee2e6; margin: 10px 0;">
+            <div class="row">
+                <div class="col-12 text-center">
+                    <p class="copyright mb-0">
+                        <small>Powered by HRMBT.Web | Bahria Town HR Management System</small>
+                    </p>
+                </div>
+            </div>
         </div>
     </footer>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>

@@ -97,7 +97,7 @@ namespace HRMBT.Web.Migrations
 
                     b.HasKey("uid");
 
-                    b.ToTable("Employees");
+                    b.ToTable("Employee");
                 });
 
             modelBuilder.Entity("HRMBT.Web.Models.LeaveRequest", b =>

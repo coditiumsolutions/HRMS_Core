@@ -23,7 +23,7 @@ public class HomeController : Controller
 
         // Dashboard Statistics
         var totalEmployees = await _context.Employees.CountAsync();
-        var activeEmployees = await _context.Employees.CountAsync(e => e.Status == "Active");
+        var activeEmployees = await _context.Employees.CountAsync(e => e.EmployeeStatus == "Active");
         var todayAttendance = await _context.Attendances.CountAsync(a => a.Date.Date == DateTime.Today);
         var pendingLeaves = await _context.LeaveRequests.CountAsync(l => l.Status == "Pending");
         var totalPayrolls = await _context.Payrolls.CountAsync();
@@ -37,6 +37,47 @@ public class HomeController : Controller
         ViewData["TotalTaxRules"] = totalTaxRules;
 
         return View();
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Test()
+    {
+        var results = new List<string>();
+        var connection = _context.Database.GetDbConnection();
+        try 
+        {
+            await connection.OpenAsync();
+            results.Add($"Connected to: {connection.Database}");
+            using (var command = connection.CreateCommand())
+            {
+                command.CommandText = "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'";
+                using (var reader = await command.ExecuteReaderAsync())
+                {
+                    results.Add("Tables found:");
+                    while (await reader.ReadAsync())
+                    {
+                        results.Add("- " + reader.GetString(0));
+                    }
+                }
+            }
+            string[] tablesToCheck = { "Employee", "Employees", "Payroll", "Payrolls" };
+            foreach (var table in tablesToCheck)
+            {
+                try 
+                {
+                    using (var command = connection.CreateCommand())
+                    {
+                        command.CommandText = $"SELECT COUNT(*) FROM [{table}]";
+                        var count = await command.ExecuteScalarAsync();
+                        results.Add($"Table [{table}] count: {count}");
+                    }
+                }
+                catch { }
+            }
+        }
+        catch (System.Exception ex) { results.Add($"Error: {ex.Message}"); }
+        finally { await connection.CloseAsync(); }
+        return Ok(results);
     }
 
     public IActionResult Privacy()
