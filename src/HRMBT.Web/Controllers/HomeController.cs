@@ -21,20 +21,35 @@ public class HomeController : Controller
     {
         ViewData["Module"] = "Home";
 
-        // Dashboard Statistics
-        var totalEmployees = await _context.Employees.CountAsync();
-        var activeEmployees = await _context.Employees.CountAsync(e => e.EmployeeStatus == "Active");
-        var todayAttendance = await _context.Attendances.CountAsync(a => a.Date.Date == DateTime.Today);
-        var pendingLeaves = await _context.LeaveRequests.CountAsync(l => l.Status == "Pending");
-        var totalPayrolls = await _context.Payrolls.CountAsync();
-        var totalTaxRules = await _context.TaxRules.CountAsync();
+        try
+        {
+            // Dashboard Statistics
+            var totalEmployees = await _context.Employees.CountAsync();
+            var activeEmployees = await _context.Employees.CountAsync(e => e.EmployeeStatus == "Active");
+            var todayAttendance = await _context.Attendances.CountAsync(a => a.Date.Date == DateTime.Today);
+            var pendingLeaves = await _context.LeaveRequests.CountAsync(l => l.Status == "Pending");
+            var totalPayrolls = await _context.Payslips.CountAsync();
+            var totalTaxRules = await _context.TaxRules.CountAsync();
 
-        ViewData["TotalEmployees"] = totalEmployees;
-        ViewData["ActiveEmployees"] = activeEmployees;
-        ViewData["TodayAttendance"] = todayAttendance;
-        ViewData["PendingLeaves"] = pendingLeaves;
-        ViewData["TotalPayrolls"] = totalPayrolls;
-        ViewData["TotalTaxRules"] = totalTaxRules;
+            ViewData["TotalEmployees"] = totalEmployees;
+            ViewData["ActiveEmployees"] = activeEmployees;
+            ViewData["TodayAttendance"] = todayAttendance;
+            ViewData["PendingLeaves"] = pendingLeaves;
+            ViewData["TotalPayrolls"] = totalPayrolls;
+            ViewData["TotalTaxRules"] = totalTaxRules;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading dashboard statistics");
+            // Set default values if database connection fails
+            ViewData["TotalEmployees"] = 0;
+            ViewData["ActiveEmployees"] = 0;
+            ViewData["TodayAttendance"] = 0;
+            ViewData["PendingLeaves"] = 0;
+            ViewData["TotalPayrolls"] = 0;
+            ViewData["TotalTaxRules"] = 0;
+            ViewData["DatabaseError"] = "Unable to connect to database. Please check your connection settings.";
+        }
 
         return View();
     }

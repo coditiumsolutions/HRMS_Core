@@ -1,23 +1,36 @@
-# Tasks: Payroll Module
+# Payroll Module Tasks
 
-## Task 1 – Create Payroll Model
-- EmployeeId
-- BasicSalary
-- Month
-- Year
+## Task 1: Create EF Models
+- Create `Allowance.cs`, `Deduction.cs`, `Payslip.cs`, `PayslipDetail.cs` under Models folder
+- Add DbSet<> in ApplicationDbContext
 
-## Task 2 – Create Payroll Table
-- Use EF Core migration
+## Task 2: Run Migrations
+- `dotnet ef migrations add PayrollModule`
+- `dotnet ef database update`
 
-## Task 3 – Create Payroll Controller
-- CRUD operations
+## Task 3: Create Controllers
+- PayrollController (for generating payslips)
+- AllowancesController
+- DeductionsController
 
-## Task 4 – Create Payroll Views
-- List
-- Create
-- Details
+## Task 4: Create Views
+- Allowances CRUD
+- Deductions CRUD
+- Payroll generation and payslip view
 
-## Task 5 – Test Payroll Module
+## Task 5: Implement Payroll Service
+- Service to calculate Gross, Deductions, Net salary
+- Include leave adjustments
 
-## Status
-✅ Completed
+## Task 6: Locking Payslips
+- Add IsLocked flag
+- Lock/Unlock functionality in UI
+
+## Task 7: Reports
+- Monthly summary report
+- Department-wise report
+
+## Task 8: Testing
+- Verify CRUD operations
+- Verify calculations
+- Verify reports

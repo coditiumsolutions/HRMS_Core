@@ -1,15 +1,34 @@
-# Feature Specification: Payroll Module
+# Payroll Module Spec
 
-## User Story 1 (P1)
-As an HR admin,
-I want to manage employee salaries
-So that payroll can be generated monthly.
+## Module: Payroll
 
-## Functional Requirements
-- Add employee salary
-- Generate payroll for a month
-- View payroll records
+### Description:
+Payroll module calculates employee salaries, manages allowances, deductions, and generates payslips. It integrates with Employee module for employee details.
 
-## Success Criteria
-- Payroll generated correctly
-- No calculation errors
+### Tables:
+- Employee
+- Allowances
+- Deductions
+- Payslips
+- PayslipDetails
+
+### Features:
+1. Allowances Management
+   - Add, Edit, Delete employee allowances
+   - Percentage-based or fixed allowances
+2. Deductions Management
+   - Add, Edit, Delete employee deductions
+   - Mandatory or optional deductions
+3. Payslip Generation
+   - Calculate gross salary: Basic + Allowances
+   - Calculate total deductions
+   - Calculate net salary = Gross - Deductions
+   - Leave adjustment: reduce salary for leave days
+4. Payslip Details
+   - Store breakdown of all salary components
+5. Lock/Unlock Payslip
+   - Prevent editing once locked
+6. Reports
+   - Employee payslips
+   - Department-wise salary summary
+   - Monthly payroll summary

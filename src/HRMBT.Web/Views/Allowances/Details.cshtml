@@ -1,0 +1,71 @@
+@model HRMBT.Web.Models.Allowance
+
+@{
+    ViewData["Title"] = "Allowance Details";
+    ViewData["Module"] = "Payroll";
+}
+
+<h1>Allowance Details</h1>
+
+<div>
+    <hr />
+    <dl class="row">
+        <dt class="col-sm-2">ID</dt>
+        <dd class="col-sm-10">@Html.DisplayFor(model => model.Id)</dd>
+        
+        <dt class="col-sm-2">Employee ID</dt>
+        <dd class="col-sm-10">@Html.DisplayFor(model => model.EmployeeId)</dd>
+        
+        <dt class="col-sm-2">Allowance Type</dt>
+        <dd class="col-sm-10">@Html.DisplayFor(model => model.AllowanceType)</dd>
+        
+        <dt class="col-sm-2">Name</dt>
+        <dd class="col-sm-10">@Html.DisplayFor(model => model.Name)</dd>
+        
+        <dt class="col-sm-2">Is Percentage</dt>
+        <dd class="col-sm-10">@(Model.IsPercentage ? "Yes" : "No")</dd>
+        
+        @if (Model.IsPercentage && Model.PercentageValue.HasValue)
+        {
+            <dt class="col-sm-2">Percentage</dt>
+            <dd class="col-sm-10">@Model.PercentageValue.Value%</dd>
+        }
+        else
+        {
+            <dt class="col-sm-2">Amount</dt>
+            <dd class="col-sm-10">@Html.DisplayFor(model => model.Amount)</dd>
+        }
+        
+        <dt class="col-sm-2">Effective Date</dt>
+        <dd class="col-sm-10">@Model.EffectiveDate.ToString("yyyy-MM-dd")</dd>
+        
+        <dt class="col-sm-2">End Date</dt>
+        <dd class="col-sm-10">@(Model.EndDate?.ToString("yyyy-MM-dd") ?? "N/A")</dd>
+        
+        <dt class="col-sm-2">Is Active</dt>
+        <dd class="col-sm-10">@(Model.IsActive ? "Yes" : "No")</dd>
+        
+        <dt class="col-sm-2">Created Date</dt>
+        <dd class="col-sm-10">@Model.CreatedDate.ToString("yyyy-MM-dd HH:mm")</dd>
+        
+        <dt class="col-sm-2">Created By</dt>
+        <dd class="col-sm-10">@Html.DisplayFor(model => model.CreatedBy)</dd>
+        
+        @if (Model.ModifiedDate.HasValue)
+        {
+            <dt class="col-sm-2">Modified Date</dt>
+            <dd class="col-sm-10">@Model.ModifiedDate.Value.ToString("yyyy-MM-dd HH:mm")</dd>
+            
+            <dt class="col-sm-2">Modified By</dt>
+            <dd class="col-sm-10">@Html.DisplayFor(model => model.ModifiedBy)</dd>
+        }
+    </dl>
+</div>
+<div>
+    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">Edit</a>
+    <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+</div>
+
+
+
+

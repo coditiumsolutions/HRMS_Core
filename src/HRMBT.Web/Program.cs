@@ -1,21 +1,30 @@
 using Microsoft.EntityFrameworkCore;
 using HRMBT.Web.Data;
+using HRMBT.Web.Services.Payroll;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ✅ REQUIRED: Add MVC services with runtime compilation
+// ✅ MVC
 builder.Services.AddControllersWithViews()
     .AddRazorRuntimeCompilation();
 
-// ✅ REQUIRED: Add DbContext
+// ✅ DbContext
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(
-        builder.Configuration.GetConnectionString("DefaultConnection")));
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        sqlOptions => sqlOptions.CommandTimeout(30)));
+
+// ✅ Payroll module services (REQUIRED)
+builder.Services.AddScoped<PayrollCalculationService>();
 
 var app = builder.Build();
 
-// Configure middleware
-if (!app.Environment.IsDevelopment())
+// Middleware
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
+}
+else
 {
     app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
@@ -25,11 +34,9 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
-
-// (Optional) Authorization
 app.UseAuthorization();
 
-// ✅ REQUIRED: MVC routing
+// MVC routing
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");

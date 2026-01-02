@@ -1,72 +1,100 @@
-@model IEnumerable<HRMBT.Web.Models.Payroll>
+@model IEnumerable<HRMBT.Web.Models.Payslip>
 
 @{
     ViewData["Title"] = "Payroll";
 }
 
 <div class="container">
+    <!-- Header with buttons -->
+    <div class="row mb-3">
+        <div class="col-md-12 d-flex justify-content-between align-items-center">
+            <h1>Payroll Management</h1>
+            <div>
+                <a asp-action="Create" class="btn btn-primary me-2">Create New</a>
+                <a asp-action="GeneratePayslips" class="btn btn-success">Generate Payslips</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success message -->
+    @if (TempData["Message"] != null)
+    {
+        <div class="alert alert-success">
+            @TempData["Message"]
+        </div>
+    }
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success">
+            @TempData["SuccessMessage"]
+        </div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger">
+            @TempData["ErrorMessage"]
+        </div>
+    }
+
+    <!-- Payroll table -->
     <div class="row">
         <div class="col-md-12">
-            <h1>Payroll Management</h1>
-            <p>
-                <a asp-action="Create" class="btn btn-primary">Create New</a>
-            </p>
-            <table class="table table-striped table-bordered">
-                <thead>
-                    <tr>
-                        <th>
-                            @Html.DisplayNameFor(model => model.Id)
-                        </th>
-                        <th>
-                            @Html.DisplayNameFor(model => model.EmployeeId)
-                        </th>
-                        <th>
-                            @Html.DisplayNameFor(model => model.BasicSalary)
-                        </th>
-                        <th>
-                            @Html.DisplayNameFor(model => model.Month)
-                        </th>
-                        <th>
-                            @Html.DisplayNameFor(model => model.Year)
-                        </th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var item in Model)
-                    {
+            @if (Model != null && Model.Any())
+            {
+                <table class="table table-striped table-bordered table-hover">
+                    <thead class="table-dark">
                         <tr>
-                            <td>
-                                @Html.DisplayFor(modelItem => item.Id)
-                            </td>
-                            <td>
-                                @Html.DisplayFor(modelItem => item.EmployeeId)
-                            </td>
-                            <td>
-                                @Html.DisplayFor(modelItem => item.BasicSalary)
-                            </td>
-                            <td>
-                                @Html.DisplayFor(modelItem => item.Month)
-                            </td>
-                            <td>
-                                @Html.DisplayFor(modelItem => item.Year)
-                            </td>
-                            <td>
-                                <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-warning">Edit</a>
-                                <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-info">Details</a>
-                                <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-danger">Delete</a>
-                            </td>
+                            <th>@Html.DisplayNameFor(model => model.Id)</th>
+                            <th>@Html.DisplayNameFor(model => model.EmployeeId)</th>
+                            <th>@Html.DisplayNameFor(model => model.BasicSalary)</th>
+                            <th>@Html.DisplayNameFor(model => model.Month)</th>
+                            <th>@Html.DisplayNameFor(model => model.Year)</th>
+                            <th>Net Salary</th>
+                            <th>Status</th>
+                            <th>Actions</th>
                         </tr>
-                    }
-                </tbody>
-            </table>
-            @if (!Model.Any())
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td>@Html.DisplayFor(modelItem => item.Id)</td>
+                                <td>@Html.DisplayFor(modelItem => item.EmployeeId)</td>
+                                <td>@item.BasicSalary.ToString("N2")</td>
+                                <td>@item.Month</td>
+                                <td>@item.Year</td>
+                                <td>@item.NetSalary.ToString("N2")</td>
+                                <td>
+                                    @if (item.IsLocked)
+                                    {
+                                        <span class="badge bg-danger">Locked</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success">Open</span>
+                                    }
+                                </td>
+                                <td>
+                                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-info">Details</a>
+                                    @if (!item.IsLocked)
+                                    {
+                                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-warning">Edit</a>
+                                        <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-danger">Delete</a>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
             {
                 <div class="alert alert-info">
-                    No payroll records found. <a asp-action="Create">Create a new payroll record</a> to get started.
+                    No payroll records found. 
+                    <a asp-action="Create">Create a new payroll record</a> 
+                    or click <strong>"Generate Payslips"</strong> to generate payroll.
                 </div>
             }
         </div>
     </div>
 </div>
-
