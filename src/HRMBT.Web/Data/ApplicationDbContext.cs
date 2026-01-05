@@ -17,6 +17,12 @@ namespace HRMBT.Web.Data
         public DbSet<LeaveRequest> LeaveRequests { get; set; }
         public DbSet<TaxRule> TaxRules { get; set; }
 
+        // ✅ LMS MODULE
+        public DbSet<LeaveQuota> LeaveQuotas { get; set; }
+        public DbSet<GazettedHoliday> GazettedHolidays { get; set; }
+        public DbSet<EmployeeLeave> EmployeeLeaves { get; set; }
+        public DbSet<CarryforwardLeave> CarryforwardLeaves { get; set; }
+
         // ✅ PAYROLL MODULE (CORRECT)
         public DbSet<Allowance> Allowances { get; set; }
         public DbSet<Deduction> Deductions { get; set; }
@@ -73,6 +79,12 @@ namespace HRMBT.Web.Data
 
             modelBuilder.Entity<LeaveRequest>().ToTable("LeaveRequests");
             modelBuilder.Entity<TaxRule>().ToTable("TaxRules");
+
+            // ✅ LMS TABLES
+            modelBuilder.Entity<LeaveQuota>().ToTable("LeaveQuota");
+            modelBuilder.Entity<GazettedHoliday>().ToTable("GazettedHoliday");
+            modelBuilder.Entity<EmployeeLeave>().ToTable("EmployeeLeaves");
+            modelBuilder.Entity<CarryforwardLeave>().ToTable("CarryforwardLeaves");
 
             // ✅ PAYROLL TABLES
             modelBuilder.Entity<Allowance>().ToTable("Allowances");
