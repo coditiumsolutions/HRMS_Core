@@ -1,17 +1,17 @@
 @model HRMBT.Web.Models.PaginatedList<HRMBT.Web.Models.Employee>
 
 @{
-    ViewData["Title"] = "Create Attendance";
-    ViewData["Module"] = "Attendance";
+    ViewData["Title"] = "Employee Detail";
+    ViewData["Module"] = "Payroll";
 }
 
 <div class="container">
     <!-- Header -->
     <div class="row mb-3">
         <div class="col-md-12 d-flex justify-content-between align-items-center">
-            <h1>Create Attendance</h1>
+            <h1>Employee Details</h1>
             <div>
-                <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+                <a asp-action="Index" class="btn btn-secondary">Back to Payroll</a>
             </div>
         </div>
     </div>
@@ -37,15 +37,15 @@
         </div>
     }
 
-    <!-- Department Filter and Attendance Creation Form -->
+    <!-- Department Filter and Payroll Generation Form -->
     <div class="row mb-3">
         <div class="col-md-12">
             <div class="card">
                 <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">Filter by Department & Add Attendance</h5>
+                    <h5 class="mb-0">Filter by Department & Generate Payroll</h5>
                 </div>
                 <div class="card-body">
-                    <form asp-action="Create" method="get" class="row g-2 mb-2" onsubmit="document.getElementById('deptPageInput').value = '1';">
+                    <form asp-action="EmployeeDetail" method="get" class="row g-2 mb-2" onsubmit="document.getElementById('deptPageInput').value = '1';">
                         <input type="hidden" name="page" id="deptPageInput" value="1" />
                         <input type="hidden" name="pageSize" value="@(ViewBag.CurrentPageSize ?? 20)" />
                         <div class="col-md-3">
@@ -70,47 +70,36 @@
                         </div>
                     </form>
 
-                    <form asp-action="Create" method="post" id="createAttendanceForm">
+                    <form asp-action="GeneratePayrollForSelected" method="post" id="generatePayrollForm">
                         @Html.AntiForgeryToken()
-                        <input type="hidden" name="department" value="@ViewBag.SelectedDepartment" />
-                        <input type="hidden" name="page" value="@(Model?.PageIndex ?? 1)" />
-                        <input type="hidden" name="pageSize" value="@(ViewBag.CurrentPageSize ?? 20)" />
                         <div class="row g-2">
-                            <div class="col-md-2">
-                                <label for="attendanceDate" class="form-label small">Attendance Date <span class="text-danger">*</span></label>
-                                <input type="date" name="attendanceDate" id="attendanceDate" class="form-control form-control-sm" 
-                                       value="@DateTime.Now.ToString("yyyy-MM-dd")" required />
-                            </div>
-                            <div class="col-md-2">
-                                <label for="timeIn" class="form-label small">Time In</label>
-                                <input type="time" name="timeIn" id="timeIn" class="form-control form-control-sm" />
-                            </div>
-                            <div class="col-md-2">
-                                <label for="timeOut" class="form-label small">Time Out</label>
-                                <input type="time" name="timeOut" id="timeOut" class="form-control form-control-sm" />
-                            </div>
-                            <div class="col-md-2">
-                                <label for="status" class="form-label small">Status</label>
-                                <select name="status" id="status" class="form-control form-control-sm">
-                                    <option value="">-- Select --</option>
-                                    <option value="P">P - Present</option>
-                                    <option value="A">A - Absent</option>
-                                    <option value="L">L - Late</option>
-                                    <option value="H">H - Holiday</option>
+                            <div class="col-md-3">
+                                <label for="month" class="form-label small">Month</label>
+                                <select name="month" id="month" class="form-control form-control-sm" required>
+                                    @for (int i = 1; i <= 12; i++)
+                                    {
+                                        var monthName = System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(i);
+                                        if (DateTime.Now.Month == i)
+                                        {
+                                            <option value="@i" selected>@monthName</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@i">@monthName</option>
+                                        }
+                                    }
                                 </select>
                             </div>
                             <div class="col-md-2">
-                                <label for="comments" class="form-label small">Comments</label>
-                                <input type="text" name="comments" id="comments" class="form-control form-control-sm" 
-                                       placeholder="Optional comments" maxlength="255" />
+                                <label for="year" class="form-label small">Year</label>
+                                <input type="number" name="year" id="year" class="form-control form-control-sm" 
+                                       value="@DateTime.Now.Year" min="2000" max="2100" required />
                             </div>
-                        </div>
-                        <div class="row g-2 mt-2">
-                            <div class="col-md-12">
+                            <div class="col-md-7 d-flex align-items-end">
                                 <button type="button" class="btn btn-sm btn-primary me-2" onclick="selectAll()">Select All</button>
                                 <button type="button" class="btn btn-sm btn-secondary me-2" onclick="deselectAll()">Deselect All</button>
-                                <button type="submit" class="btn btn-sm btn-success" onclick="return confirmCreate()">
-                                    Add Attendance
+                                <button type="submit" class="btn btn-sm btn-success" onclick="return confirmGenerate()">
+                                    Generate Payroll
                                 </button>
                             </div>
                         </div>
@@ -150,7 +139,7 @@
                                         <td>
                                             @if (item.EmployeeStatus == "Active")
                                             {
-                                                <input type="checkbox" name="selectedEmployeeIds" value="@item.EmployeeID" class="employee-checkbox" />
+                                                <input type="checkbox" name="selectedEmployeeIds" value="@item.uid" class="employee-checkbox" />
                                             }
                                             else
                                             {
@@ -217,14 +206,14 @@
                             }
                             
                             <li class="page-item @prevDisabled">
-                                <a class="page-link" asp-action="Create" 
+                                <a class="page-link" asp-action="EmployeeDetail" 
                                    asp-route-page="1" 
                                    asp-route-pageSize="@ViewBag.CurrentPageSize"
                                    asp-route-department="@ViewBag.SelectedDepartment">&laquo;&laquo;</a>
                             </li>
                             
                             <li class="page-item @prevDisabled">
-                                <a class="page-link" asp-action="Create" 
+                                <a class="page-link" asp-action="EmployeeDetail" 
                                    asp-route-page="@(Model.PageIndex - 1)" 
                                    asp-route-pageSize="@ViewBag.CurrentPageSize"
                                    asp-route-department="@ViewBag.SelectedDepartment">&laquo;</a>
@@ -234,7 +223,7 @@
                             {
                                 var active = i == Model.PageIndex ? "active" : "";
                                 <li class="page-item @active">
-                                    <a class="page-link" asp-action="Create" 
+                                    <a class="page-link" asp-action="EmployeeDetail" 
                                        asp-route-page="@i" 
                                        asp-route-pageSize="@ViewBag.CurrentPageSize"
                                        asp-route-department="@ViewBag.SelectedDepartment">@i</a>
@@ -242,14 +231,14 @@
                             }
                             
                             <li class="page-item @nextDisabled">
-                                <a class="page-link" asp-action="Create" 
+                                <a class="page-link" asp-action="EmployeeDetail" 
                                    asp-route-page="@(Model.PageIndex + 1)" 
                                    asp-route-pageSize="@ViewBag.CurrentPageSize"
                                    asp-route-department="@ViewBag.SelectedDepartment">&raquo;</a>
                             </li>
                             
                             <li class="page-item @nextDisabled">
-                                <a class="page-link" asp-action="Create" 
+                                <a class="page-link" asp-action="EmployeeDetail" 
                                    asp-route-page="@Model.TotalPages" 
                                    asp-route-pageSize="@ViewBag.CurrentPageSize"
                                    asp-route-department="@ViewBag.SelectedDepartment">&raquo;&raquo;</a>
@@ -298,27 +287,14 @@
         document.getElementById('selectedCount').textContent = selected;
     }
 
-    function confirmCreate() {
+    function confirmGenerate() {
         const selected = document.querySelectorAll('.employee-checkbox:checked').length;
         if (selected === 0) {
             alert('Please select at least one employee.');
             return false;
         }
         
-        const attendanceDate = document.getElementById('attendanceDate').value;
-        if (!attendanceDate) {
-            alert('Please select an attendance date.');
-            return false;
-        }
-
-        const timeIn = document.getElementById('timeIn').value;
-        const timeOut = document.getElementById('timeOut').value;
-        if (timeIn && timeOut && timeIn >= timeOut) {
-            alert('Time Out must be later than Time In.');
-            return false;
-        }
-        
-        if (!confirm(`Add attendance for ${selected} selected employee(s) on ${attendanceDate}?`)) {
+        if (!confirm(`Generate payroll for ${selected} selected employee(s)?`)) {
             return false;
         }
 
@@ -326,7 +302,7 @@
         const selectedIds = Array.from(document.querySelectorAll('.employee-checkbox:checked'))
             .map(cb => cb.value);
         
-        const form = document.getElementById('createAttendanceForm');
+        const form = document.getElementById('generatePayrollForm');
         
         // Remove any existing hidden inputs for employee IDs
         const existingInputs = form.querySelectorAll('input[name="selectedEmployeeIds"]');
@@ -360,6 +336,3 @@
     });
 </script>
 
-@section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-}

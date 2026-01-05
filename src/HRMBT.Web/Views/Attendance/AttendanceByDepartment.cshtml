@@ -1,0 +1,117 @@
+@model List<HRMBT.Web.Models.ViewModels.DepartmentAttendanceSummary>
+
+@{
+    ViewData["Title"] = "Attendance By Department";
+    ViewData["Module"] = "Attendance";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>Attendance By Department</h1>
+                <div>
+                    <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+                </div>
+            </div>
+
+            <!-- Date Filter -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Select Date</h5>
+                </div>
+                <div class="card-body">
+                    <form asp-action="AttendanceByDepartment" method="get" class="row g-2">
+                        <div class="col-md-3">
+                            <label for="date" class="form-label">Attendance Date</label>
+                            <input type="date" name="date" id="date" class="form-control" 
+                                   value="@ViewBag.SelectedDate" required />
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary">View Summary</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Department Summary Table -->
+            @if (Model != null && Model.Any())
+            {
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">Department-wise Attendance Summary for @ViewBag.AttendanceDate.ToString("dd MMM yyyy")</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-bordered table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Department</th>
+                                        <th class="text-center">Total Employees</th>
+                                        <th class="text-center">
+                                            <span class="badge bg-success">Present</span>
+                                        </th>
+                                        <th class="text-center">
+                                            <span class="badge bg-danger">Absent</span>
+                                        </th>
+                                        <th class="text-center">
+                                            <span class="badge bg-warning">Late</span>
+                                        </th>
+                                        <th class="text-center">
+                                            <span class="badge bg-info">Holiday</span>
+                                        </th>
+                                        <th class="text-center">
+                                            <span class="badge bg-secondary">Not Marked</span>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var dept in Model)
+                                    {
+                                        <tr>
+                                            <td><strong>@dept.DepartmentName</strong></td>
+                                            <td class="text-center">@dept.TotalEmployees</td>
+                                            <td class="text-center">
+                                                <span class="badge bg-success">@dept.Present</span>
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge bg-danger">@dept.Absent</span>
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge bg-warning">@dept.Late</span>
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge bg-info">@dept.Holiday</span>
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge bg-secondary">@dept.NotMarked</span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                                <tfoot class="table-secondary">
+                                    <tr>
+                                        <td><strong>Total</strong></td>
+                                        <td class="text-center"><strong>@Model.Sum(d => d.TotalEmployees)</strong></td>
+                                        <td class="text-center"><strong>@Model.Sum(d => d.Present)</strong></td>
+                                        <td class="text-center"><strong>@Model.Sum(d => d.Absent)</strong></td>
+                                        <td class="text-center"><strong>@Model.Sum(d => d.Late)</strong></td>
+                                        <td class="text-center"><strong>@Model.Sum(d => d.Holiday)</strong></td>
+                                        <td class="text-center"><strong>@Model.Sum(d => d.NotMarked)</strong></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info">
+                    No department data found for the selected date.
+                </div>
+            }
+        </div>
+    </div>
+</div>
+

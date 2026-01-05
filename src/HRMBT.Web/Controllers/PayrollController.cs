@@ -1,376 +1,731 @@
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.EntityFrameworkCore;
 using HRMBT.Web.Data;
 using HRMBT.Web.Models;
+using HRMBT.Web.Models.ViewModels;
 using HRMBT.Web.Services.Payroll;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 
-namespace HRMBT.Web.Controllers;
-
-public class PayrollController : Controller
+namespace HRMBT.Web.Controllers
 {
-    private readonly ApplicationDbContext _context;
-    private readonly PayrollCalculationService _payrollService;
-
-    public PayrollController(ApplicationDbContext context, PayrollCalculationService payrollService)
+    public class PayrollController : Controller
     {
-        _context = context;
-        _payrollService = payrollService;
-    }
+        private readonly ApplicationDbContext _context;
+        private readonly PayrollCalculationService _payrollService;
 
-    // GET: Payroll
-    public async Task<IActionResult> Index()
-    {
-        ViewData["Module"] = "Payroll";
-        var payslips = await _context.Payslips
-            .Include(p => p.PayslipDetails)
-            .ToListAsync();
-        return View(payslips);
-    }
-
-    // GET: Payroll/Create
-    public IActionResult Create()
-    {
-        ViewData["Module"] = "Payroll";
-        
-        // Clear any previous errors
-        ModelState.Clear();
-        
-        // Initialize values to empty/default
-        ViewData["EmployeeId"] = string.Empty;
-        ViewData["Month"] = DateTime.Now.Month;
-        ViewData["Year"] = DateTime.Now.Year;
-        
-        return View();
-    }
-
-    // POST: Payroll/Create
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(string employeeId, int? month, int? year)
-    {
-        ViewData["Module"] = "Payroll";
-        
-        // Clear ALL model binding errors since we're not using model binding
-        // We handle validation manually for all fields
-        ModelState.Clear();
-        
-        // Store values in ViewData to preserve them on error
-        ViewData["EmployeeId"] = employeeId ?? string.Empty;
-        ViewData["Month"] = month ?? DateTime.Now.Month;
-        ViewData["Year"] = year ?? DateTime.Now.Year;
-        
-        // Validate Employee ID
-        if (string.IsNullOrWhiteSpace(employeeId))
+        public PayrollController(ApplicationDbContext context, PayrollCalculationService payrollService)
         {
-            ModelState.AddModelError("EmployeeId", "Employee ID is required.");
-            return View();
+            _context = context;
+            _payrollService = payrollService;
         }
-        
-        // Validate month and year
-        if (!month.HasValue || month < 1 || month > 12)
+
+        // GET: Payroll
+        public async Task<IActionResult> Index(int? month, int? year, string employeeId, string employeeName, int page = 1, int pageSize = 20)
         {
-            ModelState.AddModelError("Month", "Please select a valid month.");
-            return View();
-        }
-        
-        if (!year.HasValue || year < 2000 || year > 2100)
-        {
-            ModelState.AddModelError("Year", "Please enter a valid year.");
-            return View();
-        }
-        
-        int monthValue = month.Value;
-        int yearValue = year.Value;
-        
-        // Look up employee by EmployeeID (string) - case-insensitive
-        var trimmedEmployeeId = employeeId.Trim();
-        var employee = await _context.Employees
-            .FirstOrDefaultAsync(e => e.EmployeeID != null && 
-                                     e.EmployeeID.Trim().ToLower() == trimmedEmployeeId.ToLower() && 
-                                     e.EmployeeStatus == "Active");
-        
-        if (employee == null)
-        {
-            // Check if employee exists but is not active
-            var inactiveEmployee = await _context.Employees
-                .FirstOrDefaultAsync(e => e.EmployeeID != null && 
-                                         e.EmployeeID.Trim().ToLower() == trimmedEmployeeId.ToLower());
+            ViewData["Module"] = "Payroll";
             
-            if (inactiveEmployee != null)
+            // Ensure valid pagination parameters
+            if (page < 1) page = 1;
+            if (pageSize < 1) pageSize = 20;
+            if (pageSize > 100) pageSize = 100; // Max page size limit
+
+            var query = _context.Payslips.Include(p => p.Employee).AsQueryable();
+
+            // Filter by month if provided
+            if (month.HasValue && month.Value > 0)
             {
-                ModelState.AddModelError("EmployeeId", $"Employee with ID '{employeeId}' exists but is not active.");
+                query = query.Where(p => p.Month == month.Value);
             }
-            else
+
+            // Filter by year if provided
+            if (year.HasValue && year.Value > 0)
             {
-                ModelState.AddModelError("EmployeeId", $"Employee with ID '{employeeId}' not found.");
+                query = query.Where(p => p.Year == year.Value);
             }
+
+            // Filter by EmployeeID if provided (partial match on Employee.EmployeeID)
+            if (!string.IsNullOrWhiteSpace(employeeId))
+            {
+                query = query.Where(p => p.Employee != null && 
+                    p.Employee.EmployeeID != null && 
+                    p.Employee.EmployeeID.Contains(employeeId));
+            }
+
+            // Filter by Employee Name if provided (partial match, case-insensitive)
+            if (!string.IsNullOrWhiteSpace(employeeName))
+            {
+                query = query.Where(p => p.Employee != null && 
+                    p.Employee.EmployeeName != null && 
+                    p.Employee.EmployeeName.Contains(employeeName));
+            }
+
+            // Apply ordering before pagination
+            query = query
+                .OrderByDescending(p => p.Year)
+                .ThenByDescending(p => p.Month)
+                .ThenBy(p => p.Employee != null ? p.Employee.EmployeeName : "");
+
+            // Get paginated results
+            var paginatedPayslips = await PaginatedList<Payslip>.CreateAsync(query, page, pageSize);
+
+            // Pass filter values to view
+            ViewBag.Month = month;
+            ViewBag.Year = year;
+            ViewBag.EmployeeId = employeeId;
+            ViewBag.EmployeeName = employeeName;
+            ViewBag.CurrentPageSize = pageSize;
+
+            return View(paginatedPayslips);
+        }
+
+        // GET: Payroll/GeneratePayslips
+        public async Task<IActionResult> GeneratePayslips()
+        {
+            ViewData["Module"] = "Payroll";
+            
+            // Get distinct departments for dropdown
+            var departments = await _context.Employees
+                .Where(e => e.Department != null && e.Department != "")
+                .Select(e => e.Department)
+                .Distinct()
+                .OrderBy(d => d)
+                .ToListAsync();
+
+            ViewBag.Departments = departments;
+
+            return View(new GeneratePayslipsVM
+            {
+                Month = DateTime.Now.Month,
+                Year = DateTime.Now.Year
+            });
+        }
+
+        // POST: Payroll/GeneratePayslips
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> GeneratePayslips(GeneratePayslipsVM model)
+        {
+            ViewData["Module"] = "Payroll";
+            if (model.Month < 1 || model.Month > 12)
+                ModelState.AddModelError("Month", "Invalid month.");
+
+            if (model.Year < 2000 || model.Year > 2100)
+                ModelState.AddModelError("Year", "Invalid year.");
+
+            if (!ModelState.IsValid)
+                return View(model);
+
+            bool locked = await _context.Payslips
+                .AnyAsync(p => p.Month == model.Month && p.Year == model.Year && p.IsLocked);
+
+            if (locked)
+            {
+                ModelState.AddModelError("", "Payroll for this month is locked.");
+                return View(model);
+            }
+
+            // Get distinct departments for dropdown (in case of validation error)
+            var departments = await _context.Employees
+                .Where(e => e.Department != null && e.Department != "")
+                .Select(e => e.Department)
+                .Distinct()
+                .OrderBy(d => d)
+                .ToListAsync();
+            ViewBag.Departments = departments;
+
+            // Filter employees by department if specified
+            var query = _context.Employees.Where(e => e.EmployeeStatus == "Active");
+            
+            if (!string.IsNullOrWhiteSpace(model.Department))
+            {
+                query = query.Where(e => e.Department != null && e.Department == model.Department);
+            }
+
+            var employees = await query.ToListAsync();
+
+            int generated = 0;
+            int skipped = 0;
+
+            foreach (var emp in employees)
+            {
+                if (await _context.Payslips.AnyAsync(p =>
+                    p.EmployeeId == emp.uid &&
+                    p.Month == model.Month &&
+                    p.Year == model.Year))
+                {
+                    skipped++;
+                    continue;
+                }
+
+                _payrollService.GeneratePayslip(
+                    emp.uid,
+                    model.Month,
+                    model.Year,
+                    User.Identity?.Name ?? "System");
+
+                generated++;
+            }
+
+            TempData["SuccessMessage"] =
+                $"Payroll completed. Generated: {generated}, Skipped: {skipped}";
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        // GET: Payroll/Details/5
+        public async Task<IActionResult> Details(int? id)
+        {
+            ViewData["Module"] = "Payroll";
+            if (id == null)
+            {
+                return NotFound();
+            }
+
+            var payslip = await _context.Payslips
+                .Include(p => p.Employee)
+                .FirstOrDefaultAsync(m => m.Id == id);
+
+            if (payslip == null)
+            {
+                return NotFound();
+            }
+
+            return View(payslip);
+        }
+
+        // GET: Payroll/Search
+        public async Task<IActionResult> Search(int? month, int? year, string employeeId, string employeeName)
+        {
+            ViewData["Module"] = "Payroll";
+            
+            var query = _context.Payslips.Include(p => p.Employee).AsQueryable();
+
+            // Default to current month if no filters
+            if (!month.HasValue && !year.HasValue && string.IsNullOrEmpty(employeeId) && string.IsNullOrEmpty(employeeName))
+            {
+                month = DateTime.Now.Month;
+                year = DateTime.Now.Year;
+            }
+
+            if (month.HasValue)
+                query = query.Where(p => p.Month == month.Value);
+
+            if (year.HasValue)
+                query = query.Where(p => p.Year == year.Value);
+
+            if (!string.IsNullOrWhiteSpace(employeeId))
+                query = query.Where(p => p.Employee != null && p.Employee.EmployeeID.Contains(employeeId));
+
+            if (!string.IsNullOrWhiteSpace(employeeName))
+                query = query.Where(p => p.Employee != null && p.Employee.EmployeeName.Contains(employeeName));
+
+            var payslips = await query
+                .OrderByDescending(p => p.Year)
+                .ThenByDescending(p => p.Month)
+                .ThenBy(p => p.Employee != null ? p.Employee.EmployeeName : "")
+                .ToListAsync();
+
+            ViewBag.Month = month ?? DateTime.Now.Month;
+            ViewBag.Year = year ?? DateTime.Now.Year;
+            ViewBag.EmployeeId = employeeId ?? "";
+            ViewBag.EmployeeName = employeeName ?? "";
+
+            return View(payslips);
+        }
+
+        // GET: Payroll/GenerateIndividual
+        public IActionResult GenerateIndividual()
+        {
+            ViewData["Module"] = "Payroll";
+            return View(new GenerateIndividualVM
+            {
+                Month = DateTime.Now.Month,
+                Year = DateTime.Now.Year
+            });
+        }
+
+        // POST: Payroll/GenerateIndividual
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> GenerateIndividual(GenerateIndividualVM model)
+        {
+            ViewData["Module"] = "Payroll";
+
+            if (string.IsNullOrWhiteSpace(model.EmployeeID))
+            {
+                ModelState.AddModelError("EmployeeID", "Employee ID is required.");
+            }
+
+            if (model.Month < 1 || model.Month > 12)
+            {
+                ModelState.AddModelError("Month", "Invalid month.");
+            }
+
+            if (model.Year < 2000 || model.Year > 2100)
+            {
+                ModelState.AddModelError("Year", "Invalid year.");
+            }
+
+            if (!ModelState.IsValid)
+                return View(model);
+
+            // Find employee by EmployeeID
+            var employee = await _context.Employees
+                .FirstOrDefaultAsync(e => e.EmployeeID != null && 
+                    e.EmployeeID.Trim().ToLower() == model.EmployeeID.Trim().ToLower());
+
+            if (employee == null)
+            {
+                ModelState.AddModelError("EmployeeID", $"Employee with ID '{model.EmployeeID}' not found.");
+                return View(model);
+            }
+
+            if (employee.EmployeeStatus != "Active")
+            {
+                ModelState.AddModelError("EmployeeID", $"Employee '{model.EmployeeID}' is not active.");
+                return View(model);
+            }
+
+            // Check if payslip already exists
+            bool exists = await _context.Payslips
+                .AnyAsync(p => p.EmployeeId == employee.uid && 
+                              p.Month == model.Month && 
+                              p.Year == model.Year);
+
+            if (exists)
+            {
+                ModelState.AddModelError("", $"Payslip already exists for Employee {model.EmployeeID} for {model.Month}/{model.Year}.");
+                return View(model);
+            }
+
+            try
+            {
+                _payrollService.GeneratePayslip(
+                    employee.uid,
+                    model.Month,
+                    model.Year,
+                    User.Identity?.Name ?? "System");
+
+                TempData["SuccessMessage"] = $"Payslip generated successfully for Employee {model.EmployeeID} ({employee.EmployeeName}) for {model.Month}/{model.Year}.";
+                return RedirectToAction(nameof(Index));
+            }
+            catch (Exception ex)
+            {
+                ModelState.AddModelError("", $"Error generating payslip: {ex.Message}");
+                return View(model);
+            }
+        }
+
+        // GET: Payroll/Create
+        public IActionResult Create()
+        {
+            ViewData["Module"] = "Payroll";
+            ViewData["EmployeeId"] = string.Empty;
+            ViewData["Month"] = DateTime.Now.Month;
+            ViewData["Year"] = DateTime.Now.Year;
             return View();
         }
-        
-        try
+
+        // POST: Payroll/Create
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create(string employeeId, int? month, int? year)
         {
+            ViewData["Module"] = "Payroll";
+            
+            // Clear model state and set values for view
+            ModelState.Clear();
+            ViewData["EmployeeId"] = employeeId ?? string.Empty;
+            ViewData["Month"] = month ?? DateTime.Now.Month;
+            ViewData["Year"] = year ?? DateTime.Now.Year;
+
+            // Validate Employee ID
+            if (string.IsNullOrWhiteSpace(employeeId))
+            {
+                ModelState.AddModelError("EmployeeId", "Employee ID is required.");
+                return View();
+            }
+
+            // Validate month and year
+            if (!month.HasValue || month < 1 || month > 12)
+            {
+                ModelState.AddModelError("Month", "Please select a valid month.");
+                return View();
+            }
+
+            if (!year.HasValue || year < 2000 || year > 2100)
+            {
+                ModelState.AddModelError("Year", "Please enter a valid year.");
+                return View();
+            }
+
+            // Find employee by EmployeeID
+            var trimmedEmployeeId = employeeId.Trim();
+            var employee = await _context.Employees
+                .FirstOrDefaultAsync(e => e.EmployeeID != null && 
+                    e.EmployeeID.Trim().ToLower() == trimmedEmployeeId.ToLower() && 
+                    e.EmployeeStatus == "Active");
+
+            if (employee == null)
+            {
+                var inactiveEmployee = await _context.Employees
+                    .FirstOrDefaultAsync(e => e.EmployeeID != null && 
+                        e.EmployeeID.Trim().ToLower() == trimmedEmployeeId.ToLower());
+                
+                if (inactiveEmployee != null)
+                {
+                    ModelState.AddModelError("EmployeeId", $"Employee with ID '{employeeId}' exists but is not active.");
+                }
+                else
+                {
+                    ModelState.AddModelError("EmployeeId", $"Employee with ID '{employeeId}' not found.");
+                }
+                return View();
+            }
+
             // Check if payslip already exists
             var existing = await _context.Payslips
                 .FirstOrDefaultAsync(p => p.EmployeeId == employee.uid && 
-                                         p.Month == monthValue && 
-                                         p.Year == yearValue);
-            
+                                         p.Month == month.Value && 
+                                         p.Year == year.Value);
+
             if (existing != null)
             {
                 ModelState.AddModelError("", "A payslip already exists for this employee for the selected month and year.");
                 return View();
             }
-            
-            // Use PayrollCalculationService to generate the payslip
-            var generatedPayslip = _payrollService.GeneratePayslip(
-                employee.uid, 
-                monthValue, 
-                yearValue, 
-                User.Identity?.Name ?? "System"
-            );
-            
-            if (generatedPayslip != null && generatedPayslip.Id > 0)
-            {
-                TempData["SuccessMessage"] = $"Payslip generated successfully for Employee ID: {employeeId}! Payslip ID: {generatedPayslip.Id}";
-                return RedirectToAction(nameof(Index));
-            }
-            else
-            {
-                ModelState.AddModelError("", "Payslip was created but could not be retrieved. Please check the payroll list.");
-                return View();
-            }
-        }
-        catch (Exception ex)
-        {
-            // Log the full exception for debugging
-            ModelState.AddModelError("", $"Error generating payslip: {ex.Message}");
-            if (ex.InnerException != null)
-            {
-                ModelState.AddModelError("", $"Details: {ex.InnerException.Message}");
-            }
-            return View();
-        }
-    }
 
-    // GET: Payroll/Details/5
-    public IActionResult Details(int id)
-    {
-        ViewData["Module"] = "Payroll";
-        var payslip = _context.Payslips
-            .Include(p => p.PayslipDetails)
-            .FirstOrDefault(p => p.Id == id);
-
-        if (payslip == null)
-            return NotFound();
-
-        return View(payslip);
-    }
-
-    // POST: Payroll/Lock/5
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public IActionResult Lock(int id)
-    {
-        ViewData["Module"] = "Payroll";
-        var payslip = _context.Payslips.Find(id);
-        
-        if (payslip == null)
-            return NotFound();
-
-        if (payslip.IsLocked)
-        {
-            TempData["ErrorMessage"] = "Payslip is already locked.";
-            return RedirectToAction(nameof(Details), new { id });
-        }
-
-        payslip.IsLocked = true;
-        payslip.LockedDate = DateTime.Now;
-        _context.SaveChanges();
-
-        TempData["SuccessMessage"] = "Payslip has been locked successfully.";
-        return RedirectToAction(nameof(Details), new { id });
-    }
-
-    // POST: Payroll/Unlock/5
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public IActionResult Unlock(int id)
-    {
-        ViewData["Module"] = "Payroll";
-        var payslip = _context.Payslips.Find(id);
-        
-        if (payslip == null)
-            return NotFound();
-
-        if (!payslip.IsLocked)
-        {
-            TempData["ErrorMessage"] = "Payslip is not locked.";
-            return RedirectToAction(nameof(Details), new { id });
-        }
-
-        payslip.IsLocked = false;
-        payslip.LockedDate = null;
-        _context.SaveChanges();
-
-        TempData["SuccessMessage"] = "Payslip has been unlocked successfully.";
-        return RedirectToAction(nameof(Details), new { id });
-    }
-
-
-
-// GET: Payroll/GeneratePayslips
-public IActionResult GeneratePayslips()
-{
-    ViewData["Module"] = "Payroll";
-    
-    // Set default values
-    var model = new Payslip
-    {
-        Year = DateTime.Now.Year,
-        Month = DateTime.Now.Month
-    };
-    
-    return View(model);
-}
-
-// POST: Payroll/GeneratePayslips
-[HttpPost]
-[ValidateAntiForgeryToken]
-public async Task<IActionResult> GeneratePayslips(IFormCollection form)
-{
-    ViewData["Module"] = "Payroll";
-
-    // Clear ALL model state
-    ModelState.Clear();
-
-    // Get values directly from form
-    string monthStr = form["Month"];
-    if (string.IsNullOrEmpty(monthStr)) monthStr = form["month"];
-    
-    string yearStr = form["Year"];
-    if (string.IsNullOrEmpty(yearStr)) yearStr = form["year"];
-
-    int? monthValue = null;
-    int? yearValue = null;
-
-    if (int.TryParse(monthStr, out int m)) monthValue = m;
-    if (int.TryParse(yearStr, out int y)) yearValue = y;
-
-    // Create model for view
-    var model = new Payslip
-    {
-        Month = monthValue ?? DateTime.Now.Month,
-        Year = yearValue ?? DateTime.Now.Year
-    };
-
-    // Validate
-    bool hasErrors = false;
-    if (!monthValue.HasValue || monthValue < 1 || monthValue > 12)
-    {
-        ModelState.AddModelError("Month", "Please select a valid month.");
-        hasErrors = true;
-    }
-    if (!yearValue.HasValue || yearValue < 2000 || yearValue > 2100)
-    {
-        ModelState.AddModelError("Year", "Please enter a valid year.");
-        hasErrors = true;
-    }
-
-    if (hasErrors)
-    {
-        // Add a general error message if both are missing
-        if (!monthValue.HasValue && !yearValue.HasValue)
-        {
-            ModelState.AddModelError("", "Please select both Month and Year.");
-        }
-        return View(model);
-    }
-    
-    int monthInt = monthValue.Value;
-    int yearInt = yearValue.Value;
-    
-    try
-    {
-        var employees = await _context.Employees
-            .Where(e => e.EmployeeStatus == "Active")
-            .ToListAsync();
-
-        if (employees == null || employees.Count == 0)
-        {
-            ModelState.AddModelError("", "No active employees found. Please ensure there are active employees in the system.");
-            return View(model);
-        }
-
-        int generatedCount = 0;
-        int skippedCount = 0;
-        int errorCount = 0;
-        var errors = new List<string>();
-
-        foreach (var emp in employees)
-        {
             try
             {
-                // Check if payslip already exists for this month/year
-                var existing = await _context.Payslips
-                    .FirstOrDefaultAsync(p => p.EmployeeId == emp.uid && p.Month == monthInt && p.Year == yearInt);
+                _payrollService.GeneratePayslip(
+                    employee.uid,
+                    month.Value,
+                    year.Value,
+                    User.Identity?.Name ?? "System");
 
-                if (existing == null)
-                {
-                    // Use PayrollCalculationService to generate the payslip (handles percentage-based calculations)
-                    var generatedPayslip = _payrollService.GeneratePayslip(
-                        emp.uid,
-                        monthInt,
-                        yearInt,
-                        User.Identity?.Name ?? "System"
-                    );
-                    
-                    if (generatedPayslip != null && generatedPayslip.Id > 0)
-                    {
-                        generatedCount++;
-                    }
-                    else
-                    {
-                        errorCount++;
-                        errors.Add($"Failed to generate payslip for Employee ID: {emp.EmployeeID}");
-                    }
-                }
-                else
-                {
-                    skippedCount++;
-                }
+                TempData["SuccessMessage"] = $"Payslip generated successfully for Employee ID: {employeeId}!";
+                return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {
-                errorCount++;
-                errors.Add($"Error generating payslip for Employee ID {emp.EmployeeID}: {ex.Message}");
+                ModelState.AddModelError("", $"Error generating payslip: {ex.Message}");
+                if (ex.InnerException != null)
+                {
+                    ModelState.AddModelError("", $"Details: {ex.InnerException.Message}");
+                }
+                return View();
             }
         }
 
-        // Build success message
-        var message = $"Payslips generation completed! Generated: {generatedCount}, Skipped (already exists): {skippedCount}";
-        if (errorCount > 0)
+        // GET: Payroll/EmployeeDetail
+        public async Task<IActionResult> EmployeeDetail(string department, int page = 1, int pageSize = 20)
         {
-            message += $", Errors: {errorCount}";
-            TempData["ErrorMessage"] = string.Join("; ", errors.Take(5)); // Show first 5 errors
+            ViewData["Module"] = "Payroll";
+            
+            // Ensure valid pagination parameters
+            if (page < 1) page = 1;
+            if (pageSize < 1) pageSize = 20;
+            if (pageSize > 100) pageSize = 100; // Max page size limit
+
+            var query = _context.Employees.AsQueryable();
+
+            // Filter by department if provided
+            if (!string.IsNullOrWhiteSpace(department))
+            {
+                query = query.Where(e => e.Department != null && e.Department == department);
+            }
+
+            // Apply ordering before pagination
+            query = query.OrderBy(e => e.EmployeeName);
+
+            // Get paginated results
+            var paginatedEmployees = await PaginatedList<Employee>.CreateAsync(query, page, pageSize);
+
+            // Get distinct departments for dropdown
+            var departments = await _context.Employees
+                .Where(e => e.Department != null && e.Department != "")
+                .Select(e => e.Department)
+                .Distinct()
+                .OrderBy(d => d)
+                .ToListAsync();
+
+            ViewBag.Departments = departments;
+            ViewBag.SelectedDepartment = department;
+            ViewBag.CurrentPageSize = pageSize;
+
+            return View(paginatedEmployees);
         }
 
-        TempData["SuccessMessage"] = message;
-        return RedirectToAction(nameof(Index));
-    }
-    catch (Exception ex)
-    {
-        ModelState.AddModelError("", $"Error generating payslips: {ex.Message}");
-        if (ex.InnerException != null)
+        // POST: Payroll/GeneratePayrollForSelected
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> GeneratePayrollForSelected(List<int> selectedEmployeeIds, int month, int year)
         {
-            ModelState.AddModelError("", $"Details: {ex.InnerException.Message}");
+            ViewData["Module"] = "Payroll";
+
+            if (selectedEmployeeIds == null || !selectedEmployeeIds.Any())
+            {
+                TempData["ErrorMessage"] = "Please select at least one employee.";
+                return RedirectToAction(nameof(EmployeeDetail));
+            }
+
+            if (month < 1 || month > 12)
+            {
+                TempData["ErrorMessage"] = "Invalid month selected.";
+                return RedirectToAction(nameof(EmployeeDetail));
+            }
+
+            if (year < 2000 || year > 2100)
+            {
+                TempData["ErrorMessage"] = "Invalid year selected.";
+                return RedirectToAction(nameof(EmployeeDetail));
+            }
+
+            int successCount = 0;
+            int skipCount = 0;
+            int errorCount = 0;
+            var errors = new List<string>();
+
+            foreach (var employeeId in selectedEmployeeIds)
+            {
+                try
+                {
+                    // Check if payslip already exists
+                    bool exists = await _context.Payslips
+                        .AnyAsync(p => p.EmployeeId == employeeId && 
+                                      p.Month == month && 
+                                      p.Year == year);
+
+                    if (exists)
+                    {
+                        skipCount++;
+                        continue;
+                    }
+
+                    // Check if employee is active
+                    var employee = await _context.Employees.FindAsync(employeeId);
+                    if (employee == null || employee.EmployeeStatus != "Active")
+                    {
+                        errorCount++;
+                        errors.Add($"Employee ID {employee?.EmployeeID ?? employeeId.ToString()} is not active or not found.");
+                        continue;
+                    }
+
+                    _payrollService.GeneratePayslip(
+                        employeeId,
+                        month,
+                        year,
+                        User.Identity?.Name ?? "System");
+
+                    successCount++;
+                }
+                catch (Exception ex)
+                {
+                    errorCount++;
+                    var employee = await _context.Employees.FindAsync(employeeId);
+                    errors.Add($"Error for Employee ID {employee?.EmployeeID ?? employeeId.ToString()}: {ex.Message}");
+                }
+            }
+
+            // Build result message
+            var message = $"Payroll generation completed: {successCount} successful";
+            if (skipCount > 0) message += $", {skipCount} skipped (already exists)";
+            if (errorCount > 0) message += $", {errorCount} errors";
+
+            if (successCount > 0)
+            {
+                TempData["SuccessMessage"] = message;
+            }
+            else
+            {
+                TempData["ErrorMessage"] = message;
+            }
+
+            if (errors.Any())
+            {
+                TempData["ErrorDetails"] = string.Join("<br/>", errors);
+            }
+
+            return RedirectToAction(nameof(EmployeeDetail));
         }
-        return View(model);
+
+        // GET: Payroll/PayrollStatus
+        public async Task<IActionResult> PayrollStatus(string year, int? month, string department, string payrollStatus, int page = 1, int pageSize = 20)
+        {
+            ViewData["Module"] = "Payroll";
+            
+            // Ensure valid pagination parameters
+            if (page < 1) page = 1;
+            if (pageSize < 1) pageSize = 20;
+            if (pageSize > 100) pageSize = 100;
+
+            // Only process if year and month are provided (user has searched)
+            bool hasSearched = !string.IsNullOrWhiteSpace(year) && month.HasValue;
+            
+            int? actualYear = null;
+            if (hasSearched)
+            {
+                // Parse year as integer
+                if (int.TryParse(year, out int yearValue))
+                {
+                    actualYear = yearValue;
+                }
+                else
+                {
+                    // Fallback to current year if parsing fails
+                    actualYear = DateTime.Now.Year;
+                }
+            }
+
+            // Set default payroll status if not provided
+            if (string.IsNullOrWhiteSpace(payrollStatus))
+                payrollStatus = "Payroll Not Generated";
+
+            // Get all departments for dropdown
+            var departments = await _context.Employees
+                .Where(e => e.Department != null && e.Department != "")
+                .Select(e => e.Department)
+                .Distinct()
+                .OrderBy(d => d)
+                .ToListAsync();
+
+            PaginatedList<Employee> paginatedList;
+            Dictionary<int, Payslip> payslipLookupFull = new Dictionary<int, Payslip>();
+
+            if (hasSearched && actualYear.HasValue)
+            {
+                // Start with all active employees
+                var employeeQuery = _context.Employees
+                    .Where(e => e.EmployeeStatus == "Active")
+                    .AsQueryable();
+
+                // Filter by department if provided
+                if (!string.IsNullOrWhiteSpace(department))
+                {
+                    employeeQuery = employeeQuery.Where(e => e.Department != null && e.Department == department);
+                }
+
+                // Get payslip IDs for the selected month/year grouped by employee
+                var payslipData = await _context.Payslips
+                    .Where(p => p.Month == month.Value && p.Year == actualYear.Value)
+                    .Select(p => new { p.EmployeeId, p.Id, p.IsLocked })
+                    .ToListAsync();
+
+                // Create dictionaries for quick lookup
+                var payslipLookup = payslipData.ToDictionary(p => p.EmployeeId, p => new { p.Id, p.IsLocked });
+                var employeeIdsWithPayslips = payslipData.Select(p => p.EmployeeId).ToHashSet();
+
+                // Filter employees based on payroll status using database query
+                IQueryable<Employee> filteredQuery = employeeQuery;
+
+                if (payrollStatus == "Payroll Not Generated")
+                {
+                    // Employees without payslips
+                    filteredQuery = filteredQuery.Where(e => !employeeIdsWithPayslips.Contains(e.uid));
+                }
+                else if (payrollStatus == "Payroll Generated")
+                {
+                    // Employees with locked payslips
+                    var lockedEmployeeIds = payslipData
+                        .Where(p => p.IsLocked)
+                        .Select(p => p.EmployeeId)
+                        .ToHashSet();
+                    filteredQuery = filteredQuery.Where(e => lockedEmployeeIds.Contains(e.uid));
+                }
+                else if (payrollStatus == "Payroll Pending")
+                {
+                    // Employees with unlocked payslips
+                    var pendingEmployeeIds = payslipData
+                        .Where(p => !p.IsLocked)
+                        .Select(p => p.EmployeeId)
+                        .ToHashSet();
+                    filteredQuery = filteredQuery.Where(e => pendingEmployeeIds.Contains(e.uid));
+                }
+
+                // Get total count before pagination
+                int totalCount = await filteredQuery.CountAsync();
+
+                // Apply ordering and pagination
+                var paginatedEmployees = await filteredQuery
+                    .OrderBy(e => e.EmployeeName)
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
+
+                // Create paginated list
+                paginatedList = new PaginatedList<Employee>(paginatedEmployees, totalCount, page, pageSize);
+                
+                // Rebuild payslip lookup with full payslip objects for the paginated results
+                var paginatedEmployeeIds = paginatedEmployees.Select(e => e.uid).ToList();
+                var payslipsForPaginated = await _context.Payslips
+                    .Where(p => p.Month == month.Value && p.Year == actualYear.Value && paginatedEmployeeIds.Contains(p.EmployeeId))
+                    .ToListAsync();
+                payslipLookupFull = payslipsForPaginated.ToDictionary(p => p.EmployeeId);
+            }
+            else
+            {
+                // Return empty list if no search has been performed
+                paginatedList = new PaginatedList<Employee>(new List<Employee>(), 0, 1, pageSize);
+            }
+
+            // Pass data to view
+            ViewBag.Year = year;
+            ViewBag.Month = month;
+            ViewBag.Department = department;
+            ViewBag.PayrollStatus = payrollStatus;
+            ViewBag.ActualYear = actualYear;
+            ViewBag.Departments = departments;
+            ViewBag.CurrentPageSize = pageSize;
+            ViewBag.PayslipLookup = payslipLookupFull; // For displaying status in view
+
+            return View(paginatedList);
+        }
+
+        // GET: Payroll/Dashboard
+        public async Task<IActionResult> Dashboard(int? month, int? year)
+        {
+            ViewData["Module"] = "Payroll";
+            
+            // Set defaults to current month/year if not provided
+            int selectedMonth = month ?? DateTime.Now.Month;
+            int selectedYear = year ?? DateTime.Now.Year;
+
+            // Get total active employees
+            int totalEmployees = await _context.Employees
+                .Where(e => e.EmployeeStatus == "Active")
+                .CountAsync();
+
+            // Get employees with payroll generated for the selected month/year
+            var employeesWithPayroll = await _context.Payslips
+                .Where(p => p.Month == selectedMonth && p.Year == selectedYear)
+                .Select(p => p.EmployeeId)
+                .Distinct()
+                .CountAsync();
+
+            // Calculate employees without payroll
+            int employeesWithoutPayroll = totalEmployees - employeesWithPayroll;
+
+            // Calculate total payroll amount for the selected month/year
+            decimal totalPayrollAmount = await _context.Payslips
+                .Where(p => p.Month == selectedMonth && p.Year == selectedYear)
+                .SumAsync(p => (decimal?)p.NetSalary) ?? 0;
+
+            var dashboardData = new PayrollDashboardVM
+            {
+                TotalEmployees = totalEmployees,
+                EmployeesWithPayrollGenerated = employeesWithPayroll,
+                EmployeesWithoutPayroll = employeesWithoutPayroll,
+                TotalPayrollAmount = totalPayrollAmount,
+                Month = selectedMonth,
+                Year = selectedYear
+            };
+
+            ViewBag.Month = selectedMonth;
+            ViewBag.Year = selectedYear;
+
+            return View(dashboardData);
+        }
     }
-}
-
-
-
-
-
 }

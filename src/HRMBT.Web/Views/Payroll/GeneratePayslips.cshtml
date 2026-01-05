@@ -1,227 +1,74 @@
-@model HRMBT.Web.Models.Payslip
+@model HRMBT.Web.Models.ViewModels.GeneratePayslipsVM
 
 @{
-    ViewData["Title"] = "Generate Payslips";
     ViewData["Module"] = "Payroll";
 }
 
-<h1>Generate Payslips</h1>
+<h2>Generate Payroll</h2>
 
-<hr />
-<div class="row">
-    <div class="col-md-8">
-        <div class="alert alert-warning">
-            <strong>Warning:</strong> This will generate payslips for all active employees for the selected month and year. 
-            Payslips that already exist will be skipped.
-        </div>
-        
-        <form asp-action="GeneratePayslips" method="post">
-            @Html.AntiForgeryToken()
-            @{
-                var relevantErrors = ViewData.ModelState
-                    .Where(kvp => kvp.Key == "Month" || kvp.Key == "Year" || string.IsNullOrEmpty(kvp.Key))
-                    .SelectMany(kvp => kvp.Value.Errors)
-                    .ToList();
-            }
-            @if (relevantErrors.Count > 0)
-            {
-                <div class="alert alert-danger">
-                    <h5>Errors:</h5>
-                    <ul class="mb-0">
-                        @foreach (var error in relevantErrors)
-                        {
-                            <li>@error.ErrorMessage</li>
-                        }
-                    </ul>
-                </div>
-            }
-            @if (TempData["SuccessMessage"] != null)
-            {
-                <div class="alert alert-success">
-                    @TempData["SuccessMessage"]
-                </div>
-            }
-            @if (TempData["ErrorMessage"] != null)
-            {
-                <div class="alert alert-warning">
-                    <strong>Note:</strong> @TempData["ErrorMessage"]
-                </div>
-            }
-            
-            <div class="form-group mb-3">
-                <label for="Month" class="control-label">Month <span class="text-danger">*</span></label>
-                <select name="Month" id="Month" class="form-control" required>
-                    <option value="">-- Select Month --</option>
-                    @{
-                        var months = new[] { 
-                            new { Value = 1, Name = "January" },
-                            new { Value = 2, Name = "February" },
-                            new { Value = 3, Name = "March" },
-                            new { Value = 4, Name = "April" },
-                            new { Value = 5, Name = "May" },
-                            new { Value = 6, Name = "June" },
-                            new { Value = 7, Name = "July" },
-                            new { Value = 8, Name = "August" },
-                            new { Value = 9, Name = "September" },
-                            new { Value = 10, Name = "October" },
-                            new { Value = 11, Name = "November" },
-                            new { Value = 12, Name = "December" }
-                        };
-                    }
-                    @foreach (var m in months)
-                    {
-                        if (Model.Month == m.Value)
-                        {
-                            <option value="@m.Value" selected>@m.Name</option>
-                        }
-                        else
-                        {
-                            <option value="@m.Value">@m.Name</option>
-                        }
-                    }
-                </select>
-                @if (ViewData.ModelState["Month"]?.Errors.Count > 0)
-                {
-                    <span class="text-danger">@ViewData.ModelState["Month"].Errors[0].ErrorMessage</span>
-                }
-            </div>
-            
-            <div class="form-group mb-3">
-                <label for="Year" class="control-label">Year <span class="text-danger">*</span></label>
-                <input name="Year" id="Year" class="form-control" type="number" min="2000" max="2100" value="@Model.Year" required />
-                @if (ViewData.ModelState["Year"]?.Errors.Count > 0)
-                {
-                    <span class="text-danger">@ViewData.ModelState["Year"].Errors[0].ErrorMessage</span>
-                }
-            </div>
-            
-            <div class="form-group mb-3">
-                <button type="submit" class="btn btn-primary" id="generateBtn">
-                    Generate Payslips for All Employees
-                </button>
-                <a asp-action="Index" class="btn btn-secondary">Cancel</a>
-            </div>
-        </form>
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger">
+        @TempData["ErrorMessage"]
     </div>
-    <div class="col-md-4">
-        <div class="alert alert-info">
-            <h5>Information:</h5>
-            <ul>
-                <li>Only active employees will be included</li>
-                <li>Payslips that already exist will be skipped</li>
-                <li>Each payslip will include:</li>
-                <ul>
-                    <li>Basic salary</li>
-                    <li>Active allowances</li>
-                    <li>Active deductions</li>
-                </ul>
-            </ul>
-        </div>
-    </div>
-</div>
-
-@section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-    
-    <script>
-        // Set default values if not already set
-        $(document).ready(function() {
-            var currentMonth = '@DateTime.Now.Month';
-            var currentYear = '@DateTime.Now.Year';
-            
-            var monthSelect = $('#Month');
-            var yearInput = $('#Year');
-            
-            // Always ensure values are set (even if they appear to be set, ensure they're valid)
-            var currentMonthVal = monthSelect.val();
-            var currentYearVal = yearInput.val();
-            
-            if (!currentMonthVal || currentMonthVal === '' || currentMonthVal === '0' || parseInt(currentMonthVal) < 1 || parseInt(currentMonthVal) > 12) {
-                monthSelect.val(currentMonth);
-            }
-            if (!currentYearVal || currentYearVal === '' || currentYearVal === '0' || parseInt(currentYearVal) < 2000 || parseInt(currentYearVal) > 2100) {
-                yearInput.val(currentYear);
-            }
-            
-            // Add confirmation dialog before form submission
-            $('form').on('submit', function(e) {
-                // Force set values if they're still empty (defensive programming)
-                var currentMonthVal = monthSelect.val();
-                var currentYearVal = yearInput.val();
-                
-                if (!currentMonthVal || currentMonthVal === '' || currentMonthVal === '0') {
-                    monthSelect.val(currentMonth);
-                }
-                if (!currentYearVal || currentYearVal === '' || currentYearVal === '0') {
-                    yearInput.val(currentYear);
-                }
-                
-                // Re-read values to ensure they're current
-                var month = monthSelect.val();
-                var year = yearInput.val();
-                
-                // Debug logging
-                console.log('Form submission - Month:', month, 'Year:', year);
-                
-                // Validate month and year are selected
-                if (!month || month === '' || month === '0') {
-                    alert('Please select a month before generating payslips.');
-                    monthSelect.focus();
-                    monthSelect.addClass('is-invalid');
-                    e.preventDefault();
-                    return false;
-                }
-                
-                if (!year || year === '' || year === '0') {
-                    alert('Please enter a year before generating payslips.');
-                    yearInput.focus();
-                    yearInput.addClass('is-invalid');
-                    e.preventDefault();
-                    return false;
-                }
-                
-                // Ensure values are integers
-                var monthInt = parseInt(month);
-                var yearInt = parseInt(year);
-                
-                if (isNaN(monthInt) || monthInt < 1 || monthInt > 12) {
-                    alert('Please select a valid month.');
-                    monthSelect.focus();
-                    monthSelect.addClass('is-invalid');
-                    e.preventDefault();
-                    return false;
-                }
-                
-                if (isNaN(yearInt) || yearInt < 2000 || yearInt > 2100) {
-                    alert('Please enter a valid year (2000-2100).');
-                    yearInput.focus();
-                    yearInput.addClass('is-invalid');
-                    e.preventDefault();
-                    return false;
-                }
-                
-                // Get month name
-                var monthNames = ['', 'January', 'February', 'March', 'April', 'May', 'June', 
-                                 'July', 'August', 'September', 'October', 'November', 'December'];
-                var monthName = monthNames[monthInt];
-                
-                // Show confirmation dialog with details
-                var confirmMessage = 'Are you sure you want to generate payslips for ALL active employees?\n\n' +
-                                   'Selected Period: ' + monthName + ' ' + yearInt + '\n\n' +
-                                   'This will create payslips for all active employees. ' +
-                                   'Payslips that already exist will be skipped.\n\n' +
-                                   'Click OK to proceed or Cancel to go back.';
-                
-                if (!confirm(confirmMessage)) {
-                    e.preventDefault();
-                    return false;
-                }
-                
-                // Remove invalid classes
-                monthSelect.removeClass('is-invalid');
-                yearInput.removeClass('is-invalid');
-            });
-        });
-    </script>
 }
 
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success">
+        @TempData["SuccessMessage"]
+    </div>
+}
+
+<form asp-action="GeneratePayslips" method="post">
+    @Html.AntiForgeryToken()
+
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-md-4">
+            <label asp-for="Department" class="form-label">Department</label>
+            <select asp-for="Department" class="form-control">
+                <option value="">All Departments</option>
+                @if (ViewBag.Departments != null)
+                {
+                    foreach (var dept in ViewBag.Departments)
+                    {
+                        <option value="@dept">@dept</option>
+                    }
+                }
+            </select>
+            <span asp-validation-for="Department" class="text-danger small"></span>
+        </div>
+
+        <div class="col-12 col-md-4">
+            <label asp-for="Month" class="form-label">Month</label>
+            <select asp-for="Month" class="form-control">
+                @for (int i = 1; i <= 12; i++)
+                {
+                    var monthName = System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(i);
+                    if (Model.Month == i)
+                    {
+                        <option value="@i" selected>@monthName</option>
+                    }
+                    else
+                    {
+                        <option value="@i">@monthName</option>
+                    }
+                }
+            </select>
+            <span asp-validation-for="Month" class="text-danger small"></span>
+        </div>
+
+        <div class="col-12 col-md-4">
+            <label asp-for="Year" class="form-label">Year</label>
+            <input asp-for="Year" class="form-control" type="number" min="2000" max="2100" />
+            <span asp-validation-for="Year" class="text-danger small"></span>
+        </div>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">
+            Generate Payslips
+        </button>
+        <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+    </div>
+</form>

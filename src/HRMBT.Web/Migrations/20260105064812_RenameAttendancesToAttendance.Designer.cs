@@ -4,6 +4,7 @@ using HRMBT.Web.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace HRMBT.Web.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260105064812_RenameAttendancesToAttendance")]
+    partial class RenameAttendancesToAttendance
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -81,58 +84,41 @@ namespace HRMBT.Web.Migrations
 
             modelBuilder.Entity("HRMBT.Web.Models.Attendance", b =>
                 {
-                    b.Property<int>("AttendanceID")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("AttendanceID");
+                        .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AttendanceID"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("AttendanceDate")
-                        .HasColumnType("date")
-                        .HasColumnName("AttendanceDate");
+                        .HasColumnType("datetime2");
 
-                    b.Property<string>("Comments")
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)")
-                        .HasColumnName("Comments");
+                    b.Property<string>("AttendanceStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
-                    b.Property<string>("DepartmentName")
+                    b.Property<string>("EmployeeCode")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasColumnName("DepartmentName");
+                        .HasColumnType("nvarchar(50)");
 
-                    b.Property<string>("EmployeeID")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasColumnName("EmployeeID");
+                    b.Property<int?>("EmployeeId")
+                        .HasColumnType("int");
 
-                    b.Property<string>("EmployeeName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
-                        .HasColumnName("EmployeeName");
+                    b.Property<TimeSpan?>("InTime")
+                        .HasColumnType("time");
 
-                    b.Property<string>("Status")
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)")
-                        .HasColumnName("Status");
+                    b.Property<TimeSpan?>("OutTime")
+                        .HasColumnType("time");
 
-                    b.Property<TimeSpan?>("TimeIn")
-                        .HasColumnType("time")
-                        .HasColumnName("TimeIn");
+                    b.HasKey("Id");
 
-                    b.Property<TimeSpan?>("TimeOut")
-                        .HasColumnType("time")
-                        .HasColumnName("TimeOut");
+                    b.HasIndex("EmployeeId");
 
-                    b.HasKey("AttendanceID");
-
-                    b.HasIndex("EmployeeID", "AttendanceDate")
+                    b.HasIndex("EmployeeCode", "AttendanceDate")
                         .IsUnique()
-                        .HasDatabaseName("IX_Attendance_EmployeeID_Date");
+                        .HasDatabaseName("IX_Attendance_EmployeeCode_Date");
 
                     b.ToTable("Attendance", (string)null);
                 });
@@ -492,6 +478,16 @@ namespace HRMBT.Web.Migrations
                         .HasForeignKey("EmployeeId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Employee");
+                });
+
+            modelBuilder.Entity("HRMBT.Web.Models.Attendance", b =>
+                {
+                    b.HasOne("HRMBT.Web.Models.Employee", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Employee");
                 });

@@ -4,6 +4,7 @@ using HRMBT.Web.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace HRMBT.Web.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260102131023_PayrollModuleUpdate")]
+    partial class PayrollModuleUpdate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -81,96 +84,30 @@ namespace HRMBT.Web.Migrations
 
             modelBuilder.Entity("HRMBT.Web.Models.Attendance", b =>
                 {
-                    b.Property<int>("AttendanceID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("AttendanceID");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AttendanceID"));
-
-                    b.Property<DateTime>("AttendanceDate")
-                        .HasColumnType("date")
-                        .HasColumnName("AttendanceDate");
-
-                    b.Property<string>("Comments")
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)")
-                        .HasColumnName("Comments");
-
-                    b.Property<string>("DepartmentName")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasColumnName("DepartmentName");
-
-                    b.Property<string>("EmployeeID")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasColumnName("EmployeeID");
-
-                    b.Property<string>("EmployeeName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
-                        .HasColumnName("EmployeeName");
-
-                    b.Property<string>("Status")
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)")
-                        .HasColumnName("Status");
-
-                    b.Property<TimeSpan?>("TimeIn")
-                        .HasColumnType("time")
-                        .HasColumnName("TimeIn");
-
-                    b.Property<TimeSpan?>("TimeOut")
-                        .HasColumnType("time")
-                        .HasColumnName("TimeOut");
-
-                    b.HasKey("AttendanceID");
-
-                    b.HasIndex("EmployeeID", "AttendanceDate")
-                        .IsUnique()
-                        .HasDatabaseName("IX_Attendance_EmployeeID_Date");
-
-                    b.ToTable("Attendance", (string)null);
-                });
-
-            modelBuilder.Entity("HRMBT.Web.Models.AttendanceUploadLog", b =>
-                {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("ErrorDetails")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("FailureCount")
-                        .HasColumnType("int");
-
-                    b.Property<string>("FileName")
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
-
-                    b.Property<int>("SuccessCount")
-                        .HasColumnType("int");
-
-                    b.Property<int>("TotalRows")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("UploadDate")
+                    b.Property<DateTime>("Date")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("UploadedBy")
+                    b.Property<string>("Department")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<int>("EmployeeId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
                     b.HasKey("Id");
 
-                    b.ToTable("AttendanceUploadLogs", (string)null);
+                    b.ToTable("Attendances", (string)null);
                 });
 
             modelBuilder.Entity("HRMBT.Web.Models.Deduction", b =>

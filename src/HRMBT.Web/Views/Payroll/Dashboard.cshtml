@@ -1,0 +1,287 @@
+@model HRMBT.Web.Models.ViewModels.PayrollDashboardVM
+
+@{
+    ViewData["Title"] = "Payroll Dashboard";
+    ViewData["Module"] = "Payroll";
+    var monthName = System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(Model.Month);
+}
+
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1>Payroll Dashboard</h1>
+            <p class="text-muted">Summary statistics for @monthName @Model.Year</p>
+        </div>
+    </div>
+
+    <!-- Month/Year Filter -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    <form asp-action="Dashboard" method="get" class="row g-3">
+                        <div class="col-md-3">
+                            <label for="month" class="form-label">Month</label>
+                            <select name="month" id="month" class="form-control" onchange="this.form.submit()">
+                                @for (int i = 1; i <= 12; i++)
+                                {
+                                    var mName = System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(i);
+                                    var isSelected = Model.Month == i;
+                                    <option value="@i" selected="@isSelected">@mName</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="year" class="form-label">Year</label>
+                            <input type="number" name="year" id="year" class="form-control" 
+                                   value="@Model.Year" min="2000" max="2100" onchange="this.form.submit()" />
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center border-primary">
+                <div class="card-body">
+                    <h5 class="card-title text-primary">Total Employees</h5>
+                    <h2 class="card-text text-primary">@Model.TotalEmployees</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center border-success">
+                <div class="card-body">
+                    <h5 class="card-title text-success">Payroll Generated</h5>
+                    <h2 class="card-text text-success">@Model.EmployeesWithPayrollGenerated</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center border-warning">
+                <div class="card-body">
+                    <h5 class="card-title text-warning">Payroll Not Generated</h5>
+                    <h2 class="card-text text-warning">@Model.EmployeesWithoutPayroll</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center border-info">
+                <div class="card-body">
+                    <h5 class="card-title text-info">Total Payroll Amount</h5>
+                    <h2 class="card-text text-info">@Model.TotalPayrollAmount.ToString("N2")</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row">
+        <!-- Payroll Status Pie Chart -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Payroll Status Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="payrollStatusChart" style="max-height: 300px;"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payroll Amount Bar Chart -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">Payroll Overview</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="payrollOverviewChart" style="max-height: 300px;"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Additional Charts Row -->
+    <div class="row">
+        <!-- Employee Count Comparison -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Employee Payroll Status</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="employeeStatusChart" style="max-height: 300px;"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Donut Chart for Payroll Status -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">Payroll Completion Rate</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="completionRateChart" style="max-height: 300px;"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>
+        // Chart data from model
+        const totalEmployees = @Model.TotalEmployees;
+        const employeesWithPayroll = @Model.EmployeesWithPayrollGenerated;
+        const employeesWithoutPayroll = @Model.EmployeesWithoutPayroll;
+        const totalPayrollAmount = @Model.TotalPayrollAmount;
+
+        // Payroll Status Pie Chart
+        const payrollStatusCtx = document.getElementById('payrollStatusChart').getContext('2d');
+        new Chart(payrollStatusCtx, {
+            type: 'pie',
+            data: {
+                labels: ['Payroll Generated', 'Payroll Not Generated'],
+                datasets: [{
+                    data: [employeesWithPayroll, employeesWithoutPayroll],
+                    backgroundColor: ['#28a745', '#ffc107'],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                label += context.parsed + ' employees';
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Payroll Overview Bar Chart
+        const payrollOverviewCtx = document.getElementById('payrollOverviewChart').getContext('2d');
+        new Chart(payrollOverviewCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Total Employees', 'With Payroll', 'Without Payroll'],
+                datasets: [{
+                    label: 'Number of Employees',
+                    data: [totalEmployees, employeesWithPayroll, employeesWithoutPayroll],
+                    backgroundColor: ['#007bff', '#28a745', '#ffc107'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+
+        // Employee Status Bar Chart
+        const employeeStatusCtx = document.getElementById('employeeStatusChart').getContext('2d');
+        new Chart(employeeStatusCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Payroll Generated', 'Payroll Not Generated'],
+                datasets: [{
+                    label: 'Employees',
+                    data: [employeesWithPayroll, employeesWithoutPayroll],
+                    backgroundColor: ['#28a745', '#ffc107'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+
+        // Completion Rate Donut Chart
+        const completionRateCtx = document.getElementById('completionRateChart').getContext('2d');
+        const completionRate = totalEmployees > 0 ? ((employeesWithPayroll / totalEmployees) * 100).toFixed(1) : 0;
+        new Chart(completionRateCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Completed', 'Pending'],
+                datasets: [{
+                    data: [employeesWithPayroll, employeesWithoutPayroll],
+                    backgroundColor: ['#28a745', '#ffc107'],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                label += context.parsed + ' employees';
+                                if (label.includes('Completed')) {
+                                    label += ' (' + completionRate + '%)';
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+}
+

@@ -1,0 +1,68 @@
+@model HRMBT.Web.Models.UploadResult
+
+@{
+    ViewData["Title"] = "Upload Result";
+}
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-10 offset-md-1">
+            <h1>Upload Result</h1>
+            
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Upload Summary</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-3">Total Rows:</dt>
+                        <dd class="col-sm-9">@Model.TotalRows</dd>
+                        
+                        <dt class="col-sm-3">Successful Rows:</dt>
+                        <dd class="col-sm-9">
+                            <span class="badge bg-success">@Model.SuccessfulRows</span>
+                        </dd>
+                        
+                        <dt class="col-sm-3">Failed Rows:</dt>
+                        <dd class="col-sm-9">
+                            <span class="badge bg-danger">@Model.FailedRows</span>
+                        </dd>
+                        
+                        <dt class="col-sm-3">Upload Log ID:</dt>
+                        <dd class="col-sm-9">@Model.UploadLogId</dd>
+                    </dl>
+                </div>
+            </div>
+
+            @if (Model.ErrorMessages != null && Model.ErrorMessages.Any())
+            {
+                <div class="card mb-4">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0">Error Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group">
+                            @foreach (var error in Model.ErrorMessages)
+                            {
+                                <li class="list-group-item">@error</li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+            }
+
+            @if (Model.SuccessfulRows > 0)
+            {
+                <div class="alert alert-success">
+                    <strong>Success!</strong> @Model.SuccessfulRows row(s) were successfully processed and saved.
+                </div>
+            }
+
+            <div class="mt-4">
+                <a asp-action="Index" class="btn btn-primary">View Attendance Records</a>
+                <a asp-action="Upload" class="btn btn-secondary">Upload Another File</a>
+            </div>
+        </div>
+    </div>
+</div>
+

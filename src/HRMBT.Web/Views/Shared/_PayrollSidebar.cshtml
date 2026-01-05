@@ -1,0 +1,33 @@
+@{
+    var currentAction = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
+}
+
+<strong class="text-dark">Payroll Menu</strong>
+<hr />
+<ul class="nav flex-column">
+    <li class="nav-item">
+        <a class="nav-link @(currentAction == "EmployeeDetail" ? "active fw-bold text-primary" : "text-dark")" 
+           asp-controller="Payroll" asp-action="EmployeeDetail">
+            Employee Detail
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link @(currentAction == "GeneratePayslips" ? "active fw-bold text-primary" : "text-dark")" 
+           asp-controller="Payroll" asp-action="GeneratePayslips">
+            Run Payroll
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link @(currentAction == "Search" ? "active fw-bold text-primary" : "text-dark")" 
+           asp-controller="Payroll" asp-action="Search">
+            Search Payroll
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link @(currentAction == "GenerateIndividual" || currentAction == "Create" ? "active fw-bold text-primary" : "text-dark")" 
+           asp-controller="Payroll" asp-action="GenerateIndividual">
+            Generate Individual Payroll
+        </a>
+    </li>
+</ul>
+

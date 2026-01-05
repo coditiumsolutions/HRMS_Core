@@ -1,0 +1,50 @@
+@{
+    ViewData["Title"] = "Upload Attendance CSV";
+}
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <h1>Upload Attendance CSV</h1>
+            
+            @if (ViewBag.Error != null)
+            {
+                <div class="alert alert-danger">
+                    @ViewBag.Error
+                </div>
+            }
+
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">CSV File Format</h5>
+                    <p class="card-text">
+                        Please upload a CSV file with the following format:
+                    </p>
+                    <ul>
+                        <li><strong>Column 1:</strong> EmployeeID (required)</li>
+                        <li><strong>Column 2:</strong> EmployeeName (required)</li>
+                        <li><strong>Column 3:</strong> DepartmentName (required)</li>
+                        <li><strong>Column 4:</strong> AttendanceDate (required, format: YYYY-MM-DD)</li>
+                        <li><strong>Column 5:</strong> TimeIn (optional, format: HH:mm:ss)</li>
+                        <li><strong>Column 6:</strong> TimeOut (optional, format: HH:mm:ss)</li>
+                        <li><strong>Column 7:</strong> Status (optional: P, A, L, H)</li>
+                        <li><strong>Column 8:</strong> Comments (optional)</li>
+                    </ul>
+                    <p class="text-muted">
+                        <small>Note: The first row will be treated as header and skipped.</small>
+                    </p>
+                </div>
+            </div>
+
+            <form asp-action="Upload" method="post" enctype="multipart/form-data" class="mt-4">
+                <div class="form-group mb-3">
+                    <label for="csvFile" class="form-label">Select CSV File</label>
+                    <input type="file" name="csvFile" id="csvFile" class="form-control" accept=".csv" required />
+                </div>
+                <button type="submit" class="btn btn-primary">Upload and Process</button>
+                <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+            </form>
+        </div>
+    </div>
+</div>
+

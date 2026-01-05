@@ -26,7 +26,7 @@ public class HomeController : Controller
             // Dashboard Statistics
             var totalEmployees = await _context.Employees.CountAsync();
             var activeEmployees = await _context.Employees.CountAsync(e => e.EmployeeStatus == "Active");
-            var todayAttendance = await _context.Attendances.CountAsync(a => a.Date.Date == DateTime.Today);
+            var todayAttendance = await _context.Attendances.CountAsync(a => a.AttendanceDate.Date == DateTime.Today);
             var pendingLeaves = await _context.LeaveRequests.CountAsync(l => l.Status == "Pending");
             var totalPayrolls = await _context.Payslips.CountAsync();
             var totalTaxRules = await _context.TaxRules.CountAsync();

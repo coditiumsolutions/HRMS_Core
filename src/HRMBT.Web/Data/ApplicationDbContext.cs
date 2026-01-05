@@ -13,6 +13,7 @@ namespace HRMBT.Web.Data
 
         public DbSet<Employee> Employees { get; set; }
         public DbSet<Attendance> Attendances { get; set; }
+        public DbSet<AttendanceUploadLog> AttendanceUploadLogs { get; set; }
         public DbSet<LeaveRequest> LeaveRequests { get; set; }
         public DbSet<TaxRule> TaxRules { get; set; }
 
@@ -42,7 +43,34 @@ namespace HRMBT.Web.Data
                 entity.Property(e => e.Year2024).HasColumnType("int");
             });
 
-            modelBuilder.Entity<Attendance>().ToTable("Attendances");
+            // Attendance entity configuration
+            modelBuilder.Entity<Attendance>(entity =>
+            {
+                entity.ToTable("Attendance"); // Use singular table name
+
+                // Map primary key
+                entity.HasKey(a => a.AttendanceID);
+                entity.Property(a => a.AttendanceID).HasColumnName("AttendanceID");
+
+                // Map properties to database columns
+                entity.Property(a => a.EmployeeID).HasColumnName("EmployeeID").IsRequired();
+                entity.Property(a => a.EmployeeName).HasColumnName("EmployeeName").IsRequired();
+                entity.Property(a => a.DepartmentName).HasColumnName("DepartmentName").IsRequired();
+                entity.Property(a => a.AttendanceDate).HasColumnName("AttendanceDate").HasColumnType("date").IsRequired();
+                entity.Property(a => a.TimeIn).HasColumnName("TimeIn").HasColumnType("time");
+                entity.Property(a => a.TimeOut).HasColumnName("TimeOut").HasColumnType("time");
+                entity.Property(a => a.Status).HasColumnName("Status");
+                entity.Property(a => a.Comments).HasColumnName("Comments");
+
+                // Enforce uniqueness: one record per employee per date
+                entity.HasIndex(a => new { a.EmployeeID, a.AttendanceDate })
+                    .IsUnique()
+                    .HasDatabaseName("IX_Attendance_EmployeeID_Date");
+            });
+
+            // AttendanceUploadLog entity configuration
+            modelBuilder.Entity<AttendanceUploadLog>().ToTable("AttendanceUploadLogs");
+
             modelBuilder.Entity<LeaveRequest>().ToTable("LeaveRequests");
             modelBuilder.Entity<TaxRule>().ToTable("TaxRules");
 

@@ -1,49 +1,135 @@
-# Feature Specification: Attendance Management
+# Attendance Module Specification
 
-**Feature Branch**: feat-attendance  
-**Created**: 2025-12-31  
-**Status**: Draft  
+## Module Name
+Attendance
 
----
+## Purpose
+The Attendance module records and manages daily employee attendance using CSV file uploads as the primary input mechanism. Attendance data serves as a foundational input for Payroll processing, Leave Management (LMS), and reporting.
 
-## User Scenarios
+## Scope
+This module handles:
+- CSV-based attendance upload
+- Attendance validation
+- Daily attendance storage
+- Monthly attendance aggregation
+- Downstream consumption by Payroll and LMS
 
-### User Story 1 – Mark Attendance (P1)
-
-As an HR user,  
-I want to record employee attendance  
-So that daily presence is tracked.
-
----
-
-### User Story 2 – View Attendance Summary (P1)
-
-As an HR user,  
-I want to view attendance by date and department  
-So that I can monitor attendance trends.
+## Primary Actors
+- HR Administrator
+- Payroll System (consumer)
+- LMS System (consumer)
 
 ---
 
-## Functional Requirements
+## Attendance Data Model (Logical)
 
-- FR-001: System MUST allow marking attendance per employee
-- FR-002: Attendance MUST store date and status (Present/Absent)
-- FR-003: Attendance MUST be viewable by date and department
+Each attendance record represents **one employee on one calendar date**.
+
+### Core Attributes
+- EmployeeCode
+- AttendanceDate
+- AttendanceStatus
+- InTime (optional)
+- OutTime (optional)
 
 ---
 
-## Key Entity
+## CSV Upload Specification
 
-**Attendance**
-- Id
-- EmployeeId
+### Accepted Format
+- File type: `.csv`
+- Encoding: UTF-8
+- One row per employee per date
+
+### CSV Header (Exact)
+
+
+
+
+---
+
+## Required Fields
+- EmployeeCode
 - Date
 - Status
-- Department
+
+## Optional Fields
+- InTime
+- OutTime
 
 ---
 
-## Success Criteria
+## Attendance Status Rules
 
-- Attendance entry saved successfully
-- Attendance summary loads correctly
+| Status     | Meaning |
+|-----------|--------|
+| Present   | Full working day |
+| Absent    | No attendance |
+| Late      | Late arrival |
+| HalfDay   | Half working day |
+| Leave     | Approved leave |
+| Holiday   | Company holiday |
+
+---
+
+## Business Rules
+
+### 1. Employee Validation
+- EmployeeCode must exist in the Employee master
+- Invalid EmployeeCode rows are rejected and logged
+
+### 2. Uniqueness Rule
+- Only **one attendance record per employee per date** is allowed
+
+### 3. Duplicate Handling Rule
+- Upload mode determines behavior:
+  - Reject duplicates
+  - OR overwrite existing record
+
+### 4. Time Validation
+- If both InTime and OutTime are provided:
+  - OutTime must be later than InTime
+
+### 5. Working Hours Calculation
+- Working hours = OutTime − InTime
+- Used for reporting and future payroll rules
+
+---
+
+## Monthly Attendance Summary Rules
+
+For a given employee and month:
+- Total working days
+- Present days
+- Absent days
+- Leave days
+- Late days
+- Half days
+
+---
+
+## Payroll Integration Rules
+- Absent days reduce payable salary
+- Attendance summary is consumed by Payroll
+- Attendance module does **not** calculate salary
+
+---
+
+## LMS Integration Rules
+- Leave attendance records are forwarded to LMS
+- LMS remains the authority for leave approval
+
+---
+
+## Reports (Logical)
+- Employee monthly attendance
+- Department-wise attendance
+- Attendance upload error log
+
+---
+
+## Non-Goals (Phase 1)
+- Biometric devices
+- Real-time punch-in/out
+- Shift scheduling
+- Overtime rules

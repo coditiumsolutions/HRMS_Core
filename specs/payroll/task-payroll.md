@@ -19,8 +19,15 @@
 - Payroll generation and payslip view
 
 ## Task 5: Implement Payroll Service
-- Service to calculate Gross, Deductions, Net salary
-- Include leave adjustments
+
+- Create PayrollCalculationService
+- Implement the following methods based on spec-payroll.md:
+  - CalculateGrossSalary
+  - CalculateTotalDeductions
+  - CalculateTax
+  - CalculateNetSalary
+- Ensure calculations follow Payroll Calculation Rules
+
 
 ## Task 6: Locking Payslips
 - Add IsLocked flag

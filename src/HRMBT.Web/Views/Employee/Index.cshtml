@@ -24,6 +24,9 @@
             <div class="card mb-4">
                 <div class="card-body">
                     <form asp-action="Index" method="get" class="row g-3">
+                        <input type="hidden" name="sortBy" value="@ViewBag.CurrentSortBy" />
+                        <input type="hidden" name="sortOrder" value="@ViewBag.CurrentSortOrder" />
+                        
                         <div class="col-md-2">
                             <label for="department" class="form-label">Department</label>
                             <select name="department" id="department" class="form-select">
@@ -48,6 +51,27 @@
                                         <option value="@desig" selected="@(ViewBag.CurrentDesignation == desig)">@desig</option>
                                     }
                                 }
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="year2024" class="form-label">Year 2024</label>
+                            <select name="year2024" id="year2024" class="form-select">
+                                <option value="">All Years</option>
+                                @if (ViewBag.Year2024Options != null)
+                                {
+                                    foreach (var year in ViewBag.Year2024Options)
+                                    {
+                                        <option value="@year" selected="@(ViewBag.CurrentYear2024 == year.ToString())">@year</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="applyTax" class="form-label">Apply Tax</label>
+                            <select name="applyTax" id="applyTax" class="form-select">
+                                <option value="">All</option>
+                                <option value="1" selected="@(ViewBag.CurrentApplyTax == "1")">Yes</option>
+                                <option value="0" selected="@(ViewBag.CurrentApplyTax == "0")">No</option>
                             </select>
                         </div>
                         <div class="col-md-2">
@@ -88,13 +112,121 @@
                 <table class="table table-sm table-striped table-bordered align-middle">
                     <thead class="table-dark">
                         <tr>
-                            <th>Employee ID</th>
-                            <th>Employee Name</th>
-                            <th>Department</th>
-                            <th>Designation</th>
+                            <th>
+                                <a asp-action="Index" 
+                                   asp-route-sortBy="EmployeeID" 
+                                   asp-route-sortOrder="@(ViewBag.CurrentSortBy == "EmployeeID" && ViewBag.CurrentSortOrder == "asc" ? "desc" : "asc")"
+                                   asp-route-department="@ViewBag.CurrentDepartment"
+                                   asp-route-designation="@ViewBag.CurrentDesignation"
+                                   asp-route-year2024="@ViewBag.CurrentYear2024"
+                                   asp-route-applyTax="@ViewBag.CurrentApplyTax"
+                                   asp-route-employeeName="@ViewBag.CurrentEmployeeName"
+                                   asp-route-employeeID="@ViewBag.CurrentEmployeeID"
+                                   asp-route-pageSize="@ViewBag.CurrentPageSize"
+                                   class="text-white text-decoration-none">
+                                    Employee ID
+                                    @if (ViewBag.CurrentSortBy == "EmployeeID")
+                                    {
+                                        <span>@(ViewBag.CurrentSortOrder == "asc" ? "↑" : "↓")</span>
+                                    }
+                                </a>
+                            </th>
+                            <th>
+                                <a asp-action="Index" 
+                                   asp-route-sortBy="EmployeeName" 
+                                   asp-route-sortOrder="@(ViewBag.CurrentSortBy == "EmployeeName" && ViewBag.CurrentSortOrder == "asc" ? "desc" : "asc")"
+                                   asp-route-department="@ViewBag.CurrentDepartment"
+                                   asp-route-designation="@ViewBag.CurrentDesignation"
+                                   asp-route-year2024="@ViewBag.CurrentYear2024"
+                                   asp-route-applyTax="@ViewBag.CurrentApplyTax"
+                                   asp-route-employeeName="@ViewBag.CurrentEmployeeName"
+                                   asp-route-employeeID="@ViewBag.CurrentEmployeeID"
+                                   asp-route-pageSize="@ViewBag.CurrentPageSize"
+                                   class="text-white text-decoration-none">
+                                    Employee Name
+                                    @if (ViewBag.CurrentSortBy == "EmployeeName")
+                                    {
+                                        <span>@(ViewBag.CurrentSortOrder == "asc" ? "↑" : "↓")</span>
+                                    }
+                                </a>
+                            </th>
+                            <th>
+                                <a asp-action="Index" 
+                                   asp-route-sortBy="Department" 
+                                   asp-route-sortOrder="@(ViewBag.CurrentSortBy == "Department" && ViewBag.CurrentSortOrder == "asc" ? "desc" : "asc")"
+                                   asp-route-department="@ViewBag.CurrentDepartment"
+                                   asp-route-designation="@ViewBag.CurrentDesignation"
+                                   asp-route-year2024="@ViewBag.CurrentYear2024"
+                                   asp-route-applyTax="@ViewBag.CurrentApplyTax"
+                                   asp-route-employeeName="@ViewBag.CurrentEmployeeName"
+                                   asp-route-employeeID="@ViewBag.CurrentEmployeeID"
+                                   asp-route-pageSize="@ViewBag.CurrentPageSize"
+                                   class="text-white text-decoration-none">
+                                    Department
+                                    @if (ViewBag.CurrentSortBy == "Department")
+                                    {
+                                        <span>@(ViewBag.CurrentSortOrder == "asc" ? "↑" : "↓")</span>
+                                    }
+                                </a>
+                            </th>
+                            <th>
+                                <a asp-action="Index" 
+                                   asp-route-sortBy="Designation" 
+                                   asp-route-sortOrder="@(ViewBag.CurrentSortBy == "Designation" && ViewBag.CurrentSortOrder == "asc" ? "desc" : "asc")"
+                                   asp-route-department="@ViewBag.CurrentDepartment"
+                                   asp-route-designation="@ViewBag.CurrentDesignation"
+                                   asp-route-year2024="@ViewBag.CurrentYear2024"
+                                   asp-route-applyTax="@ViewBag.CurrentApplyTax"
+                                   asp-route-employeeName="@ViewBag.CurrentEmployeeName"
+                                   asp-route-employeeID="@ViewBag.CurrentEmployeeID"
+                                   asp-route-pageSize="@ViewBag.CurrentPageSize"
+                                   class="text-white text-decoration-none">
+                                    Designation
+                                    @if (ViewBag.CurrentSortBy == "Designation")
+                                    {
+                                        <span>@(ViewBag.CurrentSortOrder == "asc" ? "↑" : "↓")</span>
+                                    }
+                                </a>
+                            </th>
                             <th>Status</th>
-                            <th>Year 2024</th>
-                            <th>Apply Tax</th>
+                            <th>
+                                <a asp-action="Index" 
+                                   asp-route-sortBy="Year2024" 
+                                   asp-route-sortOrder="@(ViewBag.CurrentSortBy == "Year2024" && ViewBag.CurrentSortOrder == "asc" ? "desc" : "asc")"
+                                   asp-route-department="@ViewBag.CurrentDepartment"
+                                   asp-route-designation="@ViewBag.CurrentDesignation"
+                                   asp-route-year2024="@ViewBag.CurrentYear2024"
+                                   asp-route-applyTax="@ViewBag.CurrentApplyTax"
+                                   asp-route-employeeName="@ViewBag.CurrentEmployeeName"
+                                   asp-route-employeeID="@ViewBag.CurrentEmployeeID"
+                                   asp-route-pageSize="@ViewBag.CurrentPageSize"
+                                   class="text-white text-decoration-none">
+                                    Year 2024
+                                    @if (ViewBag.CurrentSortBy == "Year2024")
+                                    {
+                                        <span>@(ViewBag.CurrentSortOrder == "asc" ? "↑" : "↓")</span>
+                                    }
+                                </a>
+                            </th>
+                            <th>
+                                <a asp-action="Index" 
+                                   asp-route-sortBy="ApplyTax" 
+                                   asp-route-sortOrder="@(ViewBag.CurrentSortBy == "ApplyTax" && ViewBag.CurrentSortOrder == "asc" ? "desc" : "asc")"
+                                   asp-route-department="@ViewBag.CurrentDepartment"
+                                   asp-route-designation="@ViewBag.CurrentDesignation"
+                                   asp-route-year2024="@ViewBag.CurrentYear2024"
+                                   asp-route-applyTax="@ViewBag.CurrentApplyTax"
+                                   asp-route-employeeName="@ViewBag.CurrentEmployeeName"
+                                   asp-route-employeeID="@ViewBag.CurrentEmployeeID"
+                                   asp-route-pageSize="@ViewBag.CurrentPageSize"
+                                   class="text-white text-decoration-none">
+                                    Apply Tax
+                                    @if (ViewBag.CurrentSortBy == "ApplyTax")
+                                    {
+                                        <span>@(ViewBag.CurrentSortOrder == "asc" ? "↑" : "↓")</span>
+                                    }
+                                </a>
+                            </th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -140,11 +272,11 @@
                         }
                         
                         <li class="page-item @prevDisabled">
-                            <a class="page-link" asp-action="Index" asp-route-page="1" asp-route-pageSize="@ViewBag.CurrentPageSize" asp-route-department="@ViewBag.CurrentDepartment" asp-route-designation="@ViewBag.CurrentDesignation" asp-route-employeeName="@ViewBag.CurrentEmployeeName" asp-route-employeeID="@ViewBag.CurrentEmployeeID">&laquo;&laquo;</a>
+                            <a class="page-link" asp-action="Index" asp-route-page="1" asp-route-pageSize="@ViewBag.CurrentPageSize" asp-route-department="@ViewBag.CurrentDepartment" asp-route-designation="@ViewBag.CurrentDesignation" asp-route-year2024="@ViewBag.CurrentYear2024" asp-route-applyTax="@ViewBag.CurrentApplyTax" asp-route-employeeName="@ViewBag.CurrentEmployeeName" asp-route-employeeID="@ViewBag.CurrentEmployeeID" asp-route-sortBy="@ViewBag.CurrentSortBy" asp-route-sortOrder="@ViewBag.CurrentSortOrder">&laquo;&laquo;</a>
                         </li>
                         
                         <li class="page-item @prevDisabled">
-                            <a class="page-link" asp-action="Index" asp-route-page="@(Model.PageIndex - 1)" asp-route-pageSize="@ViewBag.CurrentPageSize" asp-route-department="@ViewBag.CurrentDepartment" asp-route-designation="@ViewBag.CurrentDesignation" asp-route-employeeName="@ViewBag.CurrentEmployeeName" asp-route-employeeID="@ViewBag.CurrentEmployeeID">&laquo;</a>
+                            <a class="page-link" asp-action="Index" asp-route-page="@(Model.PageIndex - 1)" asp-route-pageSize="@ViewBag.CurrentPageSize" asp-route-department="@ViewBag.CurrentDepartment" asp-route-designation="@ViewBag.CurrentDesignation" asp-route-year2024="@ViewBag.CurrentYear2024" asp-route-applyTax="@ViewBag.CurrentApplyTax" asp-route-employeeName="@ViewBag.CurrentEmployeeName" asp-route-employeeID="@ViewBag.CurrentEmployeeID" asp-route-sortBy="@ViewBag.CurrentSortBy" asp-route-sortOrder="@ViewBag.CurrentSortOrder">&laquo;</a>
                         </li>
                         
                         @{
@@ -161,16 +293,16 @@
                         {
                             var active = i == Model.PageIndex ? "active" : "";
                             <li class="page-item @active">
-                                <a class="page-link" asp-action="Index" asp-route-page="@i" asp-route-pageSize="@ViewBag.CurrentPageSize" asp-route-department="@ViewBag.CurrentDepartment" asp-route-designation="@ViewBag.CurrentDesignation" asp-route-employeeName="@ViewBag.CurrentEmployeeName" asp-route-employeeID="@ViewBag.CurrentEmployeeID">@i</a>
+                                <a class="page-link" asp-action="Index" asp-route-page="@i" asp-route-pageSize="@ViewBag.CurrentPageSize" asp-route-department="@ViewBag.CurrentDepartment" asp-route-designation="@ViewBag.CurrentDesignation" asp-route-year2024="@ViewBag.CurrentYear2024" asp-route-applyTax="@ViewBag.CurrentApplyTax" asp-route-employeeName="@ViewBag.CurrentEmployeeName" asp-route-employeeID="@ViewBag.CurrentEmployeeID" asp-route-sortBy="@ViewBag.CurrentSortBy" asp-route-sortOrder="@ViewBag.CurrentSortOrder">@i</a>
                             </li>
                         }
                         
                         <li class="page-item @nextDisabled">
-                            <a class="page-link" asp-action="Index" asp-route-page="@(Model.PageIndex + 1)" asp-route-pageSize="@ViewBag.CurrentPageSize" asp-route-department="@ViewBag.CurrentDepartment" asp-route-designation="@ViewBag.CurrentDesignation" asp-route-employeeName="@ViewBag.CurrentEmployeeName" asp-route-employeeID="@ViewBag.CurrentEmployeeID">&raquo;</a>
+                            <a class="page-link" asp-action="Index" asp-route-page="@(Model.PageIndex + 1)" asp-route-pageSize="@ViewBag.CurrentPageSize" asp-route-department="@ViewBag.CurrentDepartment" asp-route-designation="@ViewBag.CurrentDesignation" asp-route-year2024="@ViewBag.CurrentYear2024" asp-route-applyTax="@ViewBag.CurrentApplyTax" asp-route-employeeName="@ViewBag.CurrentEmployeeName" asp-route-employeeID="@ViewBag.CurrentEmployeeID" asp-route-sortBy="@ViewBag.CurrentSortBy" asp-route-sortOrder="@ViewBag.CurrentSortOrder">&raquo;</a>
                         </li>
                         
                         <li class="page-item @nextDisabled">
-                            <a class="page-link" asp-action="Index" asp-route-page="@Model.TotalPages" asp-route-pageSize="@ViewBag.CurrentPageSize" asp-route-department="@ViewBag.CurrentDepartment" asp-route-designation="@ViewBag.CurrentDesignation" asp-route-employeeName="@ViewBag.CurrentEmployeeName" asp-route-employeeID="@ViewBag.CurrentEmployeeID">&raquo;&raquo;</a>
+                            <a class="page-link" asp-action="Index" asp-route-page="@Model.TotalPages" asp-route-pageSize="@ViewBag.CurrentPageSize" asp-route-department="@ViewBag.CurrentDepartment" asp-route-designation="@ViewBag.CurrentDesignation" asp-route-year2024="@ViewBag.CurrentYear2024" asp-route-applyTax="@ViewBag.CurrentApplyTax" asp-route-employeeName="@ViewBag.CurrentEmployeeName" asp-route-employeeID="@ViewBag.CurrentEmployeeID" asp-route-sortBy="@ViewBag.CurrentSortBy" asp-route-sortOrder="@ViewBag.CurrentSortOrder">&raquo;&raquo;</a>
                         </li>
                     </ul>
                 </nav>

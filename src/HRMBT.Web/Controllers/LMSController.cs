@@ -49,8 +49,49 @@ namespace HRMBT.Web.Controllers
         public async Task<IActionResult> Create([Bind("EmployeeId,LeaveType,FromDate,ToDate,Status")] LeaveRequest leaveRequest)
         {
             ViewData["Module"] = "LMS";
+            
+            // Validate leave balance (FR-002)
             if (ModelState.IsValid)
             {
+                // Calculate leave days requested
+                var leaveDays = (leaveRequest.ToDate - leaveRequest.FromDate).Days + 1;
+                
+                // Get employee leave balance
+                var employee = await _context.Employees.FindAsync(leaveRequest.EmployeeId);
+                if (employee == null)
+                {
+                    ModelState.AddModelError("EmployeeId", "Employee not found.");
+                    return View(leaveRequest);
+                }
+                
+                // Get current year leave balance (Year2024)
+                var availableLeaves = employee.Year2024 ?? 0;
+                
+                // Calculate used leaves (approved leaves for current year)
+                var currentYear = DateTime.Now.Year;
+                var usedLeaves = await _context.LeaveRequests
+                    .Where(l => l.EmployeeId == leaveRequest.EmployeeId 
+                        && l.Status == "Approved" 
+                        && l.FromDate.Year == currentYear)
+                    .SumAsync(l => (l.ToDate - l.FromDate).Days + 1);
+                
+                var remainingLeaves = availableLeaves - usedLeaves;
+                
+                // Validate leave balance
+                if (leaveDays > remainingLeaves)
+                {
+                    ModelState.AddModelError("", 
+                        $"Insufficient leave balance. Available: {remainingLeaves} days, Requested: {leaveDays} days.");
+                    ViewBag.AvailableLeaves = remainingLeaves;
+                    return View(leaveRequest);
+                }
+                
+                // Set default status if not provided
+                if (string.IsNullOrEmpty(leaveRequest.Status))
+                {
+                    leaveRequest.Status = "Pending";
+                }
+                
                 _context.Add(leaveRequest);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));

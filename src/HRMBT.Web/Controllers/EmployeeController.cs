@@ -16,7 +16,7 @@ public class EmployeeController : Controller
     }
 
     // GET: Employee
-    public async Task<IActionResult> Index(string? department, string? designation, string? employeeName, string? employeeID, int page = 1, int pageSize = 20)
+    public async Task<IActionResult> Index(string? department, string? designation, string? employeeName, string? employeeID, string? year2024, string? applyTax, string? sortBy = "EmployeeID", string? sortOrder = "asc", int page = 1, int pageSize = 20)
     {
         ViewData["Module"] = "Employees";
         
@@ -53,8 +53,32 @@ public class EmployeeController : Controller
                 query = query.Where(e => e.EmployeeID != null && e.EmployeeID.Contains(employeeID));
             }
 
-            // Order by EmployeeID for consistent pagination
-            query = query.OrderBy(e => e.EmployeeID);
+            // Filter by Year2024 (FR-005)
+            if (!string.IsNullOrEmpty(year2024))
+            {
+                if (int.TryParse(year2024, out int yearValue))
+                {
+                    query = query.Where(e => e.Year2024 == yearValue);
+                }
+            }
+
+            // Filter by ApplyTax (FR-005)
+            if (!string.IsNullOrEmpty(applyTax))
+            {
+                query = query.Where(e => e.ApplyTax == applyTax);
+            }
+
+            // Apply sorting
+            query = sortBy?.ToLower() switch
+            {
+                "employeename" => sortOrder == "desc" ? query.OrderByDescending(e => e.EmployeeName) : query.OrderBy(e => e.EmployeeName),
+                "department" => sortOrder == "desc" ? query.OrderByDescending(e => e.Department) : query.OrderBy(e => e.Department),
+                "designation" => sortOrder == "desc" ? query.OrderByDescending(e => e.Designation) : query.OrderBy(e => e.Designation),
+                "basicSalary" => sortOrder == "desc" ? query.OrderByDescending(e => e.BasicSalary) : query.OrderBy(e => e.BasicSalary),
+                "year2024" => sortOrder == "desc" ? query.OrderByDescending(e => e.Year2024) : query.OrderBy(e => e.Year2024),
+                "applytax" => sortOrder == "desc" ? query.OrderByDescending(e => e.ApplyTax) : query.OrderBy(e => e.ApplyTax),
+                _ => query.OrderBy(e => e.EmployeeID) // Default sort by EmployeeID
+            };
 
             // Get paginated results
             var paginatedEmployees = await PaginatedList<Employee>.CreateAsync(query, page, pageSize);
@@ -62,13 +86,18 @@ public class EmployeeController : Controller
             // Get filter options
             ViewBag.Departments = await _context.Employees.Select(e => e.Department).Distinct().Where(d => d != null).OrderBy(d => d).ToListAsync();
             ViewBag.Designations = await _context.Employees.Select(e => e.Designation).Distinct().Where(d => d != null).OrderBy(d => d).ToListAsync();
+            ViewBag.Year2024Options = await _context.Employees.Select(e => e.Year2024).Distinct().Where(y => y != null).OrderBy(y => y).ToListAsync();
             
             // Preserve filter values
             ViewBag.CurrentDepartment = department;
             ViewBag.CurrentDesignation = designation;
             ViewBag.CurrentEmployeeName = employeeName;
             ViewBag.CurrentEmployeeID = employeeID;
+            ViewBag.CurrentYear2024 = year2024;
+            ViewBag.CurrentApplyTax = applyTax;
             ViewBag.CurrentPageSize = pageSize;
+            ViewBag.CurrentSortBy = sortBy;
+            ViewBag.CurrentSortOrder = sortOrder;
 
             // Page size options
             ViewBag.PageSizeOptions = new List<int> { 10, 20, 50, 100 };

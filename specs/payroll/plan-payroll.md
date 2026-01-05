@@ -14,6 +14,8 @@
 - Create a service/class to calculate gross, deductions, and net salary
 - Include leave adjustments
 - Store Payslip and PayslipDetails
+- Implement payroll calculations strictly according to spec-payroll.md → Payroll Calculation Rules
+
 
 ## Phase 4: Locking & Reporting
 - Add lock/unlock feature

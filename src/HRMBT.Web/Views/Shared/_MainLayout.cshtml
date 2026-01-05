@@ -176,7 +176,18 @@
         <div class="row">
             <!-- Sidebar (20% width) -->
             <div class="col-2 sidebar">
-                @await Html.PartialAsync("_Sidebar")
+                @if (ViewData["Module"]?.ToString() == "Payroll")
+                {
+                    @await Html.PartialAsync("_PayrollSidebar")
+                }
+                else if (ViewData["Module"]?.ToString() == "Attendance")
+                {
+                    @await Html.PartialAsync("_AttendanceSidebar")
+                }
+                else
+                {
+                    @await Html.PartialAsync("_Sidebar")
+                }
             </div>
             
             <!-- Main Content (80% width) -->

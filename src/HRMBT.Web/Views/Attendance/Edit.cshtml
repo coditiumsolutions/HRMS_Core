@@ -1,0 +1,88 @@
+@model HRMBT.Web.Models.Attendance
+
+@{
+    ViewData["Title"] = "Edit Attendance";
+}
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>Edit Attendance</h1>
+                <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+            </div>
+
+            <form asp-action="Edit">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                <input type="hidden" asp-for="AttendanceID" />
+
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">Employee Information</div>
+                    <div class="card-body row">
+                        <div class="form-group col-md-6 mb-3">
+                            <label asp-for="EmployeeID" class="control-label"></label>
+                            <input asp-for="EmployeeID" class="form-control" />
+                            <span asp-validation-for="EmployeeID" class="text-danger"></span>
+                        </div>
+                        <div class="form-group col-md-6 mb-3">
+                            <label asp-for="EmployeeName" class="control-label"></label>
+                            <input asp-for="EmployeeName" class="form-control" />
+                            <span asp-validation-for="EmployeeName" class="text-danger"></span>
+                        </div>
+                        <div class="form-group col-md-6 mb-3">
+                            <label asp-for="DepartmentName" class="control-label"></label>
+                            <input asp-for="DepartmentName" class="form-control" />
+                            <span asp-validation-for="DepartmentName" class="text-danger"></span>
+                        </div>
+                        <div class="form-group col-md-6 mb-3">
+                            <label asp-for="AttendanceDate" class="control-label"></label>
+                            <input asp-for="AttendanceDate" type="date" class="form-control" />
+                            <span asp-validation-for="AttendanceDate" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header bg-success text-white">Attendance Details</div>
+                    <div class="card-body row">
+                        <div class="form-group col-md-4 mb-3">
+                            <label asp-for="TimeIn" class="control-label"></label>
+                            <input asp-for="TimeIn" type="time" class="form-control" />
+                            <span asp-validation-for="TimeIn" class="text-danger"></span>
+                        </div>
+                        <div class="form-group col-md-4 mb-3">
+                            <label asp-for="TimeOut" class="control-label"></label>
+                            <input asp-for="TimeOut" type="time" class="form-control" />
+                            <span asp-validation-for="TimeOut" class="text-danger"></span>
+                        </div>
+                        <div class="form-group col-md-4 mb-3">
+                            <label asp-for="Status" class="control-label"></label>
+                            <select asp-for="Status" class="form-select">
+                                <option value="">-- Select Status --</option>
+                                <option value="P">P - Present</option>
+                                <option value="A">A - Absent</option>
+                                <option value="L">L - Late</option>
+                                <option value="H">H - Holiday</option>
+                            </select>
+                            <span asp-validation-for="Status" class="text-danger"></span>
+                        </div>
+                        <div class="form-group col-md-12 mb-3">
+                            <label asp-for="Comments" class="control-label"></label>
+                            <textarea asp-for="Comments" class="form-control" rows="3"></textarea>
+                            <span asp-validation-for="Comments" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group mt-4 mb-5">
+                    <input type="submit" value="Save Changes" class="btn btn-warning btn-lg w-100" />
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}
+

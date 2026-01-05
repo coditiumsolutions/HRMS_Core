@@ -1,0 +1,82 @@
+@model HRMBT.Web.Models.Attendance
+
+@{
+    ViewData["Title"] = "Attendance Details";
+}
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>Attendance Details</h1>
+                <div>
+                    <a asp-action="Edit" asp-route-id="@Model.AttendanceID" class="btn btn-warning">Edit</a>
+                    <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">Employee Information</div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-4">@Html.DisplayNameFor(model => model.AttendanceID)</dt>
+                        <dd class="col-sm-8">@Html.DisplayFor(model => model.AttendanceID)</dd>
+
+                        <dt class="col-sm-4">@Html.DisplayNameFor(model => model.EmployeeID)</dt>
+                        <dd class="col-sm-8">@Html.DisplayFor(model => model.EmployeeID)</dd>
+
+                        <dt class="col-sm-4">@Html.DisplayNameFor(model => model.EmployeeName)</dt>
+                        <dd class="col-sm-8">@Html.DisplayFor(model => model.EmployeeName)</dd>
+
+                        <dt class="col-sm-4">@Html.DisplayNameFor(model => model.DepartmentName)</dt>
+                        <dd class="col-sm-8">@Html.DisplayFor(model => model.DepartmentName)</dd>
+
+                        <dt class="col-sm-4">@Html.DisplayNameFor(model => model.AttendanceDate)</dt>
+                        <dd class="col-sm-8">@Html.DisplayFor(model => model.AttendanceDate)</dd>
+                    </dl>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">Attendance Details</div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-4">@Html.DisplayNameFor(model => model.TimeIn)</dt>
+                        <dd class="col-sm-8">@(Model.TimeIn?.ToString(@"hh\:mm\:ss") ?? "-")</dd>
+
+                        <dt class="col-sm-4">@Html.DisplayNameFor(model => model.TimeOut)</dt>
+                        <dd class="col-sm-8">@(Model.TimeOut?.ToString(@"hh\:mm\:ss") ?? "-")</dd>
+
+                        <dt class="col-sm-4">@Html.DisplayNameFor(model => model.Status)</dt>
+                        <dd class="col-sm-8">
+                            @if (Model.Status == "P")
+                            {
+                                <span class="badge bg-success">Present</span>
+                            }
+                            else if (Model.Status == "A")
+                            {
+                                <span class="badge bg-danger">Absent</span>
+                            }
+                            else if (Model.Status == "L")
+                            {
+                                <span class="badge bg-warning">Late</span>
+                            }
+                            else if (Model.Status == "H")
+                            {
+                                <span class="badge bg-info">Holiday</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">@Model.Status</span>
+                            }
+                        </dd>
+
+                        <dt class="col-sm-4">@Html.DisplayNameFor(model => model.Comments)</dt>
+                        <dd class="col-sm-8">@(Model.Comments ?? "-")</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+

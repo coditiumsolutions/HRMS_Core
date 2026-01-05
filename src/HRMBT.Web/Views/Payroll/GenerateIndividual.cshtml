@@ -1,0 +1,79 @@
+@model HRMBT.Web.Models.ViewModels.GenerateIndividualVM
+
+@{
+    ViewData["Title"] = "Generate Individual Payroll";
+    ViewData["Module"] = "Payroll";
+}
+
+<h2>Generate Individual Payroll</h2>
+
+<hr />
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<form asp-action="GenerateIndividual" method="post">
+    @Html.AntiForgeryToken()
+    
+    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label asp-for="EmployeeID" class="form-label">Employee ID <span class="text-danger">*</span></label>
+                <input asp-for="EmployeeID" class="form-control" placeholder="Enter Employee ID" />
+                <span asp-validation-for="EmployeeID" class="text-danger"></span>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="mb-3">
+                <label asp-for="Month" class="form-label">Month <span class="text-danger">*</span></label>
+                <select asp-for="Month" class="form-control">
+                    @for (int i = 1; i <= 12; i++)
+                    {
+                        var monthName = System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(i);
+                        <option value="@i" selected="@(Model.Month == i)">@monthName</option>
+                    }
+                </select>
+                <span asp-validation-for="Month" class="text-danger"></span>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="mb-3">
+                <label asp-for="Year" class="form-label">Year <span class="text-danger">*</span></label>
+                <input asp-for="Year" class="form-control" type="number" min="2000" max="2100" />
+                <span asp-validation-for="Year" class="text-danger"></span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="alert alert-info">
+        <strong>Note:</strong> This will generate a payslip for the specified employee. 
+        If a payslip already exists for this employee and period, an error will be shown.
+    </div>
+    
+    <div class="mb-3">
+        <button type="submit" class="btn btn-primary">Generate Payroll</button>
+        <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+    </div>
+</form>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}
+

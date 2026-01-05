@@ -38,26 +38,31 @@
 
         <!-- SIDEBAR (20%) -->
         <aside class="col-2 bg-light vh-100 p-3">
-           <strong class="text-white">Menu</strong>
-            <hr />
-            <ul class="nav flex-column">
-                <li class="nav-item"><a class="nav-link" href="#">Link 1</a></li>
-                <li class="nav-item"><a class="nav-link" href="#">Link 2</a></li>
-                <li class="nav-item"><a class="nav-link" href="#">Link 3</a></li>
-            </ul>
+            @if (ViewData["Module"]?.ToString() == "Payroll")
+            {
+                @await Html.PartialAsync("_PayrollSidebar")
+            }
+            else
+            {
+                <strong class="text-dark">Menu</strong>
+                <hr />
+                <ul class="nav flex-column">
+                    <li class="nav-item"><a class="nav-link" href="#">Link 1</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#">Link 2</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#">Link 3</a></li>
+                </ul>
 
+                <hr class="text-dark" />
 
-            <hr class="text-white" />
-
-<ul class="nav flex-column">
-    <li class="nav-item">
-        <a class="nav-link" asp-controller="Account" asp-action="Login">Login</a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link" asp-controller="Account" asp-action="Logout">Logout</a>
-    </li>
-</ul>
-
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link" asp-controller="Account" asp-action="Login">Login</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" asp-controller="Account" asp-action="Logout">Logout</a>
+                    </li>
+                </ul>
+            }
         </aside>
 
         <!-- MAIN CONTENT (80%) -->

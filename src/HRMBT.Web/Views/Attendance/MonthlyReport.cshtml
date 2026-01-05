@@ -1,0 +1,126 @@
+@model List<HRMBT.Web.Models.ViewModels.EmployeeMonthlySummary>
+
+@{
+    ViewData["Title"] = "Monthly Attendance Report";
+    ViewData["Module"] = "Attendance";
+    var month = ViewBag.Month ?? DateTime.Now.Month;
+    var year = ViewBag.Year ?? DateTime.Now.Year;
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>Monthly Attendance Report</h1>
+                <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+            </div>
+            
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Select Month, Year & Department</h5>
+                </div>
+                <div class="card-body">
+                    <form asp-action="MonthlyReport" method="get" class="row g-3">
+                        <div class="col-md-3">
+                            <label for="month" class="form-label">Month</label>
+                            <select name="month" id="month" class="form-select">
+                                @for (int i = 1; i <= 12; i++)
+                                {
+                                    var monthName = System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(i);
+                                    if (i == month)
+                                    {
+                                        <option value="@i" selected>@monthName</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@i">@monthName</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="year" class="form-label">Year</label>
+                            <input type="number" name="year" id="year" class="form-control" value="@year" min="2000" max="2100" />
+                        </div>
+                        <div class="col-md-3">
+                            <label for="department" class="form-label">Department</label>
+                            <select name="department" id="department" class="form-select">
+                                <option value="">All Departments</option>
+                                @if (ViewBag.Departments != null)
+                                {
+                                    foreach (var dept in ViewBag.Departments)
+                                    {
+                                        if (ViewBag.SelectedDepartment != null && ViewBag.SelectedDepartment.ToString() == dept)
+                                        {
+                                            <option value="@dept" selected>@dept</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@dept">@dept</option>
+                                        }
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary">Generate Report</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <h3>Report for @System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(month) @year</h3>
+
+            @if (Model != null && Model.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped table-bordered table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Employee ID</th>
+                                <th>Employee Name</th>
+                                <th>Department</th>
+                                <th class="text-center">Total Present</th>
+                                <th class="text-center">Total Absent</th>
+                                <th class="text-center">Total Late</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model)
+                            {
+                            <tr>
+                                <td>@item.EmployeeID</td>
+                                <td>@item.EmployeeName</td>
+                                <td>@item.DepartmentName</td>
+                                <td class="text-center">
+                                    <span class="badge bg-success">@item.TotalPresent</span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-danger">@item.TotalAbsent</span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-warning">@item.TotalLate</span>
+                                </td>
+                            </tr>
+                            }
+                        </tbody>
+                        <tfoot class="table-secondary">
+                            <tr>
+                                <td colspan="3"><strong>Total</strong></td>
+                                <td class="text-center"><strong>@Model.Sum(e => e.TotalPresent)</strong></td>
+                                <td class="text-center"><strong>@Model.Sum(e => e.TotalAbsent)</strong></td>
+                                <td class="text-center"><strong>@Model.Sum(e => e.TotalLate)</strong></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info">
+                    No attendance records found for @System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(month) @year.
+                </div>
+            }
+        </div>
+    </div>
+</div>
