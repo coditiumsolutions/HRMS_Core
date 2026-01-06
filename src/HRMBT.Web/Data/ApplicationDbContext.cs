@@ -12,6 +12,7 @@ namespace HRMBT.Web.Data
         // public DbSet<Payroll> Payrolls { get; set; }
 
         public DbSet<Employee> Employees { get; set; }
+        public DbSet<Department> Departments { get; set; }
         public DbSet<Attendance> Attendances { get; set; }
         public DbSet<AttendanceUploadLog> AttendanceUploadLogs { get; set; }
         public DbSet<LeaveRequest> LeaveRequests { get; set; }
@@ -72,6 +73,15 @@ namespace HRMBT.Web.Data
                 entity.HasIndex(a => new { a.EmployeeID, a.AttendanceDate })
                     .IsUnique()
                     .HasDatabaseName("IX_Attendance_EmployeeID_Date");
+            });
+
+            // Department entity configuration
+            modelBuilder.Entity<Department>().ToTable("Departments", "dbo");
+            modelBuilder.Entity<Department>(entity =>
+            {
+                entity.HasKey(d => d.DepartmentID);
+                entity.Property(d => d.DepartmentID).HasColumnName("DepartmentID");
+                entity.Property(d => d.DepartmentName).HasColumnName("DepartmentName").HasColumnType("nvarchar(100)");
             });
 
             // AttendanceUploadLog entity configuration

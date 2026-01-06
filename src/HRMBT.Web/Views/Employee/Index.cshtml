@@ -35,7 +35,7 @@
                                 {
                                     foreach (var dept in ViewBag.Departments)
                                     {
-                                        <option value="@dept" selected="@(ViewBag.CurrentDepartment == dept)">@dept</option>
+                                        <option value="@dept.DepartmentName" selected="@(ViewBag.CurrentDepartment == dept.DepartmentName)">@dept.DepartmentName</option>
                                     }
                                 }
                             </select>
@@ -53,27 +53,7 @@
                                 }
                             </select>
                         </div>
-                        <div class="col-md-2">
-                            <label for="year2024" class="form-label">Year 2024</label>
-                            <select name="year2024" id="year2024" class="form-select">
-                                <option value="">All Years</option>
-                                @if (ViewBag.Year2024Options != null)
-                                {
-                                    foreach (var year in ViewBag.Year2024Options)
-                                    {
-                                        <option value="@year" selected="@(ViewBag.CurrentYear2024 == year.ToString())">@year</option>
-                                    }
-                                }
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <label for="applyTax" class="form-label">Apply Tax</label>
-                            <select name="applyTax" id="applyTax" class="form-select">
-                                <option value="">All</option>
-                                <option value="1" selected="@(ViewBag.CurrentApplyTax == "1")">Yes</option>
-                                <option value="0" selected="@(ViewBag.CurrentApplyTax == "0")">No</option>
-                            </select>
-                        </div>
+                        <!-- Removed Year 2024 and Apply Tax filters as requested -->
                         <div class="col-md-2">
                             <label for="employeeName" class="form-label">Employee Name</label>
                             <input type="text" name="employeeName" id="employeeName" class="form-control" value="@ViewBag.CurrentEmployeeName" placeholder="Search by name..." />
@@ -189,44 +169,7 @@
                                 </a>
                             </th>
                             <th>Status</th>
-                            <th>
-                                <a asp-action="Index" 
-                                   asp-route-sortBy="Year2024" 
-                                   asp-route-sortOrder="@(ViewBag.CurrentSortBy == "Year2024" && ViewBag.CurrentSortOrder == "asc" ? "desc" : "asc")"
-                                   asp-route-department="@ViewBag.CurrentDepartment"
-                                   asp-route-designation="@ViewBag.CurrentDesignation"
-                                   asp-route-year2024="@ViewBag.CurrentYear2024"
-                                   asp-route-applyTax="@ViewBag.CurrentApplyTax"
-                                   asp-route-employeeName="@ViewBag.CurrentEmployeeName"
-                                   asp-route-employeeID="@ViewBag.CurrentEmployeeID"
-                                   asp-route-pageSize="@ViewBag.CurrentPageSize"
-                                   class="text-white text-decoration-none">
-                                    Year 2024
-                                    @if (ViewBag.CurrentSortBy == "Year2024")
-                                    {
-                                        <span>@(ViewBag.CurrentSortOrder == "asc" ? "↑" : "↓")</span>
-                                    }
-                                </a>
-                            </th>
-                            <th>
-                                <a asp-action="Index" 
-                                   asp-route-sortBy="ApplyTax" 
-                                   asp-route-sortOrder="@(ViewBag.CurrentSortBy == "ApplyTax" && ViewBag.CurrentSortOrder == "asc" ? "desc" : "asc")"
-                                   asp-route-department="@ViewBag.CurrentDepartment"
-                                   asp-route-designation="@ViewBag.CurrentDesignation"
-                                   asp-route-year2024="@ViewBag.CurrentYear2024"
-                                   asp-route-applyTax="@ViewBag.CurrentApplyTax"
-                                   asp-route-employeeName="@ViewBag.CurrentEmployeeName"
-                                   asp-route-employeeID="@ViewBag.CurrentEmployeeID"
-                                   asp-route-pageSize="@ViewBag.CurrentPageSize"
-                                   class="text-white text-decoration-none">
-                                    Apply Tax
-                                    @if (ViewBag.CurrentSortBy == "ApplyTax")
-                                    {
-                                        <span>@(ViewBag.CurrentSortOrder == "asc" ? "↑" : "↓")</span>
-                                    }
-                                </a>
-                            </th>
+                            <!-- Removed Year 2024 and Apply Tax columns as requested -->
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -239,8 +182,6 @@
                                 <td>@item.Department</td>
                                 <td>@item.Designation</td>
                                 <td>@item.EmployeeStatus</td>
-                                <td>@item.Year2024</td>
-                                <td>@(item.ApplyTax == "1" ? "Yes" : "No")</td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
                                         <a asp-action="Edit" asp-route-id="@item.uid" class="btn btn-warning btn-sm">Edit</a>

@@ -83,8 +83,11 @@ public class EmployeeController : Controller
             // Get paginated results
             var paginatedEmployees = await PaginatedList<Employee>.CreateAsync(query, page, pageSize);
 
-            // Get filter options
-            ViewBag.Departments = await _context.Employees.Select(e => e.Department).Distinct().Where(d => d != null).OrderBy(d => d).ToListAsync();
+            // Get filter options from Departments table
+            ViewBag.Departments = await _context.Departments
+                .Where(d => d.DepartmentName != null)
+                .OrderBy(d => d.DepartmentName)
+                .ToListAsync();
             ViewBag.Designations = await _context.Employees.Select(e => e.Designation).Distinct().Where(d => d != null).OrderBy(d => d).ToListAsync();
             ViewBag.Year2024Options = await _context.Employees.Select(e => e.Year2024).Distinct().Where(y => y != null).OrderBy(y => y).ToListAsync();
             
