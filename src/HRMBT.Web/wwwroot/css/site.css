@@ -54,3 +54,11 @@ body {
   color: #ffffff;
   font-weight: 600;
 }
+
+/* Sidebar title/heading - matches Attendance Menu styling */
+.sidebar-title {
+  font-size: 1.1em;
+  font-weight: bold;
+  color: #0d6efd !important;
+  background-color: transparent;
+}

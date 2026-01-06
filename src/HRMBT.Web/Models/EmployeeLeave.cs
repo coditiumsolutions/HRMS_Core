@@ -11,6 +11,7 @@ public class EmployeeLeave
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+    [Column("uid")]
     public int Id { get; set; }
 
     /// <summary>
@@ -27,7 +28,7 @@ public class EmployeeLeave
     /// </summary>
     [Required(ErrorMessage = "Leave type name is required")]
     [Display(Name = "Leave Type Name")]
-    [StringLength(50)]
+    [StringLength(250)]
     [Column("LeaveTypeName")]
     public string LeaveTypeName { get; set; } = string.Empty;
 
@@ -54,28 +55,43 @@ public class EmployeeLeave
     /// </summary>
     [Display(Name = "Total Days")]
     [Column("TotalDays")]
-    public decimal? TotalDays { get; set; }
-
-    /// <summary>
-    /// Short leave or manual adjustment
-    /// </summary>
-    [Display(Name = "Short Adjustment")]
-    [Column("Short_Adj")]
-    public decimal? Short_Adj { get; set; }
+    public double? TotalDays { get; set; }
 
     /// <summary>
     /// Additional days to add (manual adjustment)
     /// </summary>
     [Display(Name = "Add Days")]
     [Column("AddDays")]
-    public decimal? AddDays { get; set; }
+    public int? AddDays { get; set; }
 
     /// <summary>
     /// Days to exclude (manual adjustment)
     /// </summary>
     [Display(Name = "Exclude Days")]
     [Column("ExcludeDays")]
-    public decimal? ExcludeDays { get; set; }
+    public int? ExcludeDays { get; set; }
+
+    /// <summary>
+    /// Short leave or manual adjustment (stored as varchar)
+    /// </summary>
+    [Display(Name = "Short Adjustment")]
+    [Column("Short_Adj")]
+    public string? Short_Adj { get; set; }
+
+    /// <summary>
+    /// Department supervisor comments
+    /// </summary>
+    [Display(Name = "Comments")]
+    [Column("DepSupervisorComments")]
+    public string? Comments { get; set; }
+
+    /// <summary>
+    /// Year for the leave application
+    /// </summary>
+    [Display(Name = "Year")]
+    [StringLength(50)]
+    [Column("Year")]
+    public string? Year { get; set; }
 
     /// <summary>
     /// Leave status: Applied, Approved, Rejected, Cancelled
@@ -89,24 +105,23 @@ public class EmployeeLeave
     /// Person who approved the leave
     /// </summary>
     [Display(Name = "Approved By")]
-    [StringLength(100)]
+    [StringLength(50)]
     [Column("ApprovedBy")]
     public string? ApprovedBy { get; set; }
 
     /// <summary>
-    /// Date and time when leave was approved
+    /// Date when leave was approved
     /// </summary>
     [Display(Name = "Approved On")]
-    [DataType(DataType.DateTime)]
+    [DataType(DataType.Date)]
     [Column("ApprovedOn")]
     public DateTime? ApprovedOn { get; set; }
 
     /// <summary>
-    /// Optional comments or remarks
+    /// Date when leave was applied
     /// </summary>
-    [Display(Name = "Comments")]
-    [StringLength(500)]
-    [Column("Comments")]
-    public string? Comments { get; set; }
+    [Display(Name = "Applied Date")]
+    [DataType(DataType.Date)]
+    [Column("AppliedDate")]
+    public DateTime? AppliedDate { get; set; }
 }
-

@@ -1,0 +1,89 @@
+@model HRMBT.Web.Models.EmployeeLeave
+
+@{
+    ViewData["Title"] = "Leave Application Details";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Leave Application Details</h3>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-4">ID</dt>
+                        <dd class="col-sm-8">@Html.DisplayFor(model => model.Id)</dd>
+
+                        <dt class="col-sm-4">Employee ID</dt>
+                        <dd class="col-sm-8">@Html.DisplayFor(model => model.EmployeeID)</dd>
+
+                        <dt class="col-sm-4">Leave Type</dt>
+                        <dd class="col-sm-8">@Html.DisplayFor(model => model.LeaveTypeName)</dd>
+
+                        <dt class="col-sm-4">Start Date</dt>
+                        <dd class="col-sm-8">@Model.StartDate.ToString("yyyy-MM-dd")</dd>
+
+                        <dt class="col-sm-4">End Date</dt>
+                        <dd class="col-sm-8">@Model.EndDate.ToString("yyyy-MM-dd")</dd>
+
+                        <dt class="col-sm-4">Total Days</dt>
+                        <dd class="col-sm-8">@Html.DisplayFor(model => model.TotalDays)</dd>
+
+                        <dt class="col-sm-4">Add Days</dt>
+                        <dd class="col-sm-8">@Html.DisplayFor(model => model.AddDays)</dd>
+
+                        <dt class="col-sm-4">Exclude Days</dt>
+                        <dd class="col-sm-8">@Html.DisplayFor(model => model.ExcludeDays)</dd>
+
+                        <dt class="col-sm-4">Short Adjustment</dt>
+                        <dd class="col-sm-8">@Html.DisplayFor(model => model.Short_Adj)</dd>
+
+                        <dt class="col-sm-4">Status</dt>
+                        <dd class="col-sm-8">
+                            @{
+                                var statusClass = Model.Status switch
+                                {
+                                    "Approved" => "badge bg-success",
+                                    "Rejected" => "badge bg-danger",
+                                    "Cancelled" => "badge bg-secondary",
+                                    _ => "badge bg-warning"
+                                };
+                            }
+                            <span class="@statusClass">@Html.DisplayFor(model => model.Status)</span>
+                        </dd>
+
+                        @if (!string.IsNullOrEmpty(Model.ApprovedBy))
+                        {
+                            <dt class="col-sm-4">Approved By</dt>
+                            <dd class="col-sm-8">@Html.DisplayFor(model => model.ApprovedBy)</dd>
+
+                            <dt class="col-sm-4">Approved On</dt>
+                            <dd class="col-sm-8">@(Model.ApprovedOn?.ToString("yyyy-MM-dd") ?? "N/A")</dd>
+                        }
+
+                        @if (!string.IsNullOrEmpty(Model.Comments))
+                        {
+                            <dt class="col-sm-4">Comments</dt>
+                            <dd class="col-sm-8">@Html.DisplayFor(model => model.Comments)</dd>
+                        }
+                    </dl>
+
+                    <div class="form-actions mt-4">
+                        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">
+                            <i class="bi bi-pencil"></i> Edit
+                        </a>
+                        <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-danger">
+                            <i class="bi bi-trash"></i> Delete
+                        </a>
+                        <a asp-action="Index" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Back to List
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+

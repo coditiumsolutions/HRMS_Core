@@ -83,7 +83,15 @@ namespace HRMBT.Web.Data
             // ✅ LMS TABLES
             modelBuilder.Entity<LeaveQuota>().ToTable("LeaveQuota");
             modelBuilder.Entity<GazettedHoliday>().ToTable("GazettedHoliday");
-            modelBuilder.Entity<EmployeeLeave>().ToTable("EmployeeLeaves");
+            
+            // EmployeeLeave entity configuration
+            modelBuilder.Entity<EmployeeLeave>(entity =>
+            {
+                entity.ToTable("EmployeeLeaves");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("uid");
+            });
+            
             modelBuilder.Entity<CarryforwardLeave>().ToTable("CarryforwardLeaves");
 
             // ✅ PAYROLL TABLES

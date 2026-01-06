@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Threading.Tasks;
 using System.Linq;
+using System.IO;
 
 namespace HRMBT.Web.Controllers
 {
@@ -294,25 +295,35 @@ namespace HRMBT.Web.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // GET: Upload CSV Form
+        // GET: Upload Excel Form
         public IActionResult Upload()
         {
             ViewData["Module"] = "Attendance";
             return View();
         }
 
-        // POST: Process CSV
+        // POST: Process Excel
         [HttpPost]
-        public async Task<IActionResult> Upload(IFormFile csvFile)
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Upload(IFormFile excelFile)
         {
             ViewData["Module"] = "Attendance";
-            if (csvFile == null || csvFile.Length == 0)
+            if (excelFile == null || excelFile.Length == 0)
             {
-                ViewBag.Error = "Please select a CSV file.";
+                ViewBag.Error = "Please select an Excel file.";
                 return View();
             }
 
-            var result = await _attendanceService.ProcessCsvAsync(csvFile);
+            // Validate file extension
+            var allowedExtensions = new[] { ".xlsx", ".xls" };
+            var fileExtension = Path.GetExtension(excelFile.FileName)?.ToLowerInvariant();
+            if (string.IsNullOrEmpty(fileExtension) || !allowedExtensions.Contains(fileExtension))
+            {
+                ViewBag.Error = "Invalid file type. Please upload an Excel file (.xlsx or .xls).";
+                return View();
+            }
+
+            var result = await _attendanceService.ProcessExcelAsync(excelFile);
             return View("UploadResult", result);
         }
 

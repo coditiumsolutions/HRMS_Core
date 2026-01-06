@@ -9,27 +9,68 @@
         <div class="col-md-10 offset-md-1">
             <h1>Upload Result</h1>
             
+            @{
+                var enteredCount = Model.SuccessfulRows;
+                var notEnteredCount = Model.FailedRows;
+                var totalCount = Model.TotalRows;
+            }
+
+            <!-- Summary Alert -->
+            <div class="alert @(Model.SuccessfulRows > 0 && Model.FailedRows == 0 ? "alert-success" : Model.SuccessfulRows > 0 ? "alert-warning" : "alert-danger") mb-4">
+                <h4 class="alert-heading">📊 Upload Summary</h4>
+                <hr>
+                <p class="mb-2">
+                    <strong>Total Records in File:</strong> <span class="badge bg-secondary fs-6">@totalCount</span>
+                </p>
+                <p class="mb-2">
+                    <strong>✅ Successfully Entered into Database:</strong> 
+                    <span class="badge bg-success fs-6">@enteredCount</span>
+                    @if (totalCount > 0)
+                    {
+                        <span class="text-muted">(@((enteredCount * 100.0 / totalCount).ToString("F1"))%)</span>
+                    }
+                </p>
+                <p class="mb-0">
+                    <strong>❌ Not Entered (Failed/Skipped):</strong> 
+                    <span class="badge bg-danger fs-6">@notEnteredCount</span>
+                    @if (totalCount > 0)
+                    {
+                        <span class="text-muted">(@((notEnteredCount * 100.0 / totalCount).ToString("F1"))%)</span>
+                    }
+                </p>
+            </div>
+
             <div class="card mb-4">
                 <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">Upload Summary</h5>
+                    <h5 class="mb-0">Detailed Statistics</h5>
                 </div>
                 <div class="card-body">
                     <dl class="row">
-                        <dt class="col-sm-3">Total Rows:</dt>
-                        <dd class="col-sm-9">@Model.TotalRows</dd>
-                        
-                        <dt class="col-sm-3">Successful Rows:</dt>
-                        <dd class="col-sm-9">
-                            <span class="badge bg-success">@Model.SuccessfulRows</span>
+                        <dt class="col-sm-4">Total Records in File:</dt>
+                        <dd class="col-sm-8">
+                            <span class="badge bg-secondary fs-6">@Model.TotalRows</span>
                         </dd>
                         
-                        <dt class="col-sm-3">Failed Rows:</dt>
-                        <dd class="col-sm-9">
-                            <span class="badge bg-danger">@Model.FailedRows</span>
+                        <dt class="col-sm-4">Successfully Entered:</dt>
+                        <dd class="col-sm-8">
+                            <span class="badge bg-success fs-6">@Model.SuccessfulRows</span>
+                            @if (Model.TotalRows > 0)
+                            {
+                                <span class="text-muted ms-2">(@((Model.SuccessfulRows * 100.0 / Model.TotalRows).ToString("F1"))% of total)</span>
+                            }
                         </dd>
                         
-                        <dt class="col-sm-3">Upload Log ID:</dt>
-                        <dd class="col-sm-9">@Model.UploadLogId</dd>
+                        <dt class="col-sm-4">Not Entered (Failed):</dt>
+                        <dd class="col-sm-8">
+                            <span class="badge bg-danger fs-6">@Model.FailedRows</span>
+                            @if (Model.TotalRows > 0)
+                            {
+                                <span class="text-muted ms-2">(@((Model.FailedRows * 100.0 / Model.TotalRows).ToString("F1"))% of total)</span>
+                            }
+                        </dd>
+                        
+                        <dt class="col-sm-4">Upload Log ID:</dt>
+                        <dd class="col-sm-8">@Model.UploadLogId</dd>
                     </dl>
                 </div>
             </div>
@@ -51,10 +92,27 @@
                 </div>
             }
 
-            @if (Model.SuccessfulRows > 0)
+            @if (Model.SuccessfulRows > 0 && Model.FailedRows == 0)
             {
                 <div class="alert alert-success">
-                    <strong>Success!</strong> @Model.SuccessfulRows row(s) were successfully processed and saved.
+                    <strong>✅ Complete Success!</strong> 
+                    All @Model.SuccessfulRows record(s) from the file have been successfully entered into the database.
+                </div>
+            }
+            else if (Model.SuccessfulRows > 0 && Model.FailedRows > 0)
+            {
+                <div class="alert alert-warning">
+                    <strong>⚠️ Partial Success!</strong> 
+                    @Model.SuccessfulRows record(s) were successfully entered into the database, 
+                    but @Model.FailedRows record(s) failed. Please review the error details below.
+                </div>
+            }
+            else if (Model.FailedRows > 0)
+            {
+                <div class="alert alert-danger">
+                    <strong>❌ Upload Failed!</strong> 
+                    None of the @Model.TotalRows record(s) were entered into the database. 
+                    Please review the error details below and correct the issues before trying again.
                 </div>
             }
 
