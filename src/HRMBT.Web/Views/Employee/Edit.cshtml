@@ -4,144 +4,373 @@
     ViewData["Title"] = "Edit Employee";
 }
 
-<div class="container">
-    <div class="row">
-        <div class="col-md-10 offset-md-1">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h1>Edit Employee: @Model.EmployeeName</h1>
-                <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+@section Styles {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" crossorigin="anonymous" />
+    <link rel="stylesheet" href="~/css/employee-create.css" asp-append-version="true" />
+}
+
+<div class="employee-create-page py-4">
+    <div class="container-fluid px-3 px-lg-4">
+        <!-- Breadcrumb -->
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb mb-0 small">
+                <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Home</a></li>
+                <li class="breadcrumb-item"><a asp-action="Index">Employees</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Edit</li>
+            </ol>
+        </nav>
+
+        <!-- Page header -->
+        <div class="page-header-card p-4 mb-4">
+            <div class="row align-items-center g-3">
+                <div class="col-lg">
+                    <h1 class="h2 mb-1 fw-bold text-dark">Edit Employee</h1>
+                    <p class="text-muted mb-0">
+                        @if (!string.IsNullOrWhiteSpace(Model.EmployeeName))
+                        {
+                            <span class="fw-semibold text-dark">@Model.EmployeeName</span>
+                            <span class="mx-2 text-muted">•</span>
+                        }
+                        <span>Employee Management System — update profile, assignment, and compensation.</span>
+                    </p>
+                </div>
+                <div class="col-lg-auto d-none d-lg-flex align-items-center gap-2">
+                    @if (!string.IsNullOrWhiteSpace(Model.EmployeeID))
+                    {
+                        <span class="badge rounded-pill text-bg-light border px-3 py-2 text-secondary">
+                            <i class="bi bi-person-vcard me-1 text-primary"></i>@Model.EmployeeID
+                        </span>
+                    }
+                    <span class="badge rounded-pill text-bg-light border px-3 py-2 text-secondary">
+                        <i class="bi bi-pencil-square me-1 text-warning"></i> Edit mode
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <form asp-action="Edit" method="post" id="employeeCreateForm">
+            <input type="hidden" asp-for="uid" />
+            <input type="hidden" asp-for="ModifiedOn" />
+
+            <div asp-validation-summary="All" class="mb-4" role="alert"></div>
+
+            <div class="row g-4">
+                <!-- Main form column -->
+                <div class="col-lg-8">
+                    <!-- Personal Information -->
+                    <div class="card section-card mb-4">
+                        <div class="card-header">
+                            <i class="bi bi-person-badge"></i>Personal Information
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label asp-for="EmployeeID" class="form-label"></label>
+                                    <input asp-for="EmployeeID" class="form-control" placeholder="e.g. EMP-1024" autocomplete="off" />
+                                    <span asp-validation-for="EmployeeID" class="field-validation-error"></span>
+                                </div>
+                                <div class="col-md-8">
+                                    <label asp-for="EmployeeName" class="form-label"></label>
+                                    <input asp-for="EmployeeName" class="form-control" placeholder="Full legal name" autocomplete="name" />
+                                    <span asp-validation-for="EmployeeName" class="field-validation-error"></span>
+                                </div>
+                                <div class="col-md-6">
+                                    <label asp-for="FatherName" class="form-label"></label>
+                                    <input asp-for="FatherName" class="form-control" placeholder="Father / guardian name" />
+                                    <span asp-validation-for="FatherName" class="field-validation-error"></span>
+                                </div>
+                                <div class="col-md-6">
+                                    <label asp-for="CNIC" class="form-label"></label>
+                                    <input asp-for="CNIC" class="form-control" placeholder="XXXXX-XXXXXXX-X" />
+                                    <span asp-validation-for="CNIC" class="field-validation-error"></span>
+                                </div>
+                                <div class="col-md-6">
+                                    <label asp-for="DOB" class="form-label"></label>
+                                    <input asp-for="DOB" type="date" class="form-control" />
+                                    <span asp-validation-for="DOB" class="field-validation-error"></span>
+                                </div>
+                                <div class="col-md-6">
+                                    <label asp-for="MobileNo" class="form-label"></label>
+                                    <input asp-for="MobileNo" class="form-control" placeholder="Primary mobile number" inputmode="tel" />
+                                    <span asp-validation-for="MobileNo" class="field-validation-error"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Official Information -->
+                    <div class="card section-card mb-4">
+                        <div class="card-header">
+                            <i class="bi bi-building"></i>Official Information
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label asp-for="Department" class="form-label"></label>
+                                    <input asp-for="Department" class="form-control" placeholder="Department name" />
+                                    <span asp-validation-for="Department" class="field-validation-error"></span>
+                                </div>
+                                <div class="col-md-6">
+                                    <label asp-for="Designation" class="form-label"></label>
+                                    <input asp-for="Designation" class="form-control" placeholder="Job title / designation" />
+                                    <span asp-validation-for="Designation" class="field-validation-error"></span>
+                                </div>
+                                <div class="col-md-4">
+                                    <label asp-for="Project" class="form-label"></label>
+                                    <input asp-for="Project" class="form-control" placeholder="Project or cost center" />
+                                    <span asp-validation-for="Project" class="field-validation-error"></span>
+                                </div>
+                                <div class="col-md-4">
+                                    <label asp-for="DateOfJoining" class="form-label"></label>
+                                    <input asp-for="DateOfJoining" type="date" class="form-control" value="@(Model.DateOfJoining?.ToString("yyyy-MM-dd"))" />
+                                    <span asp-validation-for="DateOfJoining" class="field-validation-error"></span>
+                                </div>
+                                <div class="col-md-4">
+                                    <label asp-for="EmployeeStatus" class="form-label"></label>
+                                    <input asp-for="EmployeeStatus" class="form-control" placeholder="Active, Probation, etc." />
+                                    <span asp-validation-for="EmployeeStatus" class="field-validation-error"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Salary Information -->
+                    <div class="card section-card mb-4">
+                        <div class="card-header">
+                            <i class="bi bi-cash-stack"></i>Salary Information
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label asp-for="BasicSalary" class="form-label"></label>
+                                    <input asp-for="BasicSalary" class="form-control" type="number" step="0.01" min="0" placeholder="0.00" />
+                                    <span asp-validation-for="BasicSalary" class="field-validation-error"></span>
+                                </div>
+                                <div class="col-md-6">
+                                    <label asp-for="ApplyTax" class="form-label"></label>
+                                    <select asp-for="ApplyTax" class="form-select">
+                                        <option value="">— Select —</option>
+                                        <option value="Yes">Yes</option>
+                                        <option value="No">No</option>
+                                    </select>
+                                    <span asp-validation-for="ApplyTax" class="field-validation-error"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Contact Information -->
+                    <div class="card section-card mb-4">
+                        <div class="card-header">
+                            <i class="bi bi-telephone"></i>Contact Information
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-light border mb-0 d-flex gap-3 align-items-start">
+                                <i class="bi bi-info-circle text-primary fs-4 flex-shrink-0"></i>
+                                <div>
+                                    <strong class="d-block text-dark mb-1">Primary contact</strong>
+                                    <p class="small text-muted mb-0">
+                                        Mobile number is recorded under <strong>Personal Information</strong>. Use it for SMS, attendance alerts, and HR correspondence.
+                                        Additional contact channels (email, extension) can be added to the database when those fields are available.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Leave balances & adjustments -->
+                    <div class="card section-card mb-4">
+                        <div class="card-header">
+                            <i class="bi bi-calendar2-check"></i>Leave balances &amp; adjustments
+                        </div>
+                        <div class="card-body">
+                            <p class="small text-muted mb-3">Optional fields — used for carry-forward and historical leave totals.</p>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label asp-for="CarryForwardLeaves" class="form-label"></label>
+                                    <input asp-for="CarryForwardLeaves" class="form-control" type="number" step="0.01" placeholder="0" />
+                                    <span asp-validation-for="CarryForwardLeaves" class="field-validation-error"></span>
+                                </div>
+                                <div class="col-md-4">
+                                    <label asp-for="CarryForwardLeaves1" class="form-label"></label>
+                                    <input asp-for="CarryForwardLeaves1" class="form-control" type="number" step="0.01" placeholder="0" />
+                                    <span asp-validation-for="CarryForwardLeaves1" class="field-validation-error"></span>
+                                </div>
+                                <div class="col-md-4">
+                                    <label asp-for="Year2024" class="form-label"></label>
+                                    <input asp-for="Year2024" class="form-control" type="number" placeholder="e.g. 2024" />
+                                    <span asp-validation-for="Year2024" class="field-validation-error"></span>
+                                </div>
+                                <div class="col-md-4">
+                                    <label asp-for="Year2022" class="form-label"></label>
+                                    <input asp-for="Year2022" class="form-control" type="number" step="0.01" placeholder="0" />
+                                    <span asp-validation-for="Year2022" class="field-validation-error"></span>
+                                </div>
+                                <div class="col-md-4">
+                                    <label asp-for="Year2023" class="form-label"></label>
+                                    <input asp-for="Year2023" class="form-control" type="number" step="0.01" placeholder="0" />
+                                    <span asp-validation-for="Year2023" class="field-validation-error"></span>
+                                </div>
+                                <div class="col-md-4">
+                                    <label asp-for="Year2023New" class="form-label"></label>
+                                    <input asp-for="Year2023New" class="form-control" type="number" step="0.01" placeholder="0" />
+                                    <span asp-validation-for="Year2023New" class="field-validation-error"></span>
+                                </div>
+                                <div class="col-md-6">
+                                    <label asp-for="AdjustedAjusted" class="form-label"></label>
+                                    <input asp-for="AdjustedAjusted" class="form-control" type="number" placeholder="0" />
+                                    <span asp-validation-for="AdjustedAjusted" class="field-validation-error"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Additional Information -->
+                    <div class="card section-card mb-4">
+                        <div class="card-header">
+                            <i class="bi bi-journal-text"></i>Additional Information
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <label asp-for="Details" class="form-label"></label>
+                                    <textarea asp-for="Details" class="form-control" rows="4" placeholder="Notes, remarks, or onboarding context"></textarea>
+                                    <span asp-validation-for="Details" class="field-validation-error"></span>
+                                </div>
+                                <div class="col-md-6">
+                                    <label asp-for="ModifiedBy" class="form-label"></label>
+                                    <input asp-for="ModifiedBy" class="form-control" placeholder="Recorder / HR officer name" />
+                                    <span asp-validation-for="ModifiedBy" class="field-validation-error"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Photo & summary column -->
+                <div class="col-lg-4">
+                    <div class="card section-card photo-card sticky-lg-top mb-4" style="top: 1rem;">
+                        <div class="card-header">
+                            <i class="bi bi-camera"></i>Employee photo
+                        </div>
+                        <div class="card-body text-center">
+                            <div class="photo-preview-wrap">
+                                <img id="employeePhotoPreview" src="~/images/employee-avatar-placeholder.svg" alt="Profile preview" />
+                            </div>
+                            <input type="file" id="employeePhotoFile" class="d-none" accept="image/*" aria-label="Choose employee photo" />
+                            <button type="button" class="btn btn-upload w-100 py-2 mb-2" id="employeePhotoBrowse">
+                                <i class="bi bi-cloud-upload me-2"></i>Upload photo
+                            </button>
+                            <p class="small text-muted mb-0">Preview only — wire-up storage when your API is ready. Does not affect save.</p>
+                        </div>
+                    </div>
+
+                    <div class="card border-0 shadow-sm bg-white mb-4">
+                        <div class="card-body small text-muted">
+                            <div class="d-flex align-items-start gap-2 mb-2">
+                                <i class="bi bi-clock-history text-primary fs-5"></i>
+                                <div>
+                                    <strong class="text-dark d-block">Last modified</strong>
+                                    @if (!string.IsNullOrWhiteSpace(Model.ModifiedOn))
+                                    {
+                                        <span>@Model.ModifiedOn</span>
+                                    }
+                                    else
+                                    {
+                                        <span>—</span>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(Model.ModifiedBy))
+                                    {
+                                        <span class="d-block">by <span class="text-dark fw-semibold">@Model.ModifiedBy</span></span>
+                                    }
+                                </div>
+                            </div>
+                            <hr class="my-2" />
+                            <div class="d-flex align-items-start gap-2">
+                                <i class="bi bi-lightbulb text-warning fs-5"></i>
+                                <div>
+                                    <strong class="text-dark d-block">Tip</strong>
+                                    Changing <span class="text-dark fw-semibold">Employee ID</span> is allowed but must remain unique across the directory.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <form asp-action="Edit">
-                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-                <input type="hidden" asp-for="uid" />
-
-                <div class="card mb-4">
-                    <div class="card-header bg-primary text-white">Personal Information</div>
-                    <div class="card-body row">
-                        <div class="form-group col-md-4 mb-3">
-                            <label asp-for="EmployeeID" class="control-label"></label>
-                            <input asp-for="EmployeeID" class="form-control" />
-                            <span asp-validation-for="EmployeeID" class="text-danger"></span>
+            <!-- Sticky actions -->
+            <div class="employee-create-actions">
+                <div class="container-fluid px-3 px-lg-4">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <div class="small text-muted d-none d-md-block">
+                            <i class="bi bi-save me-1"></i>Changes are saved to the employee directory.
                         </div>
-                        <div class="form-group col-md-8 mb-3">
-                            <label asp-for="EmployeeName" class="control-label"></label>
-                            <input asp-for="EmployeeName" class="form-control" />
-                            <span asp-validation-for="EmployeeName" class="text-danger"></span>
-                        </div>
-                        <div class="form-group col-md-6 mb-3">
-                            <label asp-for="FatherName" class="control-label"></label>
-                            <input asp-for="FatherName" class="form-control" />
-                            <span asp-validation-for="FatherName" class="text-danger"></span>
-                        </div>
-                        <div class="form-group col-md-6 mb-3">
-                            <label asp-for="CNIC" class="control-label"></label>
-                            <input asp-for="CNIC" class="form-control" />
-                            <span asp-validation-for="CNIC" class="text-danger"></span>
-                        </div>
-                        <div class="form-group col-md-4 mb-3">
-                            <label asp-for="DOB" class="control-label"></label>
-                            <input asp-for="DOB" type="date" class="form-control" />
-                            <span asp-validation-for="DOB" class="text-danger"></span>
-                        </div>
-                        <div class="form-group col-md-4 mb-3">
-                            <label asp-for="MobileNo" class="control-label"></label>
-                            <input asp-for="MobileNo" class="form-control" />
-                            <span asp-validation-for="MobileNo" class="text-danger"></span>
-                        </div>
-                        <div class="form-group col-md-4 mb-3">
-                            <label asp-for="EmployeeStatus" class="control-label"></label>
-                            <input asp-for="EmployeeStatus" class="form-control" />
-                            <span asp-validation-for="EmployeeStatus" class="text-danger"></span>
+                        <div class="d-flex flex-wrap align-items-center gap-2 ms-md-auto">
+                            <a asp-action="Index" class="btn btn-action-outline">
+                                <i class="bi bi-arrow-left-short me-1"></i>Back to list
+                            </a>
+                            <button type="reset" class="btn btn-action-secondary" id="employeeFormReset">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i>Reset
+                            </button>
+                            <button type="submit" class="btn btn-action-primary" id="employeeFormSubmit">
+                                <span class="spinner-border spinner-border-sm me-2 d-none" id="employeeSaveSpinner" role="status" aria-hidden="true"></span>
+                                <i class="bi bi-check2-circle me-1" id="employeeSaveIcon"></i>Save changes
+                            </button>
                         </div>
                     </div>
                 </div>
-
-                <div class="card mb-4">
-                    <div class="card-header bg-success text-white">Professional Information</div>
-                    <div class="card-body row">
-                        <div class="form-group col-md-6 mb-3">
-                            <label asp-for="Department" class="control-label"></label>
-                            <input asp-for="Department" class="form-control" />
-                            <span asp-validation-for="Department" class="text-danger"></span>
-                        </div>
-                        <div class="form-group col-md-6 mb-3">
-                            <label asp-for="Designation" class="control-label"></label>
-                            <input asp-for="Designation" class="form-control" />
-                            <span asp-validation-for="Designation" class="text-danger"></span>
-                        </div>
-                        <div class="form-group col-md-4 mb-3">
-                            <label asp-for="DateOfJoining" class="control-label"></label>
-                            <input asp-for="DateOfJoining" type="date" class="form-control" />
-                            <span asp-validation-for="DateOfJoining" class="text-danger"></span>
-                        </div>
-                        <div class="form-group col-md-4 mb-3">
-                            <label asp-for="Project" class="control-label"></label>
-                            <input asp-for="Project" class="form-control" />
-                            <span asp-validation-for="Project" class="text-danger"></span>
-                        </div>
-                        <div class="form-group col-md-4 mb-3">
-                            <label asp-for="ModifiedBy" class="control-label"></label>
-                            <input asp-for="ModifiedBy" class="form-control" />
-                            <span asp-validation-for="ModifiedBy" class="text-danger"></span>
-                        </div>
-                        <div class="form-group col-md-12 mb-3">
-                            <label asp-for="Details" class="control-label"></label>
-                            <textarea asp-for="Details" class="form-control" rows="2"></textarea>
-                            <span asp-validation-for="Details" class="text-danger"></span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card mb-4">
-                    <div class="card-header bg-info text-white">Financial & Leaves Information</div>
-                    <div class="card-body row">
-                        <div class="form-group col-md-4 mb-3">
-                            <label asp-for="BasicSalary" class="control-label"></label>
-                            <input asp-for="BasicSalary" class="form-control" />
-                            <span asp-validation-for="BasicSalary" class="text-danger"></span>
-                        </div>
-                        <div class="form-group col-md-4 mb-3">
-                            <label asp-for="CarryForwardLeaves" class="control-label"></label>
-                            <input asp-for="CarryForwardLeaves" class="form-control" />
-                            <span asp-validation-for="CarryForwardLeaves" class="text-danger"></span>
-                        </div>
-                        <div class="form-group col-md-3 mb-3">
-                            <label asp-for="Year2022" class="control-label"></label>
-                            <input asp-for="Year2022" class="form-control" />
-                            <span asp-validation-for="Year2022" class="text-danger"></span>
-                        </div>
-                        <div class="form-group col-md-3 mb-3">
-                            <label asp-for="Year2023" class="control-label"></label>
-                            <input asp-for="Year2023" class="form-control" />
-                            <span asp-validation-for="Year2023" class="text-danger"></span>
-                        </div>
-                        <div class="form-group col-md-3 mb-3">
-                            <label asp-for="Year2023New" class="control-label"></label>
-                            <input asp-for="Year2023New" class="form-control" />
-                            <span asp-validation-for="Year2023New" class="text-danger"></span>
-                        </div>
-                        <div class="form-group col-md-3 mb-3">
-                            <label asp-for="AdjustedAjusted" class="control-label"></label>
-                            <input asp-for="AdjustedAjusted" class="form-control" />
-                            <span asp-validation-for="AdjustedAjusted" class="text-danger"></span>
-                        </div>
-                        <div class="form-group col-md-6 mb-3">
-                            <label asp-for="CarryForwardLeaves1" class="control-label"></label>
-                            <input asp-for="CarryForwardLeaves1" class="form-control" />
-                            <span asp-validation-for="CarryForwardLeaves1" class="text-danger"></span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-group mt-4 mb-5">
-                    <input type="submit" value="Save Changes" class="btn btn-warning btn-lg w-100" />
-                </div>
-            </form>
-        </div>
+            </div>
+        </form>
     </div>
 </div>
 
 @section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+    <script>
+        (function () {
+            var form = document.getElementById('employeeCreateForm');
+            var fileInput = document.getElementById('employeePhotoFile');
+            var browseBtn = document.getElementById('employeePhotoBrowse');
+            var preview = document.getElementById('employeePhotoPreview');
+            var placeholderSrc = '@Url.Content("~/images/employee-avatar-placeholder.svg")';
+            var submitBtn = document.getElementById('employeeFormSubmit');
+            var spinner = document.getElementById('employeeSaveSpinner');
+            var icon = document.getElementById('employeeSaveIcon');
+
+            if (browseBtn && fileInput) {
+                browseBtn.addEventListener('click', function () { fileInput.click(); });
+                fileInput.addEventListener('change', function () {
+                    var f = fileInput.files && fileInput.files[0];
+                    if (!f || !f.type.match(/^image\//)) return;
+                    var reader = new FileReader();
+                    reader.onload = function (e) { preview.src = e.target.result; };
+                    reader.readAsDataURL(f);
+                });
+            }
+
+            var resetBtn = document.getElementById('employeeFormReset');
+            if (resetBtn && preview) {
+                resetBtn.addEventListener('click', function () {
+                    setTimeout(function () {
+                        preview.src = placeholderSrc;
+                        if (fileInput) fileInput.value = '';
+                    }, 0);
+                });
+            }
+
+            if (form && submitBtn && spinner && icon && window.jQuery) {
+                window.jQuery(function ($) {
+                    var $form = $(form);
+                    $form.on('submit', function () {
+                        if (!$form.valid()) {
+                            return;
+                        }
+                        spinner.classList.remove('d-none');
+                        icon.classList.add('d-none');
+                        submitBtn.disabled = true;
+                    });
+                });
+            }
+        })();
+    </script>
 }

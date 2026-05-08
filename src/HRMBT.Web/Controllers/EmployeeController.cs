@@ -3,6 +3,10 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using HRMBT.Web.Data;
 using HRMBT.Web.Models;
+using HRMBT.Web.Models.ViewModels;
+using OfficeOpenXml;
+using OfficeOpenXml.Style;
+using System.Drawing;
 
 namespace HRMBT.Web.Controllers;
 
@@ -114,6 +118,124 @@ public class EmployeeController : Controller
             // Return empty paginated list on error
             return View(new PaginatedList<Employee>(new List<Employee>(), 0, 1, pageSize));
         }
+    }
+
+    // GET: Employee/Dashboard
+    public async Task<IActionResult> Dashboard()
+    {
+        ViewData["Module"] = "Employees";
+
+        var employees = await _context.Employees.AsNoTracking().ToListAsync();
+
+        var byDept = employees
+            .GroupBy(e => string.IsNullOrWhiteSpace(e.Department) ? "Unassigned" : e.Department!.Trim())
+            .Select(g => new DepartmentEmployeeCount { Department = g.Key, Count = g.Count() })
+            .OrderByDescending(d => d.Count)
+            .ThenBy(d => d.Department)
+            .ToList();
+
+        bool IsActive(string? s) => string.Equals((s ?? string.Empty).Trim(), "Active", StringComparison.OrdinalIgnoreCase);
+        bool IsLeave(string? s)
+        {
+            var t = (s ?? string.Empty).Trim();
+            return t.Equals("On Leave", StringComparison.OrdinalIgnoreCase) || t.Equals("Leave", StringComparison.OrdinalIgnoreCase);
+        }
+        bool IsInactive(string? s)
+        {
+            var t = (s ?? string.Empty).Trim();
+            return t.Equals("Inactive", StringComparison.OrdinalIgnoreCase)
+                || t.Equals("Terminated", StringComparison.OrdinalIgnoreCase)
+                || t.Equals("Resigned", StringComparison.OrdinalIgnoreCase);
+        }
+
+        var vm = new EmployeeDashboardVM
+        {
+            TotalEmployees = employees.Count,
+            ActiveEmployees = employees.Count(e => IsActive(e.EmployeeStatus)),
+            InactiveEmployees = employees.Count(e => IsInactive(e.EmployeeStatus)),
+            OnLeaveEmployees = employees.Count(e => IsLeave(e.EmployeeStatus)),
+            DepartmentCount = byDept.Count,
+            ByDepartment = byDept,
+            TopDepartment = byDept.FirstOrDefault()
+        };
+
+        return View(vm);
+    }
+
+    // GET: Employee/ExportExcel
+    public async Task<IActionResult> ExportExcel(string? department, string? designation, string? employeeName, string? employeeID, string? year2024, string? applyTax, string? sortBy = "EmployeeID", string? sortOrder = "asc")
+    {
+        var query = _context.Employees.AsQueryable();
+
+        if (!string.IsNullOrEmpty(department))
+            query = query.Where(e => e.Department == department);
+        if (!string.IsNullOrEmpty(designation))
+            query = query.Where(e => e.Designation == designation);
+        if (!string.IsNullOrEmpty(employeeName))
+            query = query.Where(e => e.EmployeeName != null && e.EmployeeName.Contains(employeeName));
+        if (!string.IsNullOrEmpty(employeeID))
+            query = query.Where(e => e.EmployeeID != null && e.EmployeeID.Contains(employeeID));
+        if (!string.IsNullOrEmpty(year2024) && int.TryParse(year2024, out int yearValue))
+            query = query.Where(e => e.Year2024 == yearValue);
+        if (!string.IsNullOrEmpty(applyTax))
+            query = query.Where(e => e.ApplyTax == applyTax);
+
+        query = sortBy?.ToLower() switch
+        {
+            "employeename" => sortOrder == "desc" ? query.OrderByDescending(e => e.EmployeeName) : query.OrderBy(e => e.EmployeeName),
+            "department" => sortOrder == "desc" ? query.OrderByDescending(e => e.Department) : query.OrderBy(e => e.Department),
+            "designation" => sortOrder == "desc" ? query.OrderByDescending(e => e.Designation) : query.OrderBy(e => e.Designation),
+            "basicSalary" => sortOrder == "desc" ? query.OrderByDescending(e => e.BasicSalary) : query.OrderBy(e => e.BasicSalary),
+            _ => query.OrderBy(e => e.EmployeeID)
+        };
+
+        var employees = await query.ToListAsync();
+
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        using var package = new ExcelPackage();
+        var ws = package.Workbook.Worksheets.Add("Employees");
+
+        string[] headers = { "Employee ID", "Employee Name", "Father Name", "CNIC", "Mobile No", "Department", "Designation", "Project", "Date of Joining", "Status", "Basic Salary", "Apply Tax" };
+        for (int i = 0; i < headers.Length; i++)
+        {
+            ws.Cells[1, i + 1].Value = headers[i];
+        }
+
+        using (var headerRange = ws.Cells[1, 1, 1, headers.Length])
+        {
+            headerRange.Style.Font.Bold = true;
+            headerRange.Style.Font.Color.SetColor(Color.White);
+            headerRange.Style.Fill.PatternType = ExcelFillStyle.Solid;
+            headerRange.Style.Fill.BackgroundColor.SetColor(ColorTranslator.FromHtml("#00203F"));
+            headerRange.Style.HorizontalAlignment = ExcelHorizontalAlignment.Left;
+            headerRange.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
+            headerRange.Style.Border.Bottom.Color.SetColor(ColorTranslator.FromHtml("#D4AF37"));
+        }
+
+        int row = 2;
+        foreach (var e in employees)
+        {
+            ws.Cells[row, 1].Value = e.EmployeeID;
+            ws.Cells[row, 2].Value = e.EmployeeName;
+            ws.Cells[row, 3].Value = e.FatherName;
+            ws.Cells[row, 4].Value = e.CNIC;
+            ws.Cells[row, 5].Value = e.MobileNo;
+            ws.Cells[row, 6].Value = e.Department;
+            ws.Cells[row, 7].Value = e.Designation;
+            ws.Cells[row, 8].Value = e.Project;
+            ws.Cells[row, 9].Value = e.DateOfJoining?.ToString("yyyy-MM-dd");
+            ws.Cells[row, 10].Value = e.EmployeeStatus;
+            ws.Cells[row, 11].Value = e.BasicSalary;
+            ws.Cells[row, 11].Style.Numberformat.Format = "#,##0.00";
+            ws.Cells[row, 12].Value = e.ApplyTax;
+            row++;
+        }
+
+        ws.Cells[ws.Dimension?.Address ?? "A1"].AutoFitColumns();
+
+        var bytes = package.GetAsByteArray();
+        var fileName = $"Employees_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
     }
 
     // GET: Employee/Details/5

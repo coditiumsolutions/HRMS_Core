@@ -2,256 +2,458 @@
 
 @{
     ViewData["Title"] = "Employees";
+
+    string SortIcon(string col)
+    {
+        if (!string.Equals(ViewBag.CurrentSortBy as string, col, StringComparison.OrdinalIgnoreCase)) return "bi-arrow-down-up";
+        return ViewBag.CurrentSortOrder as string == "desc" ? "bi-sort-down" : "bi-sort-up";
+    }
+    string NextSort(string col) =>
+        string.Equals(ViewBag.CurrentSortBy as string, col, StringComparison.OrdinalIgnoreCase) && (ViewBag.CurrentSortOrder as string) == "asc"
+            ? "desc" : "asc";
+
+    string Initials(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+        var parts = name.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 1) return parts[0].Substring(0, Math.Min(2, parts[0].Length)).ToUpperInvariant();
+        return (parts[0][0].ToString() + parts[^1][0].ToString()).ToUpperInvariant();
+    }
+
+    string AvatarTone(string? key)
+    {
+        if (string.IsNullOrEmpty(key)) return "";
+        var palette = new[] { "", "avatar-amber", "avatar-teal", "avatar-rose", "avatar-violet", "avatar-slate" };
+        var sum = 0;
+        foreach (var c in key) sum += c;
+        return palette[sum % palette.Length];
+    }
+
+    string StatusClass(string? status)
+    {
+        if (string.IsNullOrWhiteSpace(status)) return "status-default";
+        var s = status.Trim().ToLowerInvariant();
+        return s switch
+        {
+            "active" => "status-active",
+            "inactive" => "status-inactive",
+            "terminated" => "status-inactive",
+            "resigned" => "status-inactive",
+            "pending" => "status-pending",
+            "probation" => "status-pending",
+            "on leave" => "status-leave",
+            "leave" => "status-leave",
+            _ => "status-default"
+        };
+    }
 }
 
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-md-12">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h1>Employee Management</h1>
-                <a asp-action="Create" class="btn btn-primary">Add New Employee</a>
-            </div>
-            
-            @if (ViewBag.ErrorMessage != null)
-            {
-                <div class="alert alert-danger mb-3">
-                    <h5>Error:</h5>
-                    <p>@ViewBag.ErrorMessage</p>
-                </div>
-            }
+@section Styles {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" crossorigin="anonymous" />
+    <link rel="stylesheet" href="~/css/employee-list.css" asp-append-version="true" />
+}
 
-            <!-- Filtering form -->
-            <div class="card mb-4">
-                <div class="card-body">
-                    <form asp-action="Index" method="get" class="row g-3">
-                        <input type="hidden" name="sortBy" value="@ViewBag.CurrentSortBy" />
-                        <input type="hidden" name="sortOrder" value="@ViewBag.CurrentSortOrder" />
-                        
-                        <div class="col-md-2">
-                            <label for="department" class="form-label">Department</label>
-                            <select name="department" id="department" class="form-select">
-                                <option value="">All Departments</option>
-                                @if (ViewBag.Departments != null)
-                                {
-                                    foreach (var dept in ViewBag.Departments)
-                                    {
-                                        <option value="@dept.DepartmentName" selected="@(ViewBag.CurrentDepartment == dept.DepartmentName)">@dept.DepartmentName</option>
-                                    }
-                                }
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <label for="designation" class="form-label">Designation</label>
-                            <select name="designation" id="designation" class="form-select">
-                                <option value="">All Designations</option>
-                                @if (ViewBag.Designations != null)
-                                {
-                                    foreach (var desig in ViewBag.Designations)
-                                    {
-                                        <option value="@desig" selected="@(ViewBag.CurrentDesignation == desig)">@desig</option>
-                                    }
-                                }
-                            </select>
-                        </div>
-                        <!-- Removed Year 2024 and Apply Tax filters as requested -->
-                        <div class="col-md-2">
-                            <label for="employeeName" class="form-label">Employee Name</label>
-                            <input type="text" name="employeeName" id="employeeName" class="form-control" value="@ViewBag.CurrentEmployeeName" placeholder="Search by name..." />
-                        </div>
-                        <div class="col-md-2">
-                            <label for="employeeID" class="form-label">Employee ID</label>
-                            <input type="text" name="employeeID" id="employeeID" class="form-control" value="@ViewBag.CurrentEmployeeID" placeholder="Search by ID..." />
-                        </div>
-                        <div class="col-md-2">
-                            <label for="pageSize" class="form-label">Page Size</label>
-                            <select name="pageSize" id="pageSize" class="form-select">
-                                @if (ViewBag.PageSizeOptions != null)
-                                {
-                                    foreach (var size in ViewBag.PageSizeOptions)
-                                    {
-                                        <option value="@size" selected="@(ViewBag.CurrentPageSize == size)">@size</option>
-                                    }
-                                }
-                            </select>
-                        </div>
-                        <div class="col-md-2 d-flex align-items-end">
-                            <button type="submit" class="btn btn-secondary w-100">Filter</button>
-                        </div>
-                    </form>
+<div class="employee-list-page py-4">
+    <div class="container-fluid px-3 px-lg-4">
+
+        <!-- Breadcrumb -->
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb mb-0 small">
+                <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Home</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Employees</li>
+            </ol>
+        </nav>
+
+        <!-- Page header + toolbar -->
+        <div class="page-header-card p-4 mb-4">
+            <div class="row align-items-center g-3">
+                <div class="col-lg">
+                    <h1 class="h2 mb-1 fw-bold text-dark">
+                        <i class="bi bi-people-fill text-primary me-2"></i>Employee Directory
+                    </h1>
+                    <p class="text-muted mb-0">Employee Management System — search, filter, and manage your workforce.</p>
                 </div>
-            </div>
-            
-            <!-- Record count info -->
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <span class="text-muted">
-                    Showing @Model.StartRecord to @Model.EndRecord of @Model.TotalCount records
-                </span>
+                <div class="col-lg-auto">
+                    <div class="toolbar-actions d-flex flex-wrap align-items-center gap-2">
+                        <a asp-action="Create" class="btn btn-action-primary">
+                            <i class="bi bi-plus-lg me-1"></i>Add Employee
+                        </a>
+                        <a class="btn btn-action-success"
+                           asp-action="ExportExcel"
+                           asp-route-department="@ViewBag.CurrentDepartment"
+                           asp-route-designation="@ViewBag.CurrentDesignation"
+                           asp-route-employeeName="@ViewBag.CurrentEmployeeName"
+                           asp-route-employeeID="@ViewBag.CurrentEmployeeID"
+                           asp-route-year2024="@ViewBag.CurrentYear2024"
+                           asp-route-applyTax="@ViewBag.CurrentApplyTax"
+                           asp-route-sortBy="@ViewBag.CurrentSortBy"
+                           asp-route-sortOrder="@ViewBag.CurrentSortOrder">
+                            <i class="bi bi-file-earmark-excel me-1"></i>Export Excel
+                        </a>
+                        <a asp-action="Index" class="btn btn-action-outline" title="Reset filters &amp; refresh">
+                            <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+                        </a>
+                    </div>
+                </div>
             </div>
 
-            <div class="table-responsive">
-                <table class="table table-sm table-striped table-bordered align-middle">
-                    <thead class="table-dark">
-                        <tr>
-                            <th>
-                                <a asp-action="Index" 
-                                   asp-route-sortBy="EmployeeID" 
-                                   asp-route-sortOrder="@(ViewBag.CurrentSortBy == "EmployeeID" && ViewBag.CurrentSortOrder == "asc" ? "desc" : "asc")"
-                                   asp-route-department="@ViewBag.CurrentDepartment"
-                                   asp-route-designation="@ViewBag.CurrentDesignation"
-                                   asp-route-year2024="@ViewBag.CurrentYear2024"
-                                   asp-route-applyTax="@ViewBag.CurrentApplyTax"
-                                   asp-route-employeeName="@ViewBag.CurrentEmployeeName"
-                                   asp-route-employeeID="@ViewBag.CurrentEmployeeID"
-                                   asp-route-pageSize="@ViewBag.CurrentPageSize"
-                                   class="text-white text-decoration-none">
-                                    Employee ID
-                                    @if (ViewBag.CurrentSortBy == "EmployeeID")
-                                    {
-                                        <span>@(ViewBag.CurrentSortOrder == "asc" ? "↑" : "↓")</span>
-                                    }
-                                </a>
-                            </th>
-                            <th>
-                                <a asp-action="Index" 
-                                   asp-route-sortBy="EmployeeName" 
-                                   asp-route-sortOrder="@(ViewBag.CurrentSortBy == "EmployeeName" && ViewBag.CurrentSortOrder == "asc" ? "desc" : "asc")"
-                                   asp-route-department="@ViewBag.CurrentDepartment"
-                                   asp-route-designation="@ViewBag.CurrentDesignation"
-                                   asp-route-year2024="@ViewBag.CurrentYear2024"
-                                   asp-route-applyTax="@ViewBag.CurrentApplyTax"
-                                   asp-route-employeeName="@ViewBag.CurrentEmployeeName"
-                                   asp-route-employeeID="@ViewBag.CurrentEmployeeID"
-                                   asp-route-pageSize="@ViewBag.CurrentPageSize"
-                                   class="text-white text-decoration-none">
-                                    Employee Name
-                                    @if (ViewBag.CurrentSortBy == "EmployeeName")
-                                    {
-                                        <span>@(ViewBag.CurrentSortOrder == "asc" ? "↑" : "↓")</span>
-                                    }
-                                </a>
-                            </th>
-                            <th>
-                                <a asp-action="Index" 
-                                   asp-route-sortBy="Department" 
-                                   asp-route-sortOrder="@(ViewBag.CurrentSortBy == "Department" && ViewBag.CurrentSortOrder == "asc" ? "desc" : "asc")"
-                                   asp-route-department="@ViewBag.CurrentDepartment"
-                                   asp-route-designation="@ViewBag.CurrentDesignation"
-                                   asp-route-year2024="@ViewBag.CurrentYear2024"
-                                   asp-route-applyTax="@ViewBag.CurrentApplyTax"
-                                   asp-route-employeeName="@ViewBag.CurrentEmployeeName"
-                                   asp-route-employeeID="@ViewBag.CurrentEmployeeID"
-                                   asp-route-pageSize="@ViewBag.CurrentPageSize"
-                                   class="text-white text-decoration-none">
-                                    Department
-                                    @if (ViewBag.CurrentSortBy == "Department")
-                                    {
-                                        <span>@(ViewBag.CurrentSortOrder == "asc" ? "↑" : "↓")</span>
-                                    }
-                                </a>
-                            </th>
-                            <th>
-                                <a asp-action="Index" 
-                                   asp-route-sortBy="Designation" 
-                                   asp-route-sortOrder="@(ViewBag.CurrentSortBy == "Designation" && ViewBag.CurrentSortOrder == "asc" ? "desc" : "asc")"
-                                   asp-route-department="@ViewBag.CurrentDepartment"
-                                   asp-route-designation="@ViewBag.CurrentDesignation"
-                                   asp-route-year2024="@ViewBag.CurrentYear2024"
-                                   asp-route-applyTax="@ViewBag.CurrentApplyTax"
-                                   asp-route-employeeName="@ViewBag.CurrentEmployeeName"
-                                   asp-route-employeeID="@ViewBag.CurrentEmployeeID"
-                                   asp-route-pageSize="@ViewBag.CurrentPageSize"
-                                   class="text-white text-decoration-none">
-                                    Designation
-                                    @if (ViewBag.CurrentSortBy == "Designation")
-                                    {
-                                        <span>@(ViewBag.CurrentSortOrder == "asc" ? "↑" : "↓")</span>
-                                    }
-                                </a>
-                            </th>
-                            <th>Status</th>
-                            <!-- Removed Year 2024 and Apply Tax columns as requested -->
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var item in Model)
-                        {
-                            <tr>
-                                <td>@item.EmployeeID</td>
-                                <td>@item.EmployeeName</td>
-                                <td>@item.Department</td>
-                                <td>@item.Designation</td>
-                                <td>@item.EmployeeStatus</td>
-                                <td>
-                                    <div class="btn-group btn-group-sm">
-                                        <a asp-action="Edit" asp-route-id="@item.uid" class="btn btn-warning btn-sm">Edit</a>
-                                        <a asp-action="Details" asp-route-id="@item.uid" class="btn btn-info btn-sm">Details</a>
-                                        <a asp-action="Delete" asp-route-id="@item.uid" class="btn btn-danger btn-sm">Delete</a>
-                                    </div>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-            
-            @if (!Model.Any())
+            @if (Model.TotalCount > 0)
             {
-                <div class="alert alert-info">
-                    No employees found matching the criteria.
-                </div>
-            }
-            
-            <!-- Pagination -->
-            @if (Model.TotalPages > 1)
-            {
-                <nav aria-label="Employee pagination" class="mt-4">
-                    <ul class="pagination justify-content-center">
-                        @{
-                            var prevDisabled = !Model.HasPreviousPage ? "disabled" : "";
-                            var nextDisabled = !Model.HasNextPage ? "disabled" : "";
-                        }
-                        
-                        <li class="page-item @prevDisabled">
-                            <a class="page-link" asp-action="Index" asp-route-page="1" asp-route-pageSize="@ViewBag.CurrentPageSize" asp-route-department="@ViewBag.CurrentDepartment" asp-route-designation="@ViewBag.CurrentDesignation" asp-route-year2024="@ViewBag.CurrentYear2024" asp-route-applyTax="@ViewBag.CurrentApplyTax" asp-route-employeeName="@ViewBag.CurrentEmployeeName" asp-route-employeeID="@ViewBag.CurrentEmployeeID" asp-route-sortBy="@ViewBag.CurrentSortBy" asp-route-sortOrder="@ViewBag.CurrentSortOrder">&laquo;&laquo;</a>
-                        </li>
-                        
-                        <li class="page-item @prevDisabled">
-                            <a class="page-link" asp-action="Index" asp-route-page="@(Model.PageIndex - 1)" asp-route-pageSize="@ViewBag.CurrentPageSize" asp-route-department="@ViewBag.CurrentDepartment" asp-route-designation="@ViewBag.CurrentDesignation" asp-route-year2024="@ViewBag.CurrentYear2024" asp-route-applyTax="@ViewBag.CurrentApplyTax" asp-route-employeeName="@ViewBag.CurrentEmployeeName" asp-route-employeeID="@ViewBag.CurrentEmployeeID" asp-route-sortBy="@ViewBag.CurrentSortBy" asp-route-sortOrder="@ViewBag.CurrentSortOrder">&laquo;</a>
-                        </li>
-                        
-                        @{
-                            int startPage = Math.Max(1, Model.PageIndex - 2);
-                            int endPage = Math.Min(Model.TotalPages, Model.PageIndex + 2);
-                            if (endPage - startPage < 4)
-                            {
-                                if (startPage == 1) { endPage = Math.Min(Model.TotalPages, startPage + 4); }
-                                else if (endPage == Model.TotalPages) { startPage = Math.Max(1, endPage - 4); }
-                            }
-                        }
-                        
-                        @for (int i = startPage; i <= endPage; i++)
-                        {
-                            var active = i == Model.PageIndex ? "active" : "";
-                            <li class="page-item @active">
-                                <a class="page-link" asp-action="Index" asp-route-page="@i" asp-route-pageSize="@ViewBag.CurrentPageSize" asp-route-department="@ViewBag.CurrentDepartment" asp-route-designation="@ViewBag.CurrentDesignation" asp-route-year2024="@ViewBag.CurrentYear2024" asp-route-applyTax="@ViewBag.CurrentApplyTax" asp-route-employeeName="@ViewBag.CurrentEmployeeName" asp-route-employeeID="@ViewBag.CurrentEmployeeID" asp-route-sortBy="@ViewBag.CurrentSortBy" asp-route-sortOrder="@ViewBag.CurrentSortOrder">@i</a>
-                            </li>
-                        }
-                        
-                        <li class="page-item @nextDisabled">
-                            <a class="page-link" asp-action="Index" asp-route-page="@(Model.PageIndex + 1)" asp-route-pageSize="@ViewBag.CurrentPageSize" asp-route-department="@ViewBag.CurrentDepartment" asp-route-designation="@ViewBag.CurrentDesignation" asp-route-year2024="@ViewBag.CurrentYear2024" asp-route-applyTax="@ViewBag.CurrentApplyTax" asp-route-employeeName="@ViewBag.CurrentEmployeeName" asp-route-employeeID="@ViewBag.CurrentEmployeeID" asp-route-sortBy="@ViewBag.CurrentSortBy" asp-route-sortOrder="@ViewBag.CurrentSortOrder">&raquo;</a>
-                        </li>
-                        
-                        <li class="page-item @nextDisabled">
-                            <a class="page-link" asp-action="Index" asp-route-page="@Model.TotalPages" asp-route-pageSize="@ViewBag.CurrentPageSize" asp-route-department="@ViewBag.CurrentDepartment" asp-route-designation="@ViewBag.CurrentDesignation" asp-route-year2024="@ViewBag.CurrentYear2024" asp-route-applyTax="@ViewBag.CurrentApplyTax" asp-route-employeeName="@ViewBag.CurrentEmployeeName" asp-route-employeeID="@ViewBag.CurrentEmployeeID" asp-route-sortBy="@ViewBag.CurrentSortBy" asp-route-sortOrder="@ViewBag.CurrentSortOrder">&raquo;&raquo;</a>
-                        </li>
-                    </ul>
-                </nav>
-                
-                <div class="text-center text-muted mb-3">
-                    Page @Model.PageIndex of @Model.TotalPages
+                <div class="d-flex flex-wrap align-items-center gap-2 mt-3">
+                    <span class="stat-pill"><i class="bi bi-people text-primary"></i><span class="stat-num">@Model.TotalCount</span> total</span>
+                    <span class="stat-pill"><i class="bi bi-eye text-success"></i><span class="stat-num">@Model.StartRecord–@Model.EndRecord</span> showing</span>
+                    <span class="stat-pill"><i class="bi bi-layers text-warning"></i>Page <span class="stat-num">@Model.PageIndex</span> / @Math.Max(1, Model.TotalPages)</span>
                 </div>
             }
         </div>
+
+        @if (ViewBag.ErrorMessage != null)
+        {
+            <div class="alert alert-danger d-flex align-items-start gap-2 mb-4">
+                <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+                <div>
+                    <strong>Error</strong>
+                    <div>@ViewBag.ErrorMessage</div>
+                </div>
+            </div>
+        }
+
+        <!-- Filters -->
+        <div class="filter-card mb-4">
+            <div class="card-header d-flex align-items-center justify-content-between">
+                <span><i class="bi bi-funnel"></i>Search &amp; filters</span>
+                <span class="small text-warning-emphasis">Refine the directory</span>
+            </div>
+            <div class="card-body p-3 p-lg-4">
+                <form asp-action="Index" method="get" class="row g-3" id="employeeFilterForm">
+                    <input type="hidden" name="sortBy" value="@ViewBag.CurrentSortBy" />
+                    <input type="hidden" name="sortOrder" value="@ViewBag.CurrentSortOrder" />
+
+                    <div class="col-md-3 col-lg-2">
+                        <label for="employeeName" class="form-label">Search</label>
+                        <div class="position-relative">
+                            <i class="bi bi-search position-absolute" style="top: 50%; left: 0.75rem; transform: translateY(-50%); color: #adb5bd;"></i>
+                            <input type="text" name="employeeName" id="employeeName"
+                                   class="form-control ps-4"
+                                   value="@ViewBag.CurrentEmployeeName"
+                                   placeholder="Name…" />
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-lg-2">
+                        <label for="employeeID" class="form-label">Employee ID</label>
+                        <input type="text" name="employeeID" id="employeeID" class="form-control" value="@ViewBag.CurrentEmployeeID" placeholder="EMP-…" />
+                    </div>
+                    <div class="col-md-3 col-lg-2">
+                        <label for="department" class="form-label">Department</label>
+                        <select name="department" id="department" class="form-select">
+                            <option value="">All</option>
+                            @if (ViewBag.Departments != null)
+                            {
+                                foreach (var dept in ViewBag.Departments)
+                                {
+                                    <option value="@dept.DepartmentName" selected="@(ViewBag.CurrentDepartment == dept.DepartmentName)">@dept.DepartmentName</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-3 col-lg-2">
+                        <label for="designation" class="form-label">Designation</label>
+                        <select name="designation" id="designation" class="form-select">
+                            <option value="">All</option>
+                            @if (ViewBag.Designations != null)
+                            {
+                                foreach (var desig in ViewBag.Designations)
+                                {
+                                    <option value="@desig" selected="@(ViewBag.CurrentDesignation == desig)">@desig</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-3 col-lg-2">
+                        <label for="pageSize" class="form-label">Per page</label>
+                        <select name="pageSize" id="pageSize" class="form-select">
+                            @if (ViewBag.PageSizeOptions != null)
+                            {
+                                foreach (var size in ViewBag.PageSizeOptions)
+                                {
+                                    <option value="@size" selected="@(ViewBag.CurrentPageSize == size)">@size</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-3 col-lg-2 d-flex align-items-end gap-2">
+                        <button type="submit" class="btn btn-action-primary flex-grow-1">
+                            <i class="bi bi-funnel-fill me-1"></i>Apply
+                        </button>
+                        <a asp-action="Index" class="btn btn-action-secondary" title="Clear filters">
+                            <i class="bi bi-x-lg"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Grid -->
+        <div class="grid-card mb-4">
+            <div class="card-header d-flex align-items-center justify-content-between">
+                <span><i class="bi bi-table"></i>Employees</span>
+                @if (Model.TotalCount > 0)
+                {
+                    <span class="small">@Model.StartRecord–@Model.EndRecord of @Model.TotalCount</span>
+                }
+            </div>
+            <div class="card-body">
+                @if (!Model.Any())
+                {
+                    <div class="empty-state">
+                        <i class="bi bi-inboxes"></i>
+                        <h5 class="mb-1">No employees found</h5>
+                        <p class="mb-3">Try clearing filters or adding a new employee.</p>
+                        <a asp-action="Create" class="btn btn-action-primary">
+                            <i class="bi bi-plus-lg me-1"></i>Add Employee
+                        </a>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-wrap table-responsive">
+                        <table class="employee-grid">
+                            <thead>
+                                <tr>
+                                    <th style="width:64px;">&nbsp;</th>
+                                    <th>
+                                        <a asp-action="Index"
+                                           asp-route-sortBy="EmployeeID"
+                                           asp-route-sortOrder="@NextSort("EmployeeID")"
+                                           asp-route-department="@ViewBag.CurrentDepartment"
+                                           asp-route-designation="@ViewBag.CurrentDesignation"
+                                           asp-route-employeeName="@ViewBag.CurrentEmployeeName"
+                                           asp-route-employeeID="@ViewBag.CurrentEmployeeID"
+                                           asp-route-pageSize="@ViewBag.CurrentPageSize">
+                                            Employee ID <i class="bi @SortIcon("EmployeeID") ms-1"></i>
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a asp-action="Index"
+                                           asp-route-sortBy="EmployeeName"
+                                           asp-route-sortOrder="@NextSort("EmployeeName")"
+                                           asp-route-department="@ViewBag.CurrentDepartment"
+                                           asp-route-designation="@ViewBag.CurrentDesignation"
+                                           asp-route-employeeName="@ViewBag.CurrentEmployeeName"
+                                           asp-route-employeeID="@ViewBag.CurrentEmployeeID"
+                                           asp-route-pageSize="@ViewBag.CurrentPageSize">
+                                            Employee <i class="bi @SortIcon("EmployeeName") ms-1"></i>
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a asp-action="Index"
+                                           asp-route-sortBy="Department"
+                                           asp-route-sortOrder="@NextSort("Department")"
+                                           asp-route-department="@ViewBag.CurrentDepartment"
+                                           asp-route-designation="@ViewBag.CurrentDesignation"
+                                           asp-route-employeeName="@ViewBag.CurrentEmployeeName"
+                                           asp-route-employeeID="@ViewBag.CurrentEmployeeID"
+                                           asp-route-pageSize="@ViewBag.CurrentPageSize">
+                                            Department <i class="bi @SortIcon("Department") ms-1"></i>
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a asp-action="Index"
+                                           asp-route-sortBy="Designation"
+                                           asp-route-sortOrder="@NextSort("Designation")"
+                                           asp-route-department="@ViewBag.CurrentDepartment"
+                                           asp-route-designation="@ViewBag.CurrentDesignation"
+                                           asp-route-employeeName="@ViewBag.CurrentEmployeeName"
+                                           asp-route-employeeID="@ViewBag.CurrentEmployeeID"
+                                           asp-route-pageSize="@ViewBag.CurrentPageSize">
+                                            Designation <i class="bi @SortIcon("Designation") ms-1"></i>
+                                        </a>
+                                    </th>
+                                    <th>Mobile</th>
+                                    <th>Status</th>
+                                    <th>Joining</th>
+                                    <th class="text-end">
+                                        <a asp-action="Index"
+                                           asp-route-sortBy="basicSalary"
+                                           asp-route-sortOrder="@NextSort("basicSalary")"
+                                           asp-route-department="@ViewBag.CurrentDepartment"
+                                           asp-route-designation="@ViewBag.CurrentDesignation"
+                                           asp-route-employeeName="@ViewBag.CurrentEmployeeName"
+                                           asp-route-employeeID="@ViewBag.CurrentEmployeeID"
+                                           asp-route-pageSize="@ViewBag.CurrentPageSize">
+                                            Salary <i class="bi @SortIcon("basicSalary") ms-1"></i>
+                                        </a>
+                                    </th>
+                                    <th class="text-end" style="width:160px;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model)
+                                {
+                                    <tr>
+                                        <td>
+                                            <span class="avatar @AvatarTone(item.EmployeeID ?? item.EmployeeName)" aria-hidden="true">
+                                                @Initials(item.EmployeeName)
+                                            </span>
+                                        </td>
+                                        <td><span class="text-muted small">@item.EmployeeID</span></td>
+                                        <td>
+                                            <div class="emp-name">@item.EmployeeName</div>
+                                            <div class="emp-meta">@item.Project</div>
+                                        </td>
+                                        <td>@item.Department</td>
+                                        <td>@item.Designation</td>
+                                        <td>
+                                            @if (!string.IsNullOrWhiteSpace(item.MobileNo))
+                                            {
+                                                <span class="text-nowrap"><i class="bi bi-telephone-fill text-muted me-1"></i>@item.MobileNo</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">—</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <span class="status-pill @StatusClass(item.EmployeeStatus)">
+                                                @(string.IsNullOrWhiteSpace(item.EmployeeStatus) ? "—" : item.EmployeeStatus)
+                                            </span>
+                                        </td>
+                                        <td class="text-nowrap">
+                                            @(item.DateOfJoining?.ToString("dd MMM yyyy") ?? "—")
+                                        </td>
+                                        <td class="text-end salary">
+                                            @if (item.BasicSalary.HasValue)
+                                            {
+                                                <span class="salary-currency">PKR</span>@item.BasicSalary.Value.ToString("N0")
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">—</span>
+                                            }
+                                        </td>
+                                        <td class="text-end">
+                                            <div class="row-actions">
+                                                <a class="btn btn-view"
+                                                   asp-action="Details" asp-route-id="@item.uid"
+                                                   title="View" data-bs-toggle="tooltip">
+                                                    <i class="bi bi-eye"></i>
+                                                </a>
+                                                <a class="btn btn-edit"
+                                                   asp-action="Edit" asp-route-id="@item.uid"
+                                                   title="Edit" data-bs-toggle="tooltip">
+                                                    <i class="bi bi-pencil"></i>
+                                                </a>
+                                                <a class="btn btn-delete"
+                                                   asp-action="Delete" asp-route-id="@item.uid"
+                                                   title="Delete" data-bs-toggle="tooltip">
+                                                    <i class="bi bi-trash"></i>
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        @if (Model.TotalPages > 1)
+        {
+            <nav aria-label="Employee pagination" class="mb-2">
+                <ul class="pagination justify-content-center flex-wrap">
+                    @{
+                        var prevDisabled = !Model.HasPreviousPage ? "disabled" : "";
+                        var nextDisabled = !Model.HasNextPage ? "disabled" : "";
+
+                        int startPage = Math.Max(1, Model.PageIndex - 2);
+                        int endPage = Math.Min(Model.TotalPages, Model.PageIndex + 2);
+                        if (endPage - startPage < 4)
+                        {
+                            if (startPage == 1) { endPage = Math.Min(Model.TotalPages, startPage + 4); }
+                            else if (endPage == Model.TotalPages) { startPage = Math.Max(1, endPage - 4); }
+                        }
+                    }
+
+                    <li class="page-item @prevDisabled">
+                        <a class="page-link" asp-action="Index" asp-route-page="1"
+                           asp-route-pageSize="@ViewBag.CurrentPageSize"
+                           asp-route-department="@ViewBag.CurrentDepartment"
+                           asp-route-designation="@ViewBag.CurrentDesignation"
+                           asp-route-employeeName="@ViewBag.CurrentEmployeeName"
+                           asp-route-employeeID="@ViewBag.CurrentEmployeeID"
+                           asp-route-sortBy="@ViewBag.CurrentSortBy"
+                           asp-route-sortOrder="@ViewBag.CurrentSortOrder"
+                           aria-label="First"><i class="bi bi-chevron-bar-left"></i></a>
+                    </li>
+                    <li class="page-item @prevDisabled">
+                        <a class="page-link" asp-action="Index" asp-route-page="@(Model.PageIndex - 1)"
+                           asp-route-pageSize="@ViewBag.CurrentPageSize"
+                           asp-route-department="@ViewBag.CurrentDepartment"
+                           asp-route-designation="@ViewBag.CurrentDesignation"
+                           asp-route-employeeName="@ViewBag.CurrentEmployeeName"
+                           asp-route-employeeID="@ViewBag.CurrentEmployeeID"
+                           asp-route-sortBy="@ViewBag.CurrentSortBy"
+                           asp-route-sortOrder="@ViewBag.CurrentSortOrder"
+                           aria-label="Previous"><i class="bi bi-chevron-left"></i></a>
+                    </li>
+
+                    @for (int i = startPage; i <= endPage; i++)
+                    {
+                        var active = i == Model.PageIndex ? "active" : "";
+                        <li class="page-item @active">
+                            <a class="page-link" asp-action="Index" asp-route-page="@i"
+                               asp-route-pageSize="@ViewBag.CurrentPageSize"
+                               asp-route-department="@ViewBag.CurrentDepartment"
+                               asp-route-designation="@ViewBag.CurrentDesignation"
+                               asp-route-employeeName="@ViewBag.CurrentEmployeeName"
+                               asp-route-employeeID="@ViewBag.CurrentEmployeeID"
+                               asp-route-sortBy="@ViewBag.CurrentSortBy"
+                               asp-route-sortOrder="@ViewBag.CurrentSortOrder">@i</a>
+                        </li>
+                    }
+
+                    <li class="page-item @nextDisabled">
+                        <a class="page-link" asp-action="Index" asp-route-page="@(Model.PageIndex + 1)"
+                           asp-route-pageSize="@ViewBag.CurrentPageSize"
+                           asp-route-department="@ViewBag.CurrentDepartment"
+                           asp-route-designation="@ViewBag.CurrentDesignation"
+                           asp-route-employeeName="@ViewBag.CurrentEmployeeName"
+                           asp-route-employeeID="@ViewBag.CurrentEmployeeID"
+                           asp-route-sortBy="@ViewBag.CurrentSortBy"
+                           asp-route-sortOrder="@ViewBag.CurrentSortOrder"
+                           aria-label="Next"><i class="bi bi-chevron-right"></i></a>
+                    </li>
+                    <li class="page-item @nextDisabled">
+                        <a class="page-link" asp-action="Index" asp-route-page="@Model.TotalPages"
+                           asp-route-pageSize="@ViewBag.CurrentPageSize"
+                           asp-route-department="@ViewBag.CurrentDepartment"
+                           asp-route-designation="@ViewBag.CurrentDesignation"
+                           asp-route-employeeName="@ViewBag.CurrentEmployeeName"
+                           asp-route-employeeID="@ViewBag.CurrentEmployeeID"
+                           asp-route-sortBy="@ViewBag.CurrentSortBy"
+                           asp-route-sortOrder="@ViewBag.CurrentSortOrder"
+                           aria-label="Last"><i class="bi bi-chevron-bar-right"></i></a>
+                    </li>
+                </ul>
+            </nav>
+            <div class="text-center text-muted small mb-0">
+                Page @Model.PageIndex of @Model.TotalPages
+            </div>
+        }
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        (function () {
+            if (window.bootstrap) {
+                document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
+                    new bootstrap.Tooltip(el);
+                });
+            }
+        })();
+    </script>
+}

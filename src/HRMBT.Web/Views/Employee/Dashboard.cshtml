@@ -1,0 +1,335 @@
+@model HRMBT.Web.Models.ViewModels.EmployeeDashboardVM
+
+@{
+    ViewData["Title"] = "Employee Dashboard";
+    var deptLabels = string.Join(",", Model.ByDepartment.Select(d => System.Text.Json.JsonSerializer.Serialize(d.Department)));
+    var deptCounts = string.Join(",", Model.ByDepartment.Select(d => d.Count.ToString()));
+    var maxCount = Model.ByDepartment.Any() ? Model.ByDepartment.Max(d => d.Count) : 0;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" crossorigin="anonymous" />
+    <link rel="stylesheet" href="~/css/employee-list.css" asp-append-version="true" />
+    <style>
+        .employee-list-page .page-title {
+            font-size: 2.25rem;
+            line-height: 1.2;
+            letter-spacing: -0.01em;
+        }
+        .employee-list-page .page-title i { font-size: 2.1rem; vertical-align: -0.15em; }
+        .employee-list-page .page-subtitle { font-size: 1rem; }
+        @@media (max-width: 767.98px) {
+            .employee-list-page .page-title { font-size: 1.75rem; }
+            .employee-list-page .page-title i { font-size: 1.65rem; }
+            .employee-list-page .page-subtitle { font-size: 0.95rem; }
+        }
+
+        .kpi-card {
+            background: #fff;
+            border: 1px solid rgba(0, 32, 63, 0.08);
+            border-radius: 0.75rem;
+            box-shadow: 0 0.25rem 1rem rgba(0, 32, 63, 0.06);
+            padding: 1.1rem 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 0.5rem 1.25rem rgba(0, 32, 63, 0.12); }
+        .kpi-card::before {
+            content: "";
+            position: absolute; left: 0; top: 0; bottom: 0;
+            width: 4px; background: #d4af37;
+        }
+        .kpi-card .kpi-icon {
+            width: 3rem; height: 3rem; border-radius: 0.6rem;
+            display: inline-flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 1.35rem; flex-shrink: 0;
+        }
+        .kpi-card .kpi-label { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #6c757d; }
+        .kpi-card .kpi-value { font-size: 1.65rem; font-weight: 700; color: #00203f; line-height: 1.1; }
+        .kpi-card .kpi-sub   { font-size: 0.78rem; color: #6c757d; }
+
+        .kpi-total    .kpi-icon { background: linear-gradient(135deg, #00203f 0%, #1a4a7a 100%); }
+        .kpi-active   .kpi-icon { background: linear-gradient(135deg, #1f7a3a 0%, #2e9c4f 100%); }
+        .kpi-inactive .kpi-icon { background: linear-gradient(135deg, #b91c1c 0%, #ef4444 100%); }
+        .kpi-leave    .kpi-icon { background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%); }
+        .kpi-dept     .kpi-icon { background: linear-gradient(135deg, #b45309 0%, #d4af37 100%); }
+
+        .dept-bar-row {
+            display: grid;
+            grid-template-columns: minmax(8rem, 14rem) 1fr auto;
+            gap: 0.85rem;
+            align-items: center;
+            padding: 0.55rem 0;
+            border-bottom: 1px solid #f1f3f5;
+        }
+        .dept-bar-row:last-child { border-bottom: 0; }
+        .dept-bar-row .dept-name { font-weight: 600; color: #212529; font-size: 0.92rem; }
+        .dept-bar-row .dept-count { font-weight: 700; color: #00203f; font-variant-numeric: tabular-nums; min-width: 2.5rem; text-align: right; }
+        .dept-bar-track { height: 0.65rem; background: #f1f3f5; border-radius: 2rem; overflow: hidden; }
+        .dept-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00203f 0%, #1a4a7a 60%, #d4af37 100%);
+            border-radius: 2rem;
+            transition: width 0.4s ease;
+        }
+        @@media (max-width: 575.98px) {
+            .dept-bar-row { grid-template-columns: 1fr auto; }
+            .dept-bar-row .dept-bar-track { grid-column: 1 / -1; }
+        }
+
+        .chart-wrap { position: relative; min-height: 320px; }
+    </style>
+}
+
+<div class="employee-list-page py-4">
+    <div class="container-fluid px-3 px-lg-4">
+
+        <!-- Breadcrumb -->
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb mb-0 small">
+                <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Home</a></li>
+                <li class="breadcrumb-item"><a asp-action="Index">Employees</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Dashboard</li>
+            </ol>
+        </nav>
+
+        <!-- Header -->
+        <div class="page-header-card p-4 mb-4">
+            <div class="row align-items-center g-3">
+                <div class="col-lg">
+                    <h1 class="page-title mb-1 fw-bold text-dark">
+                        <i class="bi bi-bar-chart-line-fill text-primary me-2"></i>Employee Dashboard
+                    </h1>
+                    <p class="text-muted mb-0 page-subtitle">Workforce overview — headcount, status mix, and distribution by department.</p>
+                </div>
+                <div class="col-lg-auto">
+                    <div class="toolbar-actions d-flex flex-wrap align-items-center gap-2">
+                        <a asp-action="Index" class="btn btn-action-outline">
+                            <i class="bi bi-arrow-left-short me-1"></i>Back to list
+                        </a>
+                        <a asp-action="Create" class="btn btn-action-primary">
+                            <i class="bi bi-plus-lg me-1"></i>Add Employee
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- KPI cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-sm-6 col-xl">
+                <div class="kpi-card kpi-total h-100">
+                    <span class="kpi-icon"><i class="bi bi-people-fill"></i></span>
+                    <div>
+                        <div class="kpi-label">Total Employees</div>
+                        <div class="kpi-value">@Model.TotalEmployees.ToString("N0")</div>
+                        <div class="kpi-sub">across @Model.DepartmentCount departments</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-xl">
+                <div class="kpi-card kpi-active h-100">
+                    <span class="kpi-icon"><i class="bi bi-check2-circle"></i></span>
+                    <div>
+                        <div class="kpi-label">Active</div>
+                        <div class="kpi-value">@Model.ActiveEmployees.ToString("N0")</div>
+                        <div class="kpi-sub">@(Model.TotalEmployees == 0 ? "—" : (Model.ActiveEmployees * 100.0 / Model.TotalEmployees).ToString("0.#") + "%") of workforce</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-xl">
+                <div class="kpi-card kpi-leave h-100">
+                    <span class="kpi-icon"><i class="bi bi-airplane"></i></span>
+                    <div>
+                        <div class="kpi-label">On Leave</div>
+                        <div class="kpi-value">@Model.OnLeaveEmployees.ToString("N0")</div>
+                        <div class="kpi-sub">currently away</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-xl">
+                <div class="kpi-card kpi-inactive h-100">
+                    <span class="kpi-icon"><i class="bi bi-x-octagon"></i></span>
+                    <div>
+                        <div class="kpi-label">Inactive</div>
+                        <div class="kpi-value">@Model.InactiveEmployees.ToString("N0")</div>
+                        <div class="kpi-sub">resigned / terminated</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-xl">
+                <div class="kpi-card kpi-dept h-100">
+                    <span class="kpi-icon"><i class="bi bi-diagram-3"></i></span>
+                    <div>
+                        <div class="kpi-label">Top Department</div>
+                        <div class="kpi-value" style="font-size:1.15rem; line-height:1.25;">
+                            @(Model.TopDepartment?.Department ?? "—")
+                        </div>
+                        <div class="kpi-sub">@(Model.TopDepartment == null ? "no data" : Model.TopDepartment.Count.ToString("N0") + " employees")</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if (!Model.ByDepartment.Any())
+        {
+            <div class="grid-card">
+                <div class="card-header"><i class="bi bi-bar-chart"></i>Employees by Department</div>
+                <div class="card-body">
+                    <div class="empty-state">
+                        <i class="bi bi-inboxes"></i>
+                        <h5 class="mb-1">No employee data yet</h5>
+                        <p class="mb-3">Add employees to see department distribution.</p>
+                        <a asp-action="Create" class="btn btn-action-primary">
+                            <i class="bi bi-plus-lg me-1"></i>Add Employee
+                        </a>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="row g-4 mb-4">
+                <!-- Bar chart -->
+                <div class="col-xl-7">
+                    <div class="grid-card h-100">
+                        <div class="card-header d-flex align-items-center justify-content-between">
+                            <span><i class="bi bi-bar-chart-line"></i>Employees by Department</span>
+                            <span class="small text-warning-emphasis">Headcount distribution</span>
+                        </div>
+                        <div class="card-body p-3 p-lg-4">
+                            <div class="chart-wrap">
+                                <canvas id="empByDeptBar" height="320"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Doughnut -->
+                <div class="col-xl-5">
+                    <div class="grid-card h-100">
+                        <div class="card-header d-flex align-items-center justify-content-between">
+                            <span><i class="bi bi-pie-chart"></i>Department Mix</span>
+                            <span class="small text-warning-emphasis">Share of headcount</span>
+                        </div>
+                        <div class="card-body p-3 p-lg-4 d-flex align-items-center justify-content-center">
+                            <div class="chart-wrap w-100" style="max-width: 420px;">
+                                <canvas id="empByDeptDoughnut" height="320"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Department table with bars -->
+            <div class="grid-card mb-4">
+                <div class="card-header d-flex align-items-center justify-content-between">
+                    <span><i class="bi bi-list-ul"></i>Department breakdown</span>
+                    <span class="small">@Model.ByDepartment.Count departments · @Model.TotalEmployees employees</span>
+                </div>
+                <div class="card-body p-3 p-lg-4">
+                    @foreach (var d in Model.ByDepartment)
+                    {
+                        var pct = maxCount == 0 ? 0 : Math.Round((d.Count * 100.0) / maxCount);
+                        var sharePct = Model.TotalEmployees == 0 ? 0 : Math.Round((d.Count * 100.0) / Model.TotalEmployees, 1);
+                        <div class="dept-bar-row">
+                            <div class="dept-name">
+                                <i class="bi bi-building text-primary me-1"></i>@d.Department
+                            </div>
+                            <div class="dept-bar-track">
+                                <div class="dept-bar-fill" style="width:@pct%;"></div>
+                            </div>
+                            <div class="dept-count">
+                                @d.Count
+                                <span class="text-muted small fw-normal ms-1">(@sharePct%)</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+    </div>
+</div>
+
+@section Scripts {
+    @if (Model.ByDepartment.Any())
+    {
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+        <script>
+            (function () {
+                var labels = [@Html.Raw(deptLabels)];
+                var values = [@Html.Raw(deptCounts)];
+                var palette = ['#00203f','#1a4a7a','#336b87','#0f766e','#14b8a6','#b45309','#d4af37','#9d174d','#db2777','#5b21b6','#8b5cf6','#1f7a3a','#2e9c4f','#1d4ed8','#3b82f6'];
+                var colors = labels.map(function (_, i) { return palette[i % palette.length]; });
+
+                var barCtx = document.getElementById('empByDeptBar');
+                if (barCtx) {
+                    new Chart(barCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Employees',
+                                data: values,
+                                backgroundColor: colors,
+                                borderRadius: 6,
+                                borderSkipped: false,
+                                maxBarThickness: 42
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: { callbacks: { label: function (ctx) { return ' ' + ctx.parsed.y + ' employees'; } } }
+                            },
+                            scales: {
+                                x: { grid: { display: false }, ticks: { autoSkip: false, maxRotation: 30, minRotation: 0 } },
+                                y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#f1f3f5' } }
+                            }
+                        }
+                    });
+                }
+
+                var doughCtx = document.getElementById('empByDeptDoughnut');
+                if (doughCtx) {
+                    new Chart(doughCtx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                data: values,
+                                backgroundColor: colors,
+                                borderColor: '#fff',
+                                borderWidth: 2
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            cutout: '62%',
+                            plugins: {
+                                legend: { position: 'bottom', labels: { boxWidth: 12, padding: 10 } },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function (ctx) {
+                                            var total = ctx.dataset.data.reduce(function (a, b) { return a + b; }, 0);
+                                            var pct = total === 0 ? 0 : Math.round((ctx.parsed / total) * 100);
+                                            return ' ' + ctx.label + ': ' + ctx.parsed + ' (' + pct + '%)';
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            })();
+        </script>
+    }
+}

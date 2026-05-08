@@ -1,0 +1,346 @@
+/* Employee Create — enterprise HRMS styling */
+
+.employee-create-page {
+  background: linear-gradient(180deg, #f1f3f5 0%, #e9ecef 100%);
+  min-height: calc(100vh - 120px);
+  padding-bottom: 6.5rem;
+}
+
+.employee-create-page .page-header-card {
+  background: #fff;
+  border-radius: 0.75rem;
+  box-shadow: 0 0.125rem 0.5rem rgba(0, 32, 63, 0.08);
+  border: 1px solid rgba(0, 32, 63, 0.06);
+}
+
+.employee-create-page .section-card {
+  background: #fff;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(0, 32, 63, 0.08);
+  box-shadow: 0 0.25rem 1rem rgba(0, 32, 63, 0.06);
+  overflow: hidden;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.employee-create-page .section-card:hover {
+  box-shadow: 0 0.35rem 1.25rem rgba(0, 32, 63, 0.1);
+  border-color: rgba(212, 175, 55, 0.35);
+}
+
+.employee-create-page .section-card .card-header {
+  background: linear-gradient(90deg, #00203f 0%, #0b2d52 100%);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+  border-bottom: 3px solid #d4af37;
+  padding: 0.85rem 1.25rem;
+}
+
+.employee-create-page .section-card .card-header i {
+  color: #d4af37;
+  margin-right: 0.5rem;
+  vertical-align: -0.125em;
+}
+
+.employee-create-page .section-card .card-body {
+  padding: 1.5rem 1.25rem;
+}
+
+.employee-create-page .form-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #495057;
+  margin-bottom: 0.35rem;
+}
+
+.employee-create-page .form-control,
+.employee-create-page .form-select {
+  min-height: 2.65rem;
+  border-radius: 0.5rem;
+  border: 1px solid #ced4da;
+  font-size: 0.9375rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.employee-create-page .form-control:focus,
+.employee-create-page .form-select:focus {
+  border-color: #336b87;
+  box-shadow: 0 0 0 0.2rem rgba(51, 107, 135, 0.2);
+}
+
+.employee-create-page .form-control:hover:not(:focus):not(.input-validation-error),
+.employee-create-page .form-select:hover:not(:focus):not(.input-validation-error) {
+  border-color: #adb5bd;
+}
+
+.employee-create-page textarea.form-control {
+  min-height: 5rem;
+}
+
+/* jQuery unobtrusive validation */
+.employee-create-page .input-validation-error,
+.employee-create-page .form-control.input-validation-error,
+.employee-create-page .form-select.input-validation-error {
+  border-color: #dc3545 !important;
+  background-color: #fff8f8;
+  box-shadow: 0 0 0 0.15rem rgba(220, 53, 69, 0.15);
+}
+
+.employee-create-page .field-validation-error {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #dc3545 !important;
+  margin-top: 0.25rem;
+  display: block;
+}
+
+.employee-create-page .validation-summary-errors {
+  border-radius: 0.5rem;
+  border: 1px solid #f5c2c7;
+  background-color: #f8d7da;
+  color: #842029;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+}
+
+.employee-create-page .validation-summary-valid {
+  display: none;
+}
+
+/* Photo card */
+.employee-create-page .photo-card .photo-preview-wrap {
+  width: 140px;
+  height: 140px;
+  margin: 0 auto 1rem;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 4px solid #d4af37;
+  box-shadow: 0 0.25rem 0.75rem rgba(0, 32, 63, 0.15);
+  background: #f8f9fa;
+}
+
+.employee-create-page .photo-card .photo-preview-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.employee-create-page .photo-card .btn-upload {
+  border-radius: 2rem;
+  border: 2px dashed #336b87;
+  color: #336b87;
+  font-weight: 600;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.employee-create-page .photo-card .btn-upload:hover {
+  background: rgba(51, 107, 135, 0.08);
+  border-color: #00203f;
+  color: #00203f;
+}
+
+/* Sticky action bar */
+.employee-create-actions {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1020;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(8px);
+  border-top: 1px solid rgba(0, 32, 63, 0.1);
+  box-shadow: 0 -0.25rem 1rem rgba(0, 32, 63, 0.08);
+  padding: 0.75rem 0;
+}
+
+.employee-create-actions .btn-action-primary {
+  border-radius: 2rem;
+  padding: 0.55rem 1.5rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, #00203f 0%, #1a4a7a 100%);
+  border: none;
+  color: #fff;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.employee-create-actions .btn-action-primary:hover:not(:disabled) {
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 0.35rem 1rem rgba(0, 32, 63, 0.35);
+}
+
+.employee-create-actions .btn-action-primary:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
+}
+
+.employee-create-actions .btn-action-secondary {
+  border-radius: 2rem;
+  padding: 0.55rem 1.35rem;
+  font-weight: 600;
+  border: 1px solid #ced4da;
+  color: #495057;
+  background: #fff;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.employee-create-actions .btn-action-secondary:hover {
+  background: #f8f9fa;
+  border-color: #adb5bd;
+  color: #212529;
+}
+
+.employee-create-actions .btn-action-outline {
+  border-radius: 2rem;
+  padding: 0.55rem 1.35rem;
+  font-weight: 600;
+  border: 2px solid #d4af37;
+  color: #856404;
+  background: #fff;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.employee-create-actions .btn-action-outline:hover {
+  background: #fff9e6;
+  color: #664d03;
+}
+
+@media (max-width: 991.98px) {
+  .employee-create-page {
+    padding-bottom: 7.5rem;
+  }
+
+  .employee-create-actions .d-flex {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center !important;
+  }
+
+  .employee-create-actions .btn {
+    flex: 1 1 auto;
+    min-width: 8rem;
+  }
+}
+
+/* Read-only details view (shares Create page chrome) */
+.employee-create-page .info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem 1.25rem;
+}
+
+@media (max-width: 575.98px) {
+  .employee-create-page .info-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.employee-create-page .info-grid.info-grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 767.98px) {
+  .employee-create-page .info-grid.info-grid-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.employee-create-page .info-cell {
+  background: #f8fafc;
+  border: 1px solid #eef0f2;
+  border-radius: 0.5rem;
+  padding: 0.6rem 0.85rem;
+}
+
+.employee-create-page .info-cell.info-cell-wide {
+  grid-column: 1 / -1;
+}
+
+.employee-create-page .info-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #6c757d;
+  margin-bottom: 0.2rem;
+}
+
+.employee-create-page .info-value {
+  display: block;
+  font-size: 0.95rem;
+  color: #212529;
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.employee-create-page .info-value.text-empty {
+  color: #adb5bd;
+  font-style: italic;
+  font-weight: 400;
+}
+
+.employee-create-page .profile-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.4rem;
+  padding-top: 0.5rem;
+}
+
+.employee-create-page .profile-summary .profile-name {
+  font-weight: 700;
+  color: #00203f;
+  font-size: 1.05rem;
+}
+
+.employee-create-page .profile-summary .profile-role {
+  color: #495057;
+  font-size: 0.875rem;
+}
+
+.employee-create-page .profile-summary .profile-id {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 2rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: #fff8e1;
+  border: 1px solid #f1e1a0;
+  color: #856404;
+  letter-spacing: 0.02em;
+}
+
+.employee-create-page .status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 2rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border: 1px solid transparent;
+  text-transform: uppercase;
+}
+
+.employee-create-page .status-pill::before {
+  content: "";
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.employee-create-page .status-active   { color: #1f7a3a; background: #e8f5ec; border-color: #c5e6cf; }
+.employee-create-page .status-inactive { color: #b91c1c; background: #fdecec; border-color: #f5c2c7; }
+.employee-create-page .status-pending  { color: #b45309; background: #fff8e1; border-color: #f1e1a0; }
+.employee-create-page .status-leave    { color: #1d4ed8; background: #e7efff; border-color: #c7daff; }
+.employee-create-page .status-default  { color: #495057; background: #f1f3f5; border-color: #dee2e6; }
+
