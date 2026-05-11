@@ -15,6 +15,8 @@ namespace HRMBT.Web.Models
         public int Year { get; set; }
         public decimal BasicSalary { get; set; }
         public decimal GrossSalary { get; set; }
+        public decimal TaxPercentage { get; set; }
+        public decimal TaxAmount { get; set; }
         public decimal TotalDeductions { get; set; }
         public decimal NetSalary { get; set; }
         public int? WorkingDays { get; set; }

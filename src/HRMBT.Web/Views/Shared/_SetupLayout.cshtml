@@ -1,0 +1,180 @@
+@{
+    var authName = User.Identity?.IsAuthenticated == true ? User.Identity!.Name : null;
+    var displayName = User.FindFirst(AuthClaims.DisplayName)?.Value ?? authName;
+    var loginAt = User.FindFirst(AuthClaims.LoginAt)?.Value;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] — Setup</title>
+    <script type="importmap"></script>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/HRMBT.Web.styles.css" asp-append-version="true" />
+    <style>
+        .navbar-top-1 {
+            background-color: white;
+            border-bottom: 3px solid #336B87;
+            padding-top: 0.25rem;
+            padding-bottom: 0.25rem;
+            min-height: auto;
+        }
+        .navbar-top-1 .navbar-brand {
+            padding-top: 0.25rem;
+            padding-bottom: 0.25rem;
+            font-size: 1rem;
+        }
+        .navbar-top-1 .navbar-text {
+            padding-top: 0.25rem;
+            padding-bottom: 0.25rem;
+        }
+        .navbar-top-2 {
+            background-color: #00203F;
+        }
+        .navbar-top-2 .nav-link {
+            color: white !important;
+        }
+        .navbar-top-2 .nav-link:hover {
+            color: #f0f0f0 !important;
+        }
+        .setup-shell { min-height: calc(100vh - 120px); background: #f4f5f7; }
+        .setup-sidebar {
+            background: #1a1d29;
+            min-height: calc(100vh - 120px);
+            padding: 1.25rem 0.75rem;
+            border-right: 1px solid #333;
+        }
+        .setup-sidebar .nav-link {
+            color: #c8cad4 !important;
+            border-radius: 0.35rem;
+            margin-bottom: 0.25rem;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.9rem;
+            border-left: 3px solid transparent;
+            border-bottom: 1px solid #d4af37;
+        }
+        .setup-sidebar .nav-link:hover {
+            background: rgba(255,255,255,.08);
+            color: #fff !important;
+        }
+        .setup-sidebar .nav-link.active {
+            background: rgba(201, 162, 39, .15);
+            color: #f5e6b3 !important;
+            border-left-color: #c9a227;
+            font-weight: 600;
+        }
+        .setup-sidebar .heading {
+            color: #8b8fa3;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin: 1rem 0.75rem 0.5rem;
+        }
+        .setup-main { padding: 1.5rem 1.75rem; }
+    </style>
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body>
+    <!-- Top Navigation Bar 2 (Dark Blue) — same as main app -->
+    <nav class="navbar navbar-expand-sm navbar-top-2">
+        <div class="container-fluid">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#setupModuleNavbar" aria-controls="setupModuleNavbar"
+                    aria-expanded="false" aria-label="Toggle navigation" style="border-color: white;">
+                <span class="navbar-toggler-icon" style="filter: invert(1);"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="setupModuleNavbar">
+                <ul class="navbar-nav flex-grow-1">
+                    <li class="nav-item">
+                        <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" asp-area="" asp-controller="Employee" asp-action="Index">Employees</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" asp-area="" asp-controller="Payroll" asp-action="Index">Payroll</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" asp-area="" asp-controller="Attendance" asp-action="Index">Attendance</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" asp-area="" asp-controller="LMS" asp-action="Index">LMS</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" asp-area="" asp-controller="Tax" asp-action="Index">Tax</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" asp-area="" asp-controller="Setup" asp-action="Index">Setup</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav ms-auto">
+                    @if (string.IsNullOrEmpty(authName))
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link" asp-controller="Home" asp-action="Login">Login</a>
+                        </li>
+                    }
+                    else
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link" asp-controller="Home" asp-action="Logout">Logout</a>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Top Navigation Bar 1 (White) — same as main app -->
+    <nav class="navbar navbar-expand-sm navbar-top-1">
+        <div class="container-fluid">
+            <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">HR Management Bahria Town</a>
+            <div class="navbar-nav ms-auto">
+                @if (!string.IsNullOrEmpty(authName) && !string.IsNullOrEmpty(loginAt))
+                {
+                    <span class="navbar-text"><span class="fw-semibold">@(displayName ?? authName)</span> · logged in at @loginAt</span>
+                }
+                else if (!string.IsNullOrEmpty(authName))
+                {
+                    <span class="navbar-text"><span class="fw-semibold">@(displayName ?? authName)</span></span>
+                }
+                else
+                {
+                    <span class="navbar-text text-white-50 small">Not signed in · open Setup to add users, then log in from HR Login</span>
+                }
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid setup-shell g-0">
+        <div class="row g-0">
+            <nav class="col-12 col-md-3 col-lg-2 setup-sidebar">
+                <div class="heading">Setup menu</div>
+                <ul class="nav flex-column px-1">
+                    @{
+                        var ctrl = ViewContext.RouteData.Values["controller"]?.ToString();
+                        var act = ViewContext.RouteData.Values["action"]?.ToString();
+                        string A(string a, string c = "Setup") => (ctrl == c && act == a) ? "nav-link active" : "nav-link";
+                    }
+                    <li class="nav-item"><a class="@A("Index")" asp-controller="Setup" asp-action="Index">Overview</a></li>
+                    <li class="nav-item"><a class="@A("Users")" asp-controller="Setup" asp-action="Users">Users</a></li>
+                    <li class="nav-item"><a class="@A("Config")" asp-controller="Setup" asp-action="Config">Config</a></li>
+                </ul>
+                <div class="heading mt-3">Application</div>
+                <ul class="nav flex-column px-1">
+                    <li class="nav-item">
+                        <a class="nav-link" asp-controller="Home" asp-action="Index">← Home dashboard</a>
+                    </li>
+                </ul>
+            </nav>
+            <main class="col-12 col-md-9 col-lg-10 setup-main">
+                @RenderBody()
+            </main>
+        </div>
+    </div>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

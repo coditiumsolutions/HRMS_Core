@@ -1,3 +1,8 @@
+@{
+    var authName = User.Identity?.IsAuthenticated == true ? User.Identity!.Name : null;
+    var displayName = User.FindFirst(AuthClaims.DisplayName)?.Value ?? authName;
+    var loginAt = User.FindFirst(AuthClaims.LoginAt)?.Value;
+}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -159,6 +164,23 @@
                     <li class="nav-item">
                         <a class="nav-link" asp-area="" asp-controller="Tax" asp-action="Index">Tax</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" asp-area="" asp-controller="Setup" asp-action="Index">Setup</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav ms-auto">
+                    @if (string.IsNullOrEmpty(authName))
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link" asp-controller="Home" asp-action="Login">Login</a>
+                        </li>
+                    }
+                    else
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link" asp-controller="Home" asp-action="Logout">Logout</a>
+                        </li>
+                    }
                 </ul>
             </div>
         </div>
@@ -169,10 +191,14 @@
         <div class="container-fluid">
             <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">HR Management Bahria Town</a>
             <div class="navbar-nav ms-auto">
-                @{
-                    var currentDate = DateTime.Now.ToString("dd MMM yyyy HH:mm");
+                @if (!string.IsNullOrEmpty(authName) && !string.IsNullOrEmpty(loginAt))
+                {
+                    <span class="navbar-text"><span class="fw-semibold">@(displayName ?? authName)</span> · logged in at @loginAt</span>
                 }
-                <span class="navbar-text">you are logged in as Mohammad Shahid on @currentDate</span>
+                else if (!string.IsNullOrEmpty(authName))
+                {
+                    <span class="navbar-text"><span class="fw-semibold">@(displayName ?? authName)</span></span>
+                }
             </div>
         </div>
     </nav>

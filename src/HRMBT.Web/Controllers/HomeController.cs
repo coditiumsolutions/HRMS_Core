@@ -1,11 +1,20 @@
 using System.Diagnostics;
+using System.Globalization;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using HRMBT.Web.Models;
 using HRMBT.Web.Data;
+using HRMBT.Web.Infrastructure;
+using HRMBT.Web.Models;
+using HRMBT.Web.Models.ViewModels;
+using HRMBT.Web.Services;
 
 namespace HRMBT.Web.Controllers;
 
+[Authorize]
 public class HomeController : Controller
 {
     private readonly ILogger<HomeController> _logger;
@@ -23,7 +32,6 @@ public class HomeController : Controller
 
         try
         {
-            // Dashboard Statistics
             var totalEmployees = await _context.Employees.CountAsync();
             var activeEmployees = await _context.Employees.CountAsync(e => e.EmployeeStatus == "Active");
             var todayAttendance = await _context.Attendances.CountAsync(a => a.AttendanceDate.Date == DateTime.Today);
@@ -41,7 +49,6 @@ public class HomeController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error loading dashboard statistics");
-            // Set default values if database connection fails
             ViewData["TotalEmployees"] = 0;
             ViewData["ActiveEmployees"] = 0;
             ViewData["TodayAttendance"] = 0;
@@ -59,7 +66,7 @@ public class HomeController : Controller
     {
         var results = new List<string>();
         var connection = _context.Database.GetDbConnection();
-        try 
+        try
         {
             await connection.OpenAsync();
             results.Add($"Connected to: {connection.Database}");
@@ -78,14 +85,12 @@ public class HomeController : Controller
             string[] tablesToCheck = { "Employee", "Employees", "Payroll", "Payrolls" };
             foreach (var table in tablesToCheck)
             {
-                try 
+                try
                 {
-                    using (var command = connection.CreateCommand())
-                    {
-                        command.CommandText = $"SELECT COUNT(*) FROM [{table}]";
-                        var count = await command.ExecuteScalarAsync();
-                        results.Add($"Table [{table}] count: {count}");
-                    }
+                    using var command = connection.CreateCommand();
+                    command.CommandText = $"SELECT COUNT(*) FROM [{table}]";
+                    var count = await command.ExecuteScalarAsync();
+                    results.Add($"Table [{table}] count: {count}");
                 }
                 catch { }
             }
@@ -101,19 +106,121 @@ public class HomeController : Controller
         return View();
     }
 
-    public IActionResult Login()
+    [AllowAnonymous]
+    [HttpGet]
+    public IActionResult Login(string? returnUrl)
     {
+        if (User.Identity?.IsAuthenticated == true)
+            return RedirectToLocal(returnUrl);
+
         ViewData["Module"] = "Home";
-        return View();
+        ViewData["ReturnUrl"] = returnUrl;
+        return View(new LoginViewModel());
     }
 
-    public IActionResult Logout()
+    [AllowAnonymous]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Login(LoginViewModel model, string? returnUrl)
     {
         ViewData["Module"] = "Home";
-        // TODO: Implement logout logic (clear session, sign out, etc.)
-        return RedirectToAction("Index");
+        ViewData["ReturnUrl"] = returnUrl;
+
+        if (!ModelState.IsValid)
+            return View(model);
+
+        var name = model.Username.Trim();
+        if (string.IsNullOrEmpty(model.Password))
+        {
+            ModelState.AddModelError(nameof(model.Password), "Password is required.");
+            return View(model);
+        }
+
+        try
+        {
+            var user = await _context.AppUsers.AsNoTracking()
+                .FirstOrDefaultAsync(u => u.Username.ToLower() == name.ToLower());
+
+            if (user == null)
+            {
+                ModelState.AddModelError(string.Empty,
+                    $"No row in Users for username \"{name}\". Either the name does not exist in dbo.Users, or it does not match when compared case-insensitive. Add or fix the row under Setup → Users, or check the database your app connects to.");
+                return View(model);
+            }
+
+            if (string.IsNullOrWhiteSpace(user.PasswordHash))
+            {
+                ModelState.AddModelError(string.Empty,
+                    $"User \"{user.Username}\" was found, but PasswordHash is empty or whitespace. Edit this user in Setup → Users and set a password, or UPDATE dbo.Users SET PasswordHash = ... ");
+                return View(model);
+            }
+
+            if (!LoginPasswordHasher.Verify(model.Password, user.PasswordHash))
+            {
+                var hint = LoginPasswordHasher.DescribeStoredFormat(user.PasswordHash);
+                ModelState.AddModelError(string.Empty,
+                    $"Password was rejected for user \"{user.Username}\". {hint}");
+                return View(model);
+            }
+
+            await SignInAsync(user);
+            return RedirectToLocal(returnUrl);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Login failed for username candidate {Candidate}", name);
+            ModelState.AddModelError(string.Empty,
+                $"Sign-in could not talk to the database or complete processing: {ex.Message}. Confirm SQL Server is reachable and table dbo.Users exists for this connection.");
+            return View(model);
+        }
     }
 
+    private IActionResult RedirectToLocal(string? returnUrl)
+    {
+        if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+            return Redirect(returnUrl);
+
+        return RedirectToAction(nameof(Index));
+    }
+
+    private async Task SignInAsync(AppUser user)
+    {
+        var loggedInAt = DateTime.Now;
+        var loginAtStr = loggedInAt.ToString("dd MMM yyyy HH:mm", CultureInfo.CurrentCulture);
+
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.Name, user.Username),
+            new Claim(AuthClaims.DisplayName, user.Username.Trim()),
+            new Claim(AuthClaims.LoginAt, loginAtStr),
+        };
+
+        if (!string.IsNullOrWhiteSpace(user.Role))
+            claims.Add(new Claim(ClaimTypes.Role, user.Role));
+
+        var principal = new ClaimsPrincipal(new ClaimsIdentity(
+            claims,
+            CookieAuthenticationDefaults.AuthenticationScheme));
+
+        await HttpContext.SignInAsync(
+            CookieAuthenticationDefaults.AuthenticationScheme,
+            principal,
+            new AuthenticationProperties
+            {
+                ExpiresUtc = DateTimeOffset.UtcNow.AddHours(8),
+                AllowRefresh = true,
+                IsPersistent = true,
+            });
+    }
+
+    [AllowAnonymous]
+    public async Task<IActionResult> Logout()
+    {
+        await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        return RedirectToAction(nameof(Login));
+    }
+
+    [AllowAnonymous]
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
     public IActionResult Error()
     {

@@ -258,9 +258,10 @@ public class EmployeeController : Controller
     }
 
     // GET: Employee/Create
-    public IActionResult Create()
+    public async Task<IActionResult> Create()
     {
         ViewData["Module"] = "Employees";
+        await LoadCreateFormOptionsAsync();
         return View();
     }
 
@@ -289,6 +290,7 @@ public class EmployeeController : Controller
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
+        await LoadCreateFormOptionsAsync();
         return View(employee);
     }
 
@@ -388,6 +390,63 @@ public class EmployeeController : Controller
         }
 
         return RedirectToAction(nameof(Index));
+    }
+
+    private async Task LoadCreateFormOptionsAsync()
+    {
+        var configRows = await _context.HrConfigurations
+            .AsNoTracking()
+            .Where(c => c.ConfigKey != null && c.ConfigValue != null)
+            .ToListAsync();
+
+        static IEnumerable<string> SplitCsv(string? csv)
+        {
+            if (string.IsNullOrWhiteSpace(csv)) yield break;
+            foreach (var item in csv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                if (!string.IsNullOrWhiteSpace(item))
+                    yield return item;
+            }
+        }
+
+        static bool KeyMatches(string? key, params string[] aliases)
+        {
+            if (string.IsNullOrWhiteSpace(key)) return false;
+            return aliases.Any(a => string.Equals(key.Trim(), a, StringComparison.OrdinalIgnoreCase));
+        }
+
+        var departmentOptions = configRows
+            .Where(c => KeyMatches(c.ConfigKey, "Department", "Departments"))
+            .SelectMany(c => SplitCsv(c.ConfigValue))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(v => v)
+            .ToList();
+
+        var designationOptions = configRows
+            .Where(c => KeyMatches(c.ConfigKey, "Designation", "Designations"))
+            .SelectMany(c => SplitCsv(c.ConfigValue))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(v => v)
+            .ToList();
+
+        var employeeStatusOptions = configRows
+            .Where(c => KeyMatches(c.ConfigKey, "EmployeeStatus"))
+            .SelectMany(c => SplitCsv(c.ConfigValue))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(v => v)
+            .ToList();
+
+        var projectOptions = configRows
+            .Where(c => KeyMatches(c.ConfigKey, "Project", "Projects"))
+            .SelectMany(c => SplitCsv(c.ConfigValue))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(v => v)
+            .ToList();
+
+        ViewBag.DepartmentOptions = departmentOptions;
+        ViewBag.DesignationOptions = designationOptions;
+        ViewBag.EmployeeStatusOptions = employeeStatusOptions;
+        ViewBag.ProjectOptions = projectOptions;
     }
 
     private bool EmployeeExists(int id)

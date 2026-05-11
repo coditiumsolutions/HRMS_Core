@@ -3,6 +3,10 @@
 @{
     ViewData["Title"] = "Employee Detail";
     ViewData["Module"] = "Payroll";
+    var currentAction = (ViewContext.RouteData.Values["action"]?.ToString() ?? "EmployeeDetail");
+    var routeAction = string.Equals(currentAction, "GeneratePayroll", StringComparison.OrdinalIgnoreCase)
+        ? "GeneratePayroll"
+        : "EmployeeDetail";
 
     string MonthName(int m) => m >= 1 && m <= 12 ? System.Globalization.CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(m) : m.ToString();
 
@@ -29,7 +33,7 @@
             <ol class="breadcrumb mb-0 small">
                 <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Home</a></li>
                 <li class="breadcrumb-item"><a asp-action="Index">Payroll</a></li>
-                <li class="breadcrumb-item active" aria-current="page">Employee Detail</li>
+                <li class="breadcrumb-item active" aria-current="page">Generate Payroll</li>
             </ol>
         </nav>
 
@@ -95,7 +99,7 @@
         <div class="filter-card mb-4">
             <div class="card-header"><i class="bi bi-funnel"></i>Filter employees</div>
             <div class="card-body p-3 p-lg-4">
-                <form asp-action="EmployeeDetail" method="get" class="row g-3" onsubmit="document.getElementById('deptPageInput').value = '1';">
+                <form asp-action="@routeAction" method="get" class="row g-3" onsubmit="document.getElementById('deptPageInput').value = '1';">
                     <input type="hidden" name="page" id="deptPageInput" value="1" />
                     <input type="hidden" name="pageSize" value="@(ViewBag.CurrentPageSize ?? 20)" />
                     <div class="col-md-4">
@@ -117,7 +121,7 @@
                         <button type="submit" class="btn btn-action-primary">
                             <i class="bi bi-search me-1"></i>Apply
                         </button>
-                        <a asp-action="EmployeeDetail" class="btn btn-action-secondary">
+                        <a asp-action="@routeAction" class="btn btn-action-secondary">
                             <i class="bi bi-x-lg me-1"></i>Clear
                         </a>
                     </div>
@@ -128,6 +132,8 @@
         <!-- Pay-run controls -->
         <form asp-action="GeneratePayrollForSelected" method="post" id="generatePayrollForm">
             @Html.AntiForgeryToken()
+            <input type="hidden" name="sourceAction" value="@routeAction" />
+            <input type="hidden" name="department" value="@ViewBag.SelectedDepartment" />
 
             <div class="section-card mb-4">
                 <div class="card-header"><i class="bi bi-cash-coin"></i>Run payroll for selected</div>
@@ -284,14 +290,14 @@
             <nav aria-label="Employee pagination" class="mt-2">
                 <ul class="pagination justify-content-center">
                     <li class="page-item @prevDisabled">
-                        <a class="page-link" asp-action="EmployeeDetail"
+                        <a class="page-link" asp-action="@routeAction"
                            asp-route-page="1"
                            asp-route-pageSize="@ViewBag.CurrentPageSize"
                            asp-route-department="@ViewBag.SelectedDepartment"
                            aria-label="First">&laquo;&laquo;</a>
                     </li>
                     <li class="page-item @prevDisabled">
-                        <a class="page-link" asp-action="EmployeeDetail"
+                        <a class="page-link" asp-action="@routeAction"
                            asp-route-page="@(Model.PageIndex - 1)"
                            asp-route-pageSize="@ViewBag.CurrentPageSize"
                            asp-route-department="@ViewBag.SelectedDepartment"
@@ -301,21 +307,21 @@
                     {
                         var active = i == Model.PageIndex ? "active" : "";
                         <li class="page-item @active">
-                            <a class="page-link" asp-action="EmployeeDetail"
+                            <a class="page-link" asp-action="@routeAction"
                                asp-route-page="@i"
                                asp-route-pageSize="@ViewBag.CurrentPageSize"
                                asp-route-department="@ViewBag.SelectedDepartment">@i</a>
                         </li>
                     }
                     <li class="page-item @nextDisabled">
-                        <a class="page-link" asp-action="EmployeeDetail"
+                        <a class="page-link" asp-action="@routeAction"
                            asp-route-page="@(Model.PageIndex + 1)"
                            asp-route-pageSize="@ViewBag.CurrentPageSize"
                            asp-route-department="@ViewBag.SelectedDepartment"
                            aria-label="Next">&raquo;</a>
                     </li>
                     <li class="page-item @nextDisabled">
-                        <a class="page-link" asp-action="EmployeeDetail"
+                        <a class="page-link" asp-action="@routeAction"
                            asp-route-page="@Model.TotalPages"
                            asp-route-pageSize="@ViewBag.CurrentPageSize"
                            asp-route-department="@ViewBag.SelectedDepartment"

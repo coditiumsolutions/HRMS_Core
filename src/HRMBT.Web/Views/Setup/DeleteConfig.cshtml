@@ -1,0 +1,18 @@
+@model HRMBT.Web.Models.HrConfiguration
+@{
+    ViewData["Title"] = "Delete configuration";
+}
+
+<h1 class="h3 mb-3">Delete configuration</h1>
+
+<p class="mb-2">Delete this row? This cannot be undone.</p>
+<ul class="small text-muted mb-3">
+    <li><strong>UID:</strong> @Model.UID</li>
+    <li><strong>Key:</strong> @(Model.ConfigKey ?? "—")</li>
+    <li><strong>Value:</strong> @(Model.ConfigValue ?? "—")</li>
+</ul>
+
+<form asp-action="DeleteConfig" asp-route-id="@Model.UID" method="post" class="mt-3">
+    <button type="submit" class="btn btn-danger">Delete</button>
+    <a class="btn btn-outline-secondary" asp-action="Config">Cancel</a>
+</form>

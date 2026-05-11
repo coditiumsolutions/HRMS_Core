@@ -1,0 +1,30 @@
+@model HRMBT.Web.Models.ViewModels.ConfigEditVm
+@{
+    ViewData["Title"] = "New configuration";
+}
+
+<h1 class="h3 mb-3">New configuration</h1>
+<p class="text-muted small mb-4">Add a row to <code>dbo.Configuration</code>. Use commas to separate multiple values (e.g. <code>a,b,c</code>).</p>
+
+<form asp-action="CreateConfig" method="post" class="col-lg-8">
+    <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+    <div class="mb-3">
+        <label asp-for="ConfigKey" class="form-label"></label>
+        <input asp-for="ConfigKey" class="form-control" maxlength="50" />
+        <span asp-validation-for="ConfigKey" class="text-danger small"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="ConfigValue" class="form-label"></label>
+        <textarea asp-for="ConfigValue" class="form-control font-monospace" rows="12" spellcheck="false" placeholder="comma-separated values, one line or wrap as needed"></textarea>
+        <div class="form-text">Stored as large text (<code>nvarchar(max)</code>). No fixed length limit in the application.</div>
+        <span asp-validation-for="ConfigValue" class="text-danger small"></span>
+    </div>
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-dark">Save</button>
+        <a class="btn btn-outline-secondary" asp-action="Config">Cancel</a>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

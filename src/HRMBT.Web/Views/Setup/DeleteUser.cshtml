@@ -1,0 +1,13 @@
+@model HRMBT.Web.Models.AppUser
+@{
+    ViewData["Title"] = "Delete user";
+}
+
+<h1 class="h3 mb-3">Delete user</h1>
+
+<p>Delete account <strong>@Model.Username</strong>? This cannot be undone.</p>
+
+<form asp-action="DeleteUser" asp-route-id="@Model.Uid" method="post" class="mt-3">
+    <button type="submit" class="btn btn-danger">Delete</button>
+    <a class="btn btn-outline-secondary" asp-action="Users">Cancel</a>
+</form>

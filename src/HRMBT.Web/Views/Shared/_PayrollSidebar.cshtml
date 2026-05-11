@@ -12,6 +12,12 @@
         </a>
     </li>
     <li class="nav-item">
+        <a class="nav-link @(currentAction == "GeneratePayroll" ? "active fw-bold text-primary" : "text-dark")"
+           asp-controller="Payroll" asp-action="GeneratePayroll">
+            ⚙️ Generate Payroll
+        </a>
+    </li>
+    <li class="nav-item">
         <a class="nav-link @(currentAction == "GeneratePayslips" ? "active fw-bold text-primary" : "text-dark")" 
            asp-controller="Payroll" asp-action="GeneratePayslips">
             💰 Run Payroll

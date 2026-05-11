@@ -26,6 +26,12 @@
     <dt class="col-sm-3">Gross Salary</dt>
     <dd class="col-sm-9">@Model.GrossSalary.ToString("N2")</dd>
 
+    <dt class="col-sm-3" title="dbo.Payslips.TaxPercentage">TaxPercentage</dt>
+    <dd class="col-sm-9">@Model.TaxPercentage.ToString("N2")%</dd>
+
+    <dt class="col-sm-3" title="dbo.Payslips.TaxAmount">TaxAmount</dt>
+    <dd class="col-sm-9">@Model.TaxAmount.ToString("N2")</dd>
+
     <dt class="col-sm-3">Total Deductions</dt>
     <dd class="col-sm-9">@Model.TotalDeductions.ToString("N2")</dd>
 

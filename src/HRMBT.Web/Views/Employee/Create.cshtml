@@ -91,17 +91,44 @@
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <label asp-for="Department" class="form-label"></label>
-                                    <input asp-for="Department" class="form-control" placeholder="Department name" />
+                                    <select asp-for="Department" class="form-select">
+                                        <option value="">— Select Department —</option>
+                                        @if (ViewBag.DepartmentOptions is IEnumerable<string> deptOptions)
+                                        {
+                                            foreach (var dept in deptOptions)
+                                            {
+                                                <option value="@dept">@dept</option>
+                                            }
+                                        }
+                                    </select>
                                     <span asp-validation-for="Department" class="field-validation-error"></span>
                                 </div>
                                 <div class="col-md-6">
                                     <label asp-for="Designation" class="form-label"></label>
-                                    <input asp-for="Designation" class="form-control" placeholder="Job title / designation" />
+                                    <select asp-for="Designation" class="form-select">
+                                        <option value="">— Select Designation —</option>
+                                        @if (ViewBag.DesignationOptions is IEnumerable<string> desigOptions)
+                                        {
+                                            foreach (var desig in desigOptions)
+                                            {
+                                                <option value="@desig">@desig</option>
+                                            }
+                                        }
+                                    </select>
                                     <span asp-validation-for="Designation" class="field-validation-error"></span>
                                 </div>
                                 <div class="col-md-4">
                                     <label asp-for="Project" class="form-label"></label>
-                                    <input asp-for="Project" class="form-control" placeholder="Project or cost center" />
+                                    <select asp-for="Project" class="form-select">
+                                        <option value="">— Select Project —</option>
+                                        @if (ViewBag.ProjectOptions is IEnumerable<string> projectOptions)
+                                        {
+                                            foreach (var project in projectOptions)
+                                            {
+                                                <option value="@project">@project</option>
+                                            }
+                                        }
+                                    </select>
                                     <span asp-validation-for="Project" class="field-validation-error"></span>
                                 </div>
                                 <div class="col-md-4">
@@ -111,7 +138,16 @@
                                 </div>
                                 <div class="col-md-4">
                                     <label asp-for="EmployeeStatus" class="form-label"></label>
-                                    <input asp-for="EmployeeStatus" class="form-control" placeholder="Active, Probation, etc." />
+                                    <select asp-for="EmployeeStatus" class="form-select">
+                                        <option value="">— Select Status —</option>
+                                        @if (ViewBag.EmployeeStatusOptions is IEnumerable<string> statusOptions)
+                                        {
+                                            foreach (var status in statusOptions)
+                                            {
+                                                <option value="@status">@status</option>
+                                            }
+                                        }
+                                    </select>
                                     <span asp-validation-for="EmployeeStatus" class="field-validation-error"></span>
                                 </div>
                             </div>

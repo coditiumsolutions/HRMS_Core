@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] — HR Management Bahria Town</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <style>
+        body.login-body {
+            min-height: 100vh;
+            background: linear-gradient(160deg, #00203f 0%, #1a4a7a 45%, #e9ecef 45%);
+        }
+        .login-panel {
+            max-width: 440px;
+            margin-top: 12vh;
+        }
+        .login-card {
+            border-radius: 0.75rem;
+            border: none;
+            box-shadow: 0 1rem 2rem rgba(0, 32, 63, 0.18);
+        }
+        .login-card .card-header {
+            background: #00203f;
+            color: #fff;
+            border-bottom: 3px solid #d4af37;
+            border-radius: 0.75rem 0.75rem 0 0 !important;
+            font-weight: 600;
+        }
+    </style>
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body class="login-body">
+    <div class="container login-panel">
+        <div class="text-center text-white mb-4">
+            <div class="small text-white-50">Bahria Town</div>
+            <h1 class="h3 mb-0">HR Management System</h1>
+            <div class="small text-white-50 mt-1">Sign in to continue</div>
+        </div>
+        <div class="card login-card">
+            <div class="card-header py-3">@ViewData["Title"]</div>
+            <div class="card-body p-4">
+                @RenderBody()
+            </div>
+        </div>
+    </div>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

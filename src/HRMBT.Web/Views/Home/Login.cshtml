@@ -1,27 +1,34 @@
+@model HRMBT.Web.Models.ViewModels.LoginViewModel
 @{
+    Layout = "_LoginLayout";
     ViewData["Title"] = "Login";
 }
 
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <h1>Login</h1>
-            <hr />
-            <form>
-                <div class="form-group mb-3">
-                    <label for="username" class="form-label">Username</label>
-                    <input type="text" class="form-control" id="username" name="username" required />
-                </div>
-                <div class="form-group mb-3">
-                    <label for="password" class="form-label">Password</label>
-                    <input type="password" class="form-control" id="password" name="password" required />
-                </div>
-                <div class="form-group mb-3">
-                    <button type="submit" class="btn btn-primary">Login</button>
-                    <a asp-action="Index" class="btn btn-secondary">Cancel</a>
-                </div>
-            </form>
-        </div>
+<form asp-action="Login" method="post">
+    @{
+        var returnUrl = ViewData["ReturnUrl"] as string;
+    }
+    @if (!string.IsNullOrEmpty(returnUrl))
+    {
+        <input type="hidden" name="returnUrl" value="@returnUrl" />
+        <div class="alert alert-info small mb-3 py-2" role="status">Sign in to continue (you will return to your requested page after a successful login).</div>
+    }
+    <div asp-validation-summary="All" class="alert alert-danger small mb-3 py-2" role="alert"></div>
+    <div class="mb-3">
+        <label asp-for="Username" class="form-label"></label>
+        <input asp-for="Username" class="form-control" autocomplete="username" />
+        <span asp-validation-for="Username" class="text-danger small"></span>
     </div>
-</div>
+    <div class="mb-3">
+        <label asp-for="Password" class="form-label"></label>
+        <input asp-for="Password" class="form-control" autocomplete="current-password" />
+        <span asp-validation-for="Password" class="text-danger small"></span>
+    </div>
+    <div class="mb-0">
+        <button type="submit" class="btn btn-primary">Sign in</button>
+    </div>
+</form>
 
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

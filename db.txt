@@ -1,0 +1,186 @@
+Database: HRMS
+Connection: DefaultConnection (src/HRMBT.Web/appsettings.json)
+Generated: 2026-05-09 15:03:45
+
+[dbo].[__EFMigrationsHistory]
+  - MigrationId (nvarchar(150), Nullable: NO)
+  - ProductVersion (nvarchar(32), Nullable: NO)
+
+[dbo].[Allowances]
+  - Id (int, Nullable: NO)
+  - EmployeeId (int, Nullable: NO)
+  - AllowanceType (nvarchar(50), Nullable: NO)
+  - Name (nvarchar(200), Nullable: NO)
+  - Amount (decimal(18,2), Nullable: NO)
+  - IsPercentage (bit, Nullable: NO)
+  - PercentageValue (decimal(5,2), Nullable: YES)
+  - EffectiveDate (datetime2, Nullable: NO)
+  - EndDate (datetime2, Nullable: YES)
+  - IsActive (bit, Nullable: NO)
+  - CreatedDate (datetime2, Nullable: NO)
+  - CreatedBy (nvarchar(100), Nullable: NO)
+  - ModifiedDate (datetime2, Nullable: YES)
+  - ModifiedBy (nvarchar(max), Nullable: YES)
+
+[dbo].[Attendance]
+  - AttendanceID (int, Nullable: NO)
+  - EmployeeID (nvarchar(50), Nullable: NO)
+  - EmployeeName (nvarchar(100), Nullable: NO)
+  - DepartmentName (nvarchar(50), Nullable: NO)
+  - AttendanceDate (date, Nullable: NO)
+  - TimeIn (time, Nullable: YES)
+  - TimeOut (time, Nullable: YES)
+  - Status (nvarchar(10), Nullable: YES)
+  - Comments (nvarchar(255), Nullable: YES)
+
+[dbo].[AttendanceUploadLogs]
+  - Id (int, Nullable: NO)
+  - FileName (nvarchar(255), Nullable: YES)
+  - UploadedBy (nvarchar(100), Nullable: YES)
+  - UploadDate (datetime, Nullable: YES)
+  - Status (nvarchar(50), Nullable: YES)
+  - Message (nvarchar(max), Nullable: YES)
+  - ErrorDetails (nvarchar(max), Nullable: YES)
+  - SuccessCount (int, Nullable: YES)
+  - FailureCount (int, Nullable: YES)
+  - TotalRows (int, Nullable: YES)
+
+[dbo].[CarryforwardLeaves]
+  - EmployeeId (nvarchar(50), Nullable: NO)
+  - Year (int, Nullable: NO)
+  - TotalLeaves (int, Nullable: NO)
+  - LeavesUsed (int, Nullable: YES)
+  - LeavesRemaining (int, Nullable: YES)
+
+[dbo].[Configuration]
+  - UID (int, Nullable: NO)
+  - ConfigKey (nvarchar(50), Nullable: YES)
+  - ConfigValue (nvarchar(max), Nullable: YES)
+
+[dbo].[Deductions]
+  - Id (int, Nullable: NO)
+  - EmployeeId (int, Nullable: NO)
+  - DeductionType (nvarchar(50), Nullable: NO)
+  - Name (nvarchar(200), Nullable: NO)
+  - Amount (decimal(18,2), Nullable: YES)
+  - CalculationMethod (nvarchar(50), Nullable: NO)
+  - PercentageValue (decimal(5,2), Nullable: YES)
+  - IsMandatory (bit, Nullable: NO)
+  - EffectiveDate (datetime2, Nullable: NO)
+  - EndDate (datetime2, Nullable: YES)
+  - IsActive (bit, Nullable: NO)
+  - CreatedDate (datetime2, Nullable: NO)
+  - CreatedBy (nvarchar(100), Nullable: NO)
+  - ModifiedDate (datetime2, Nullable: YES)
+  - ModifiedBy (nvarchar(max), Nullable: YES)
+
+[dbo].[Departments]
+  - DepartmentID (int, Nullable: NO)
+  - DepartmentName (nvarchar(100), Nullable: YES)
+
+[dbo].[Employee]
+  - uid (int, Nullable: NO)
+  - EmployeeID (varchar(250), Nullable: NO)
+  - EmployeeName (varchar(250), Nullable: YES)
+  - CNIC (varchar(250), Nullable: YES)
+  - FatherName (varchar(250), Nullable: YES)
+  - DOB (varchar(250), Nullable: YES)
+  - MobileNo (varchar(250), Nullable: YES)
+  - Department (varchar(250), Nullable: YES)
+  - Designation (varchar(250), Nullable: YES)
+  - DateOfJoining (date, Nullable: YES)
+  - EmployeeStatus (varchar(250), Nullable: YES)
+  - ModifiedBy (varchar(max), Nullable: YES)
+  - ModifiedOn (nvarchar(max), Nullable: YES)
+  - Details (nvarchar(max), Nullable: YES)
+  - Project (nvarchar(50), Nullable: YES)
+  - CarryForwardLeaves (float, Nullable: YES)
+  - Year2022 (float, Nullable: YES)
+  - Year2023 (float, Nullable: YES)
+  - AdjustedAjusted (int, Nullable: YES)
+  - Year2024 (int, Nullable: YES)
+  - CarryForwardLeaves1 (float, Nullable: YES)
+  - Year2023New (decimal(18,2), Nullable: YES)
+  - BasicSalary (decimal(18,2), Nullable: YES)
+  - ApplyTax (nvarchar(10), Nullable: YES)
+
+[dbo].[EmployeeLeaves]
+  - uid (int, Nullable: NO)
+  - EmployeeID (varchar(50), Nullable: NO)
+  - LeaveTypeName (varchar(250), Nullable: NO)
+  - StartDate (date, Nullable: NO)
+  - EndDate (date, Nullable: NO)
+  - TotalDays (float, Nullable: YES)
+  - AddDays (int, Nullable: YES)
+  - ExcludeDays (int, Nullable: YES)
+  - Short_Adj (varchar(max), Nullable: YES)
+  - DepSupervisorComments (varchar(max), Nullable: YES)
+  - Year (varchar(50), Nullable: YES)
+  - Status (nvarchar(50), Nullable: YES)
+  - ApprovedBy (varchar(50), Nullable: YES)
+  - ApprovedOn (date, Nullable: YES)
+  - AppliedDate (date, Nullable: YES)
+
+[dbo].[GazettedHolidays]
+  - HolidayDate (date, Nullable: NO)
+  - Description (nvarchar(255), Nullable: YES)
+
+[dbo].[LeaveQuota]
+  - UID (int, Nullable: NO)
+  - LeaveTypeName (varchar(50), Nullable: NO)
+  - TotalLeaves (int, Nullable: NO)
+  - Year (varchar(50), Nullable: NO)
+
+[dbo].[LeaveRequests]
+  - Id (int, Nullable: NO)
+  - EmployeeId (int, Nullable: NO)
+  - LeaveType (nvarchar(max), Nullable: NO)
+  - FromDate (datetime2, Nullable: NO)
+  - ToDate (datetime2, Nullable: NO)
+  - Status (nvarchar(max), Nullable: YES)
+
+[dbo].[PayslipDetails]
+  - Id (int, Nullable: NO)
+  - PayslipId (int, Nullable: NO)
+  - ItemType (nvarchar(20), Nullable: NO)
+  - ItemName (nvarchar(200), Nullable: NO)
+  - ItemCategory (nvarchar(50), Nullable: NO)
+  - Amount (decimal(18,2), Nullable: NO)
+  - SortOrder (int, Nullable: YES)
+
+[dbo].[Payslips]
+  - Id (int, Nullable: NO)
+  - EmployeeId (int, Nullable: NO)
+  - Month (int, Nullable: NO)
+  - Year (int, Nullable: NO)
+  - BasicSalary (decimal(18,2), Nullable: NO)
+  - GrossSalary (decimal(18,2), Nullable: NO)
+  - TotalDeductions (decimal(18,2), Nullable: NO)
+  - NetSalary (decimal(18,2), Nullable: NO)
+  - WorkingDays (int, Nullable: YES)
+  - LeaveDays (decimal(5,2), Nullable: YES)
+  - LeaveBalance (nvarchar(max), Nullable: YES)
+  - CalculationDetails (nvarchar(max), Nullable: NO)
+  - GeneratedDate (datetime2, Nullable: NO)
+  - GeneratedBy (nvarchar(100), Nullable: NO)
+  - IsLocked (bit, Nullable: NO)
+  - LockedDate (datetime2, Nullable: YES)
+  - Notes (nvarchar(1000), Nullable: YES)
+  - TaxPercentage (decimal(18,2), Nullable: NO)
+  - TaxAmount (decimal(18,2), Nullable: NO)
+
+[dbo].[TaxRules]
+  - Id (int, Nullable: NO)
+  - MinSalary (decimal(18,2), Nullable: NO)
+  - MaxSalary (decimal(18,2), Nullable: YES)
+  - TaxPercentage (decimal(18,2), Nullable: NO)
+
+[dbo].[Users]
+  - uid (int, Nullable: NO)
+  - EmployeeId (varchar(50), Nullable: YES)
+  - Username (nvarchar(100), Nullable: NO)
+  - PasswordHash (nvarchar(255), Nullable: NO)
+  - Role (nvarchar(max), Nullable: YES)
+  - CreatedBy (varchar(max), Nullable: YES)
+  - CreatedOn (varchar(max), Nullable: YES)
+  - History (varchar(max), Nullable: YES)

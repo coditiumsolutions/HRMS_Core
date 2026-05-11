@@ -30,6 +30,9 @@ namespace HRMBT.Web.Data
         public DbSet<Payslip> Payslips { get; set; }
         public DbSet<PayslipDetail> PayslipDetails { get; set; }
 
+        public DbSet<AppUser> AppUsers { get; set; }
+        public DbSet<HrConfiguration> HrConfigurations { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -109,6 +112,34 @@ namespace HRMBT.Web.Data
             modelBuilder.Entity<Deduction>().ToTable("Deductions");
             modelBuilder.Entity<Payslip>().ToTable("Payslips");
             modelBuilder.Entity<PayslipDetail>().ToTable("PayslipDetails");
+            modelBuilder.Entity<Payslip>(entity =>
+            {
+                entity.Property(p => p.BasicSalary).HasColumnType("decimal(18,2)");
+                entity.Property(p => p.GrossSalary).HasColumnType("decimal(18,2)");
+                entity.Property(p => p.TaxPercentage).HasColumnType("decimal(18,2)");
+                entity.Property(p => p.TaxAmount).HasColumnType("decimal(18,2)");
+                entity.Property(p => p.TotalDeductions).HasColumnType("decimal(18,2)");
+                entity.Property(p => p.NetSalary).HasColumnType("decimal(18,2)");
+            });
+
+            modelBuilder.Entity<AppUser>(entity =>
+            {
+                entity.ToTable("Users");
+                entity.HasKey(e => e.Uid);
+                entity.Property(e => e.Uid).HasColumnName("uid");
+                entity.Property(e => e.EmployeeId).HasColumnName("EmployeeId").HasMaxLength(50);
+                entity.Property(e => e.Username).HasMaxLength(100).IsRequired();
+                entity.Property(e => e.PasswordHash).HasMaxLength(255).IsRequired();
+            });
+
+            modelBuilder.Entity<HrConfiguration>(entity =>
+            {
+                entity.ToTable("Configuration");
+                entity.HasKey(e => e.UID);
+                entity.Property(e => e.UID).HasColumnName("UID");
+                entity.Property(e => e.ConfigKey).HasMaxLength(50);
+                entity.Property(e => e.ConfigValue).HasColumnType("nvarchar(max)");
+            });
         }
     }
 }

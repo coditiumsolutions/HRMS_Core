@@ -455,32 +455,42 @@ namespace HRMBT.Web.Controllers
             ViewBag.SelectedDepartment = department;
             ViewBag.CurrentPageSize = pageSize;
 
-            return View(paginatedEmployees);
+            return View("EmployeeDetail", paginatedEmployees);
+        }
+
+        // GET: Payroll/GeneratePayroll
+        // Reuses EmployeeDetail data/view so functionality stays identical.
+        public Task<IActionResult> GeneratePayroll(string department, int page = 1, int pageSize = 20)
+        {
+            return EmployeeDetail(department, page, pageSize);
         }
 
         // POST: Payroll/GeneratePayrollForSelected
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> GeneratePayrollForSelected(List<int> selectedEmployeeIds, int month, int year)
+        public async Task<IActionResult> GeneratePayrollForSelected(List<int> selectedEmployeeIds, int month, int year, string? sourceAction, string? department)
         {
             ViewData["Module"] = "Payroll";
+            var returnAction = string.Equals(sourceAction, nameof(GeneratePayroll), StringComparison.OrdinalIgnoreCase)
+                ? nameof(GeneratePayroll)
+                : nameof(EmployeeDetail);
 
             if (selectedEmployeeIds == null || !selectedEmployeeIds.Any())
             {
                 TempData["ErrorMessage"] = "Please select at least one employee.";
-                return RedirectToAction(nameof(EmployeeDetail));
+                return RedirectToAction(returnAction, new { department });
             }
 
             if (month < 1 || month > 12)
             {
                 TempData["ErrorMessage"] = "Invalid month selected.";
-                return RedirectToAction(nameof(EmployeeDetail));
+                return RedirectToAction(returnAction, new { department });
             }
 
             if (year < 2000 || year > 2100)
             {
                 TempData["ErrorMessage"] = "Invalid year selected.";
-                return RedirectToAction(nameof(EmployeeDetail));
+                return RedirectToAction(returnAction, new { department });
             }
 
             int successCount = 0;
@@ -548,7 +558,7 @@ namespace HRMBT.Web.Controllers
                 TempData["ErrorDetails"] = string.Join("<br/>", errors);
             }
 
-            return RedirectToAction(nameof(EmployeeDetail));
+            return RedirectToAction(returnAction, new { department });
         }
 
         // GET: Payroll/PayrollStatus

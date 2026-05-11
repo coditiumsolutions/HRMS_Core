@@ -241,6 +241,7 @@
 }
 .payslip-page .row-actions .btn:hover { transform: translateY(-1px); border-color: var(--row-action-color); }
 .payslip-page .row-actions .btn-view   { --row-action-color: #0d6efd; }
+.payslip-page .row-actions .btn-edit   { --row-action-color: #fd7e14; }
 .payslip-page .row-actions .btn-print  { --row-action-color: #0f766e; }
 .payslip-page .row-actions .btn-delete { --row-action-color: #b91c1c; }
 

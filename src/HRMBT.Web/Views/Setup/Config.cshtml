@@ -1,0 +1,62 @@
+@model IReadOnlyList<HRMBT.Web.Models.HrConfiguration>
+@{
+    ViewData["Title"] = "Configuration";
+
+    static string TrimForTable(string? s, int max = 96)
+    {
+        if (string.IsNullOrEmpty(s)) return "—";
+        if (s.Length <= max) return s;
+        return s.Substring(0, max).TrimEnd() + "…";
+    }
+}
+
+<h1 class="h3 mb-3">Configuration</h1>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <p class="text-muted small mb-0">Rows from <code>dbo.Configuration</code>. Key up to 50 characters; values can be long (comma-separated). Edit or Delete an existing row.</p>
+    <a class="btn btn-success" asp-action="CreateConfig">New configuration</a>
+</div>
+
+<div class="table-responsive bg-white rounded shadow-sm">
+    <table class="table table-sm table-hover mb-0 align-middle">
+        <thead class="table-light">
+            <tr>
+                <th>UID</th>
+                <th>Key</th>
+                <th>Value</th>
+                <th class="text-end" style="min-width: 150px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model == null || !Model.Any())
+            {
+                <tr><td colspan="4" class="text-muted text-center py-4">No configuration rows. Use <strong>New configuration</strong> to add one.</td></tr>
+            }
+            else
+            {
+                foreach (var c in Model)
+                {
+                    var fullVal = c.ConfigValue;
+                    var shortVal = TrimForTable(fullVal);
+                    <tr>
+                        <td>@c.UID</td>
+                        <td>@(c.ConfigKey ?? "—")</td>
+                        <td class="small" title="@fullVal">@shortVal</td>
+                        <td class="text-end text-nowrap">
+                            <a class="btn btn-sm btn-outline-primary me-1" asp-action="EditConfig" asp-route-id="@c.UID">Edit</a>
+                            <a class="btn btn-sm btn-outline-danger" asp-action="DeleteConfig" asp-route-id="@c.UID">Delete</a>
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
