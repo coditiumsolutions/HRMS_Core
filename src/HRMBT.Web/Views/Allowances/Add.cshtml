@@ -1,0 +1,300 @@
+@model HRMBT.Web.Models.PaginatedList<HRMBT.Web.Models.Employee>
+
+@{
+    ViewData["Title"] = "Add Allowances";
+    ViewData["Module"] = "Allowances";
+    var empModel = Model;
+
+    string Initials(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+        var parts = name.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 1) return parts[0].Substring(0, Math.Min(2, parts[0].Length)).ToUpperInvariant();
+        return (parts[0][0].ToString() + parts[^1][0].ToString()).ToUpperInvariant();
+    }
+}
+
+@section Styles {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" crossorigin="anonymous" />
+    <link rel="stylesheet" href="~/css/payslips.css" asp-append-version="true" />
+}
+
+<div class="payslip-page py-4">
+    <div class="container-fluid px-3 px-lg-4">
+
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb mb-0 small">
+                <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Home</a></li>
+                <li class="breadcrumb-item"><a asp-action="Index">Allowances</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Add Allowances</li>
+            </ol>
+        </nav>
+
+        <div class="page-header-card p-4 mb-4">
+            <div class="row align-items-center g-3">
+                <div class="col-lg">
+                    <h1 class="h2 mb-1 fw-bold text-dark">
+                        <i class="bi bi-ui-checks-grid text-primary me-2"></i>Add Allowances
+                    </h1>
+                    <p class="text-muted mb-0">Filter employees by <strong>department</strong> and/or <strong>employee ID or name</strong> (same field). Select rows, choose an allowance from configuration, enter the amount, then <strong>Add to selected</strong>.</p>
+                </div>
+                <div class="col-lg-auto d-flex flex-wrap gap-2 justify-content-lg-end">
+                    <a asp-action="Index" class="btn btn-action-secondary">
+                        <i class="bi bi-table me-1"></i>View allowances
+                    </a>
+                    <a asp-action="Create" class="btn btn-action-primary">
+                        <i class="bi bi-plus-lg me-1"></i>Single allowance
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show d-flex align-items-center gap-2 mb-4" role="alert">
+                <i class="bi bi-check-circle-fill"></i>
+                <div>@TempData["SuccessMessage"]</div>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+            </div>
+        }
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center gap-2 mb-4" role="alert">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                <div>@TempData["ErrorMessage"]</div>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+            </div>
+        }
+
+        <div class="filter-card mb-4">
+            <div class="card-header"><i class="bi bi-funnel"></i>Filter employees</div>
+            <div class="card-body p-3 p-lg-4">
+                <form asp-action="Add" method="get" class="row g-3" onsubmit="document.getElementById('empPageInput').value = '1';">
+                    <input type="hidden" name="ePage" id="empPageInput" value="@ViewBag.CurrentEPage" />
+                    <div class="col-md-4 col-lg-3">
+                        <label class="form-label" for="deptId">Department</label>
+                        <select name="deptId" id="deptId" class="form-select" asp-items="ViewBag.DepartmentFilterOptions"
+                                onchange="document.getElementById('empPageInput').value = '1'; this.form.submit();"></select>
+                    </div>
+                    <div class="col-md-5 col-lg-4">
+                        <label class="form-label" for="empSearch">Employee ID or name</label>
+                        <input type="text" name="empSearch" id="empSearch" class="form-control" value="@ViewBag.CurrentEmpSearch" placeholder="e.g. Shahid Ghauri or 860" />
+                    </div>
+                    <div class="col-md-12 col-lg-5 d-flex align-items-end gap-2 flex-wrap">
+                        <button type="submit" class="btn btn-action-primary"><i class="bi bi-search me-1"></i>Apply</button>
+                        <a asp-action="Add" class="btn btn-action-secondary"><i class="bi bi-x-lg me-1"></i>Clear</a>
+                        <div class="ms-lg-auto">
+                            <label class="form-label small d-block" for="ePageSizeTop">Per page</label>
+                            <select name="ePageSize" id="ePageSizeTop" class="form-select form-select-sm" style="min-width:5rem;" onchange="document.getElementById('empPageInput').value = '1'; this.form.submit();">
+                                @if (ViewBag.EPageSizeOptions != null)
+                                {
+                                    foreach (var ps in ViewBag.EPageSizeOptions)
+                                    {
+                                        <option value="@ps" selected="@(ViewBag.CurrentEPageSize == ps)">@ps</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <form asp-action="BulkCreateAllowances" method="post" id="bulkAllowanceForm">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="deptId" value="@(ViewBag.CurrentDeptId)" />
+            <input type="hidden" name="empSearch" value="@ViewBag.CurrentEmpSearch" />
+            <input type="hidden" name="ePage" value="@ViewBag.CurrentEPage" />
+            <input type="hidden" name="ePageSize" value="@(ViewBag.CurrentEPageSize ?? 20)" />
+
+            <div class="section-card mb-4">
+                <div class="card-header"><i class="bi bi-ui-checks-grid"></i>Add allowance to selected employees</div>
+                <div class="card-body p-3 p-lg-4">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-4 col-lg-3">
+                            <label class="form-label" for="allowanceName">Allowance name</label>
+                            <select name="allowanceName" id="allowanceName" class="form-select" asp-items="ViewBag.AllowanceNameOptions" required></select>
+                            <div class="form-text">From <code>dbo.Configuration</code> where <code>ConfigKey</code> is Allowances.</div>
+                        </div>
+                        <div class="col-md-3 col-lg-2">
+                            <label class="form-label" for="allowanceValue">Allowance value</label>
+                            <input type="number" name="allowanceValue" id="allowanceValue" class="form-control" step="0.01" min="0" value="0" required />
+                            <div class="form-text">Fixed amount per selected employee.</div>
+                        </div>
+                        <div class="col-md-5 col-lg-7">
+                            <label class="form-label invisible d-none d-md-block">Selection</label>
+                            <div class="d-flex flex-wrap gap-2 align-items-center">
+                                <button type="button" class="btn btn-action-secondary" onclick="selectAllEmp()">
+                                    <i class="bi bi-check2-all me-1"></i>Select all on page
+                                </button>
+                                <button type="button" class="btn btn-action-outline" onclick="deselectAllEmp()">
+                                    <i class="bi bi-x-lg me-1"></i>Deselect all
+                                </button>
+                                <span class="text-muted small ms-md-2"><span id="selectedCount">0</span> selected</span>
+                                <button type="submit" class="btn btn-action-primary ms-auto" onclick="return confirmBulkAdd()">
+                                    <i class="bi bi-plus-circle me-1"></i>Add to selected
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <div class="grid-card mb-4">
+            <div class="card-header d-flex align-items-center justify-content-between">
+                <span><i class="bi bi-people"></i>Employees</span>
+                @if (empModel != null && empModel.Any())
+                {
+                    <span class="small">@empModel.StartRecord–@empModel.EndRecord of @empModel.TotalCount</span>
+                }
+            </div>
+            <div class="card-body">
+                @if (empModel == null || !empModel.Any())
+                {
+                    <div class="empty-state">
+                        <i class="bi bi-person-x"></i>
+                        <h5 class="mb-1">No employees match</h5>
+                        <p class="mb-0">Change department or search, then click Apply.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-wrap table-responsive">
+                        <table class="payslip-grid">
+                            <thead>
+                                <tr>
+                                    <th style="width: 56px;">
+                                        <input type="checkbox" id="selectAllCheckbox" class="form-check-input" onclick="toggleAllEmp(this)" title="Select all on this page" />
+                                    </th>
+                                    <th style="width: 56px;">&nbsp;</th>
+                                    <th class="col-payroll-id">Uid</th>
+                                    <th>Employee</th>
+                                    <th>Department</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in empModel)
+                                {
+                                    <tr>
+                                        <td>
+                                            <input type="checkbox" form="bulkAllowanceForm" name="selectedEmployeeIds" value="@item.uid" class="employee-checkbox form-check-input" />
+                                        </td>
+                                        <td>
+                                            <span class="d-inline-flex align-items-center justify-content-center rounded-circle text-white fw-bold"
+                                                  style="width:36px;height:36px;font-size:.85rem;background:linear-gradient(135deg,#336b87 0%,#00203f 100%);">
+                                                @Initials(item.EmployeeName)
+                                            </span>
+                                        </td>
+                                        <td class="col-payroll-id text-muted small font-monospace">@item.uid</td>
+                                        <td>
+                                            <div class="fw-semibold">@item.EmployeeName</div>
+                                            <div class="text-muted small">@item.EmployeeID</div>
+                                        </td>
+                                        <td>@(item.Department ?? "—")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+
+        @if (empModel != null && empModel.TotalPages > 1)
+        {
+            var prevE = !empModel.HasPreviousPage ? "disabled" : "";
+            var nextE = !empModel.HasNextPage ? "disabled" : "";
+            int startE = Math.Max(1, empModel.PageIndex - 2);
+            int endE = Math.Min(empModel.TotalPages, empModel.PageIndex + 2);
+            if (endE - startE < 4)
+            {
+                if (startE == 1) { endE = Math.Min(empModel.TotalPages, startE + 4); }
+                else if (endE == empModel.TotalPages) { startE = Math.Max(1, endE - 4); }
+            }
+            <nav aria-label="Employee pagination" class="mb-4">
+                <ul class="pagination justify-content-center">
+                    <li class="page-item @prevE">
+                        <a class="page-link" asp-action="Add" asp-route-ePage="1" asp-route-ePageSize="@ViewBag.CurrentEPageSize"
+                           asp-route-deptId="@ViewBag.CurrentDeptId" asp-route-empSearch="@ViewBag.CurrentEmpSearch">&laquo;&laquo;</a>
+                    </li>
+                    <li class="page-item @prevE">
+                        <a class="page-link" asp-action="Add" asp-route-ePage="@(empModel.PageIndex - 1)" asp-route-ePageSize="@ViewBag.CurrentEPageSize"
+                           asp-route-deptId="@ViewBag.CurrentDeptId" asp-route-empSearch="@ViewBag.CurrentEmpSearch">&laquo;</a>
+                    </li>
+                    @for (int i = startE; i <= endE; i++)
+                    {
+                        var activeE = i == empModel.PageIndex ? "active" : "";
+                        <li class="page-item @activeE">
+                            <a class="page-link" asp-action="Add" asp-route-ePage="@i" asp-route-ePageSize="@ViewBag.CurrentEPageSize"
+                               asp-route-deptId="@ViewBag.CurrentDeptId" asp-route-empSearch="@ViewBag.CurrentEmpSearch">@i</a>
+                        </li>
+                    }
+                    <li class="page-item @nextE">
+                        <a class="page-link" asp-action="Add" asp-route-ePage="@(empModel.PageIndex + 1)" asp-route-ePageSize="@ViewBag.CurrentEPageSize"
+                           asp-route-deptId="@ViewBag.CurrentDeptId" asp-route-empSearch="@ViewBag.CurrentEmpSearch">&raquo;</a>
+                    </li>
+                    <li class="page-item @nextE">
+                        <a class="page-link" asp-action="Add" asp-route-ePage="@empModel.TotalPages" asp-route-ePageSize="@ViewBag.CurrentEPageSize"
+                           asp-route-deptId="@ViewBag.CurrentDeptId" asp-route-empSearch="@ViewBag.CurrentEmpSearch">&raquo;&raquo;</a>
+                    </li>
+                </ul>
+                <div class="text-center text-muted small">Page @empModel.PageIndex of @empModel.TotalPages</div>
+            </nav>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function toggleAllEmp(checkbox) {
+            document.querySelectorAll('.employee-checkbox').forEach(cb => cb.checked = checkbox.checked);
+            updateSelectedCount();
+        }
+        function selectAllEmp() {
+            document.querySelectorAll('.employee-checkbox').forEach(cb => cb.checked = true);
+            var sa = document.getElementById('selectAllCheckbox'); if (sa) sa.checked = true;
+            updateSelectedCount();
+        }
+        function deselectAllEmp() {
+            document.querySelectorAll('.employee-checkbox').forEach(cb => cb.checked = false);
+            var sa = document.getElementById('selectAllCheckbox'); if (sa) sa.checked = false;
+            updateSelectedCount();
+        }
+        function updateSelectedCount() {
+            var n = document.querySelectorAll('.employee-checkbox:checked').length;
+            var el = document.getElementById('selectedCount');
+            if (el) el.textContent = n;
+        }
+        function confirmBulkAdd() {
+            var selected = document.querySelectorAll('.employee-checkbox:checked').length;
+            if (selected === 0) {
+                alert('Please select at least one employee.');
+                return false;
+            }
+            var nameSel = document.getElementById('allowanceName');
+            if (!nameSel || !nameSel.value) {
+                alert('Please select an allowance name.');
+                return false;
+            }
+            var val = parseFloat(document.getElementById('allowanceValue').value);
+            if (isNaN(val) || val < 0) {
+                alert('Enter a valid allowance value (0 or greater).');
+                return false;
+            }
+            return confirm('Add allowance “' + nameSel.options[nameSel.selectedIndex].text + '” (' + val.toFixed(2) + ') for ' + selected + ' employee(s)?');
+        }
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.employee-checkbox').forEach(cb => {
+                cb.addEventListener('change', function () {
+                    updateSelectedCount();
+                    var allChecked = document.querySelectorAll('.employee-checkbox:checked').length;
+                    var total = document.querySelectorAll('.employee-checkbox').length;
+                    var sa = document.getElementById('selectAllCheckbox');
+                    if (sa) sa.checked = allChecked === total && total > 0;
+                });
+            });
+            updateSelectedCount();
+        });
+    </script>
+}

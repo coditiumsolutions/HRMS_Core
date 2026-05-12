@@ -149,9 +149,12 @@
 /* Net salary highlight */
 .payslip-page .calc-summary {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.85rem;
   margin-top: 0.5rem;
+}
+@media (max-width: 991.98px) {
+  .payslip-page .calc-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 575.98px) {
   .payslip-page .calc-summary { grid-template-columns: 1fr; }
@@ -228,6 +231,36 @@
 .payslip-page table.payslip-grid tbody tr:nth-child(even) { background: #fafbfc; }
 .payslip-page table.payslip-grid tbody tr:hover { background: #fff8e1; box-shadow: inset 4px 0 0 #d4af37; }
 
+/* dbo.Employee.uid — narrow Id column on payroll employee grid */
+.payslip-page table.payslip-grid th.col-payroll-id,
+.payslip-page table.payslip-grid td.col-payroll-id {
+  width: 3.25rem;
+  max-width: 4rem;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* dbo.Employee.GenStatus — wider column, readable label */
+.payslip-page table.payslip-grid th.col-generation-status,
+.payslip-page table.payslip-grid td.col-generation-status {
+  min-width: 13rem;
+  width: 16rem;
+  max-width: 22rem;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.4;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.payslip-page table.payslip-grid th.col-generation-status {
+  text-transform: none;
+  letter-spacing: 0.02em;
+  font-size: 0.82rem;
+}
+
 .payslip-page .row-actions {
   display: inline-flex; gap: 0.35rem; white-space: nowrap;
 }
@@ -267,9 +300,11 @@
   display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem;
 }
 .payslip-page .info-grid.info-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.payslip-page .info-grid.info-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 @media (max-width: 767.98px) {
   .payslip-page .info-grid,
-  .payslip-page .info-grid.info-grid-3 { grid-template-columns: 1fr; }
+  .payslip-page .info-grid.info-grid-3,
+  .payslip-page .info-grid.info-grid-4 { grid-template-columns: 1fr; }
 }
 .payslip-page .info-cell {
   background: #f8fafc; border: 1px solid #eef0f2; border-radius: 0.5rem;

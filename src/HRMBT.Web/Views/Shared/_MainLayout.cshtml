@@ -39,6 +39,47 @@
         .navbar-top-2 .nav-link:hover {
             color: #f0f0f0 !important;
         }
+        .navbar-top-2 .modules-heading {
+            color: #D4AF37 !important;
+            font-weight: 700;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            padding-top: 0.5rem;
+            padding-bottom: 0.5rem;
+            margin-bottom: 0;
+            white-space: nowrap;
+        }
+        .navbar-top-2 .navbar-modules-nav .nav-link {
+            font-weight: 700 !important;
+            font-size: 0.875rem;
+        }
+        @@media (min-width: 576px) {
+            .navbar-top-2 .navbar-modules-nav .nav-link {
+                padding-left: 1.35rem;
+                padding-right: 1.35rem;
+            }
+            .navbar-top-2 .navbar-nav.ms-auto .nav-link {
+                padding-left: 1.35rem;
+                padding-right: 1.35rem;
+            }
+            .navbar-top-2 .navbar-modules-nav .nav-item + .nav-item,
+            .navbar-top-2 .navbar-nav.ms-auto .nav-item {
+                position: relative;
+            }
+            .navbar-top-2 .navbar-modules-nav .nav-item + .nav-item::before,
+            .navbar-top-2 .navbar-nav.ms-auto .nav-item::before {
+                content: '';
+                position: absolute;
+                left: 0;
+                top: 50%;
+                transform: translateY(-50%);
+                width: 2px;
+                height: 0.75rem;
+                background-color: #D4AF37;
+                border-radius: 1px;
+            }
+        }
         .sidebar {
             background-color: #00203F;
             min-height: calc(100vh - 120px);
@@ -145,7 +186,9 @@
                 <span class="navbar-toggler-icon" style="filter: invert(1);"></span>
             </button>
             <div class="collapse navbar-collapse" id="moduleNavbar">
-                <ul class="navbar-nav flex-grow-1">
+                <div class="d-flex flex-column flex-sm-row align-items-start align-items-sm-center flex-grow-1 me-sm-3 mb-2 mb-sm-0 gap-sm-2">
+                    <span class="navbar-text modules-heading">Modules</span>
+                    <ul class="navbar-nav navbar-modules-nav flex-grow-1 flex-wrap">
                     <li class="nav-item">
                         <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
                     </li>
@@ -154,6 +197,12 @@
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" asp-area="" asp-controller="Payroll" asp-action="Index">Payroll</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" asp-area="" asp-controller="Allowances" asp-action="Index">Allowances</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" asp-area="" asp-controller="Deductions" asp-action="Index">Deductions</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" asp-area="" asp-controller="Attendance" asp-action="Index">Attendance</a>
@@ -167,7 +216,8 @@
                     <li class="nav-item">
                         <a class="nav-link" asp-area="" asp-controller="Setup" asp-action="Index">Setup</a>
                     </li>
-                </ul>
+                    </ul>
+                </div>
                 <ul class="navbar-nav ms-auto">
                     @if (string.IsNullOrEmpty(authName))
                     {
@@ -215,6 +265,10 @@
                 else if (ViewData["Module"]?.ToString() == "Attendance")
                 {
                     @await Html.PartialAsync("_AttendanceSidebar")
+                }
+                else if (ViewData["Module"]?.ToString() == "Deductions")
+                {
+                    @await Html.PartialAsync("_DeductionsSidebar")
                 }
                 else
                 {

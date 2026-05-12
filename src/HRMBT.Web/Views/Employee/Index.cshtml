@@ -56,57 +56,6 @@
 <div class="employee-list-page py-4">
     <div class="container-fluid px-3 px-lg-4">
 
-        <!-- Breadcrumb -->
-        <nav aria-label="breadcrumb" class="mb-3">
-            <ol class="breadcrumb mb-0 small">
-                <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Home</a></li>
-                <li class="breadcrumb-item active" aria-current="page">Employees</li>
-            </ol>
-        </nav>
-
-        <!-- Page header + toolbar -->
-        <div class="page-header-card p-4 mb-4">
-            <div class="row align-items-center g-3">
-                <div class="col-lg">
-                    <h1 class="h2 mb-1 fw-bold text-dark">
-                        <i class="bi bi-people-fill text-primary me-2"></i>Employee Directory
-                    </h1>
-                    <p class="text-muted mb-0">Employee Management System — search, filter, and manage your workforce.</p>
-                </div>
-                <div class="col-lg-auto">
-                    <div class="toolbar-actions d-flex flex-wrap align-items-center gap-2">
-                        <a asp-action="Create" class="btn btn-action-primary">
-                            <i class="bi bi-plus-lg me-1"></i>Add Employee
-                        </a>
-                        <a class="btn btn-action-success"
-                           asp-action="ExportExcel"
-                           asp-route-department="@ViewBag.CurrentDepartment"
-                           asp-route-designation="@ViewBag.CurrentDesignation"
-                           asp-route-employeeName="@ViewBag.CurrentEmployeeName"
-                           asp-route-employeeID="@ViewBag.CurrentEmployeeID"
-                           asp-route-year2024="@ViewBag.CurrentYear2024"
-                           asp-route-applyTax="@ViewBag.CurrentApplyTax"
-                           asp-route-sortBy="@ViewBag.CurrentSortBy"
-                           asp-route-sortOrder="@ViewBag.CurrentSortOrder">
-                            <i class="bi bi-file-earmark-excel me-1"></i>Export Excel
-                        </a>
-                        <a asp-action="Index" class="btn btn-action-outline" title="Reset filters &amp; refresh">
-                            <i class="bi bi-arrow-clockwise me-1"></i>Refresh
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-            @if (Model.TotalCount > 0)
-            {
-                <div class="d-flex flex-wrap align-items-center gap-2 mt-3">
-                    <span class="stat-pill"><i class="bi bi-people text-primary"></i><span class="stat-num">@Model.TotalCount</span> total</span>
-                    <span class="stat-pill"><i class="bi bi-eye text-success"></i><span class="stat-num">@Model.StartRecord–@Model.EndRecord</span> showing</span>
-                    <span class="stat-pill"><i class="bi bi-layers text-warning"></i>Page <span class="stat-num">@Model.PageIndex</span> / @Math.Max(1, Model.TotalPages)</span>
-                </div>
-            }
-        </div>
-
         @if (ViewBag.ErrorMessage != null)
         {
             <div class="alert alert-danger d-flex align-items-start gap-2 mb-4">
@@ -120,9 +69,8 @@
 
         <!-- Filters -->
         <div class="filter-card mb-4">
-            <div class="card-header d-flex align-items-center justify-content-between">
+            <div class="card-header">
                 <span><i class="bi bi-funnel"></i>Search &amp; filters</span>
-                <span class="small text-warning-emphasis">Refine the directory</span>
             </div>
             <div class="card-body p-3 p-lg-4">
                 <form asp-action="Index" method="get" class="row g-3" id="employeeFilterForm">
@@ -195,12 +143,8 @@
 
         <!-- Grid -->
         <div class="grid-card mb-4">
-            <div class="card-header d-flex align-items-center justify-content-between">
+            <div class="card-header">
                 <span><i class="bi bi-table"></i>Employees</span>
-                @if (Model.TotalCount > 0)
-                {
-                    <span class="small">@Model.StartRecord–@Model.EndRecord of @Model.TotalCount</span>
-                }
             </div>
             <div class="card-body">
                 @if (!Model.Any())
@@ -221,7 +165,7 @@
                             <thead>
                                 <tr>
                                     <th style="width:64px;">&nbsp;</th>
-                                    <th>
+                                    <th class="col-emp-id">
                                         <a asp-action="Index"
                                            asp-route-sortBy="EmployeeID"
                                            asp-route-sortOrder="@NextSort("EmployeeID")"
@@ -230,7 +174,7 @@
                                            asp-route-employeeName="@ViewBag.CurrentEmployeeName"
                                            asp-route-employeeID="@ViewBag.CurrentEmployeeID"
                                            asp-route-pageSize="@ViewBag.CurrentPageSize">
-                                            Employee ID <i class="bi @SortIcon("EmployeeID") ms-1"></i>
+                                            Emp ID <i class="bi @SortIcon("EmployeeID") ms-1"></i>
                                         </a>
                                     </th>
                                     <th>
@@ -257,22 +201,8 @@
                                             Department <i class="bi @SortIcon("Department") ms-1"></i>
                                         </a>
                                     </th>
-                                    <th>
-                                        <a asp-action="Index"
-                                           asp-route-sortBy="Designation"
-                                           asp-route-sortOrder="@NextSort("Designation")"
-                                           asp-route-department="@ViewBag.CurrentDepartment"
-                                           asp-route-designation="@ViewBag.CurrentDesignation"
-                                           asp-route-employeeName="@ViewBag.CurrentEmployeeName"
-                                           asp-route-employeeID="@ViewBag.CurrentEmployeeID"
-                                           asp-route-pageSize="@ViewBag.CurrentPageSize">
-                                            Designation <i class="bi @SortIcon("Designation") ms-1"></i>
-                                        </a>
-                                    </th>
-                                    <th>Mobile</th>
                                     <th>Status</th>
-                                    <th>Joining</th>
-                                    <th class="text-end">
+                                    <th class="text-end col-salary">
                                         <a asp-action="Index"
                                            asp-route-sortBy="basicSalary"
                                            asp-route-sortOrder="@NextSort("basicSalary")"
@@ -282,6 +212,18 @@
                                            asp-route-employeeID="@ViewBag.CurrentEmployeeID"
                                            asp-route-pageSize="@ViewBag.CurrentPageSize">
                                             Salary <i class="bi @SortIcon("basicSalary") ms-1"></i>
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a asp-action="Index"
+                                           asp-route-sortBy="GenStatus"
+                                           asp-route-sortOrder="@NextSort("GenStatus")"
+                                           asp-route-department="@ViewBag.CurrentDepartment"
+                                           asp-route-designation="@ViewBag.CurrentDesignation"
+                                           asp-route-employeeName="@ViewBag.CurrentEmployeeName"
+                                           asp-route-employeeID="@ViewBag.CurrentEmployeeID"
+                                           asp-route-pageSize="@ViewBag.CurrentPageSize">
+                                            Gen status <i class="bi @SortIcon("GenStatus") ms-1"></i>
                                         </a>
                                     </th>
                                     <th class="text-end" style="width:160px;">Actions</th>
@@ -296,32 +238,18 @@
                                                 @Initials(item.EmployeeName)
                                             </span>
                                         </td>
-                                        <td><span class="text-muted small">@item.EmployeeID</span></td>
+                                        <td class="col-emp-id"><span class="text-muted small emp-id-cell" title="@item.EmployeeID">@item.EmployeeID</span></td>
                                         <td>
                                             <div class="emp-name">@item.EmployeeName</div>
                                             <div class="emp-meta">@item.Project</div>
                                         </td>
                                         <td>@item.Department</td>
-                                        <td>@item.Designation</td>
-                                        <td>
-                                            @if (!string.IsNullOrWhiteSpace(item.MobileNo))
-                                            {
-                                                <span class="text-nowrap"><i class="bi bi-telephone-fill text-muted me-1"></i>@item.MobileNo</span>
-                                            }
-                                            else
-                                            {
-                                                <span class="text-muted">—</span>
-                                            }
-                                        </td>
                                         <td>
                                             <span class="status-pill @StatusClass(item.EmployeeStatus)">
                                                 @(string.IsNullOrWhiteSpace(item.EmployeeStatus) ? "—" : item.EmployeeStatus)
                                             </span>
                                         </td>
-                                        <td class="text-nowrap">
-                                            @(item.DateOfJoining?.ToString("dd MMM yyyy") ?? "—")
-                                        </td>
-                                        <td class="text-end salary">
+                                        <td class="text-end salary col-salary">
                                             @if (item.BasicSalary.HasValue)
                                             {
                                                 <span class="salary-currency">PKR</span>@item.BasicSalary.Value.ToString("N0")
@@ -330,6 +258,9 @@
                                             {
                                                 <span class="text-muted">—</span>
                                             }
+                                        </td>
+                                        <td>
+                                            @(string.IsNullOrWhiteSpace(item.GenStatus) ? "—" : item.GenStatus)
                                         </td>
                                         <td class="text-end">
                                             <div class="row-actions">

@@ -23,6 +23,9 @@
     <dt class="col-sm-3">Basic Salary</dt>
     <dd class="col-sm-9">@Model.BasicSalary.ToString("N2")</dd>
 
+    <dt class="col-sm-3">Total Allowances</dt>
+    <dd class="col-sm-9">@(Model.TotalAllowances.HasValue ? Model.TotalAllowances.Value.ToString("N2") : "—")</dd>
+
     <dt class="col-sm-3">Gross Salary</dt>
     <dd class="col-sm-9">@Model.GrossSalary.ToString("N2")</dd>
 
@@ -32,7 +35,7 @@
     <dt class="col-sm-3" title="dbo.Payslips.TaxAmount">TaxAmount</dt>
     <dd class="col-sm-9">@Model.TaxAmount.ToString("N2")</dd>
 
-    <dt class="col-sm-3">Total Deductions</dt>
+    <dt class="col-sm-3" title="Sum of payroll lines from Deductions (excludes tax)">Total payroll deductions</dt>
     <dd class="col-sm-9">@Model.TotalDeductions.ToString("N2")</dd>
 
     <dt class="col-sm-3">Net Salary</dt>

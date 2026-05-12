@@ -14,9 +14,12 @@ namespace HRMBT.Web.Models
         public int Month { get; set; }
         public int Year { get; set; }
         public decimal BasicSalary { get; set; }
+        /// <summary>Sum of computed allowance amounts for this period (dbo.Payslips.TotalAllowances).</summary>
+        public decimal? TotalAllowances { get; set; }
         public decimal GrossSalary { get; set; }
         public decimal TaxPercentage { get; set; }
         public decimal TaxAmount { get; set; }
+        /// <summary>Sum of payroll deduction lines from <c>Deductions</c> for this payslip (excludes income tax; see <see cref="TaxAmount"/>).</summary>
         public decimal TotalDeductions { get; set; }
         public decimal NetSalary { get; set; }
         public int? WorkingDays { get; set; }

@@ -126,11 +126,12 @@
                             <thead>
                                 <tr>
                                     <th style="width:56px;">&nbsp;</th>
+                                    <th>Employee ID</th>
                                     <th>Employee</th>
                                     <th>Period</th>
                                     <th class="text-end">Gross</th>
                                     <th class="text-end">Net</th>
-                                    <th>Status</th>
+                                    <th>Gen Status</th>
                                     <th class="text-end" style="width:120px;">Actions</th>
                                 </tr>
                             </thead>
@@ -144,23 +145,14 @@
                                                 @Initials(item.Employee?.EmployeeName)
                                             </span>
                                         </td>
+                                        <td class="text-muted small text-nowrap">@(item.Employee?.EmployeeID ?? item.EmployeeId.ToString())</td>
                                         <td>
                                             <div class="fw-semibold">@(item.Employee?.EmployeeName ?? "—")</div>
-                                            <div class="text-muted small">@(item.Employee?.EmployeeID ?? item.EmployeeId.ToString())</div>
                                         </td>
                                         <td class="text-nowrap">@MonthName(item.Month) @item.Year</td>
                                         <td class="text-end salary">@item.GrossSalary.ToString("N2")</td>
                                         <td class="text-end salary">@item.NetSalary.ToString("N2")</td>
-                                        <td>
-                                            @if (item.IsLocked)
-                                            {
-                                                <span class="status-pill status-locked">Locked</span>
-                                            }
-                                            else
-                                            {
-                                                <span class="status-pill status-unlocked">Open</span>
-                                            }
-                                        </td>
+                                        <td>@(string.IsNullOrWhiteSpace(item.Employee?.GenStatus) ? "—" : item.Employee!.GenStatus)</td>
                                         <td class="text-end">
                                             <div class="row-actions">
                                                 <a class="btn btn-view" asp-action="Details" asp-route-id="@item.Id" title="Details"><i class="bi bi-eye"></i></a>

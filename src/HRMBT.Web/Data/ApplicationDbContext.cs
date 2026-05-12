@@ -108,13 +108,31 @@ namespace HRMBT.Web.Data
             modelBuilder.Entity<CarryforwardLeave>().ToTable("CarryforwardLeaves");
 
             // ✅ PAYROLL TABLES
-            modelBuilder.Entity<Allowance>().ToTable("Allowances");
-            modelBuilder.Entity<Deduction>().ToTable("Deductions");
+            modelBuilder.Entity<Allowance>(entity =>
+            {
+                entity.ToTable("Allowances");
+                entity.Property(a => a.Amount).HasColumnType("decimal(18,2)");
+                entity.Property(a => a.PercentageValue).HasColumnType("decimal(5,2)");
+            });
+            modelBuilder.Entity<Deduction>(entity =>
+            {
+                entity.ToTable("Deductions");
+                entity.Property(d => d.DeductionType).HasMaxLength(50).IsRequired();
+                entity.Property(d => d.DeductionName).HasMaxLength(100).IsRequired();
+                entity.Property(d => d.Frequency).HasMaxLength(50).IsRequired();
+                entity.Property(d => d.CalculationMethod).HasMaxLength(50).IsRequired();
+                entity.Property(d => d.PercentageValue).HasColumnType("decimal(5,2)");
+                entity.Property(d => d.EffectiveDate).HasColumnType("date");
+                entity.Property(d => d.EndDate).HasColumnType("date");
+                entity.Property(d => d.CreatedBy).HasMaxLength(100).IsRequired();
+                entity.Property(d => d.ModifiedBy).HasMaxLength(100);
+            });
             modelBuilder.Entity<Payslip>().ToTable("Payslips");
             modelBuilder.Entity<PayslipDetail>().ToTable("PayslipDetails");
             modelBuilder.Entity<Payslip>(entity =>
             {
                 entity.Property(p => p.BasicSalary).HasColumnType("decimal(18,2)");
+                entity.Property(p => p.TotalAllowances).HasColumnType("decimal(18,2)");
                 entity.Property(p => p.GrossSalary).HasColumnType("decimal(18,2)");
                 entity.Property(p => p.TaxPercentage).HasColumnType("decimal(18,2)");
                 entity.Property(p => p.TaxAmount).HasColumnType("decimal(18,2)");

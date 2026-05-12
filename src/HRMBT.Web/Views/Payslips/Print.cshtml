@@ -3,6 +3,15 @@
     Layout = null;
     ViewData["Title"] = "Payslip — Print";
     string MonthName(int m) => m >= 1 && m <= 12 ? System.Globalization.CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(m) : m.ToString();
+    var allowanceLines = (Model.PayslipDetails ?? Enumerable.Empty<HRMBT.Web.Models.PayslipDetail>())
+        .Where(d => string.Equals(d.ItemType, "Allowance", StringComparison.OrdinalIgnoreCase))
+        .OrderBy(d => d.SortOrder ?? int.MaxValue)
+        .ToList();
+    var deductionLines = (Model.PayslipDetails ?? Enumerable.Empty<HRMBT.Web.Models.PayslipDetail>())
+        .Where(d => string.Equals(d.ItemType, "Deduction", StringComparison.OrdinalIgnoreCase))
+        .OrderBy(d => d.SortOrder ?? int.MaxValue)
+        .ToList();
+    var payrollDedTotal = deductionLines.Count > 0 ? deductionLines.Sum(l => l.Amount) : Model.TotalDeductions;
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -77,14 +86,45 @@
                             <td>Basic Salary</td>
                             <td class="amount">@Model.BasicSalary.ToString("N2")</td>
                         </tr>
+                        @foreach (var line in allowanceLines)
+                        {
+                            <tr>
+                                <td>@line.ItemName (@line.ItemCategory)</td>
+                                <td class="amount">@line.Amount.ToString("N2")</td>
+                            </tr>
+                        }
+                        @if (Model.TotalAllowances.HasValue || allowanceLines.Count > 0)
+                        {
+                            <tr class="table-light">
+                                <td><strong>Total Allowances</strong></td>
+                                <td class="amount"><strong>@(Model.TotalAllowances ?? allowanceLines.Sum(l => l.Amount)).ToString("N2")</strong></td>
+                            </tr>
+                        }
                         <tr>
                             <td>Gross Salary</td>
                             <td class="amount">@Model.GrossSalary.ToString("N2")</td>
                         </tr>
-                        <tr>
-                            <td>Total Deductions</td>
-                            <td class="amount">- @Model.TotalDeductions.ToString("N2")</td>
-                        </tr>
+                        @foreach (var line in deductionLines)
+                        {
+                            <tr>
+                                <td>@line.ItemName (@line.ItemCategory)</td>
+                                <td class="amount">- @line.Amount.ToString("N2")</td>
+                            </tr>
+                        }
+                        @if (Model.TotalDeductions > 0 || deductionLines.Count > 0)
+                        {
+                            <tr class="table-light">
+                                <td><strong>Total payroll deductions</strong></td>
+                                <td class="amount"><strong>- @payrollDedTotal.ToString("N2")</strong></td>
+                            </tr>
+                        }
+                        @if (Model.TaxAmount > 0)
+                        {
+                            <tr>
+                                <td>Income tax (@Model.TaxPercentage.ToString("N2")% of basic)</td>
+                                <td class="amount">- @Model.TaxAmount.ToString("N2")</td>
+                            </tr>
+                        }
                     </tbody>
                 </table>
             </div>

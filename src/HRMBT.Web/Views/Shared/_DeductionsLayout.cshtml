@@ -8,7 +8,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] — Setup</title>
+    <title>@ViewData["Title"]</title>
     <script type="importmap"></script>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
@@ -80,52 +80,112 @@
                 border-radius: 1px;
             }
         }
-        .setup-shell { min-height: calc(100vh - 120px); background: #f4f5f7; }
-        .setup-sidebar {
-            background: #1a1d29;
+        .sidebar {
+            background-color: #00203F;
             min-height: calc(100vh - 120px);
-            padding: 1.25rem 0.75rem;
-            border-right: 1px solid #333;
+            padding: 20px 10px;
+            border-right: 1px solid #dee2e6;
+            margin-bottom: 0;
         }
-        .setup-sidebar .nav-link {
-            color: #c8cad4 !important;
-            border-radius: 0.35rem;
-            margin-bottom: 0.25rem;
-            padding: 0.5rem 0.75rem;
-            font-size: 0.9rem;
-            border-left: 3px solid transparent;
-            border-bottom: 1px solid #d4af37;
+        .sidebar h5 {
+            color: white;
+            font-size: 1rem;
         }
-        .setup-sidebar .nav-link:hover {
-            background: rgba(255,255,255,.08);
-            color: #fff !important;
+        .sidebar .nav-link {
+            color: white !important;
+            padding: 0.5rem 0.5rem;
+            margin-bottom: 0;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            border-bottom: 1px solid #D4AF37;
         }
-        .setup-sidebar .nav-link.active {
-            background: rgba(201, 162, 39, .15);
-            color: #f5e6b3 !important;
-            border-left-color: #c9a227;
+        .sidebar hr {
+            border-color: #D4AF37 !important;
+            opacity: 1;
+        }
+        .sidebar .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white !important;
+        }
+        .sidebar .text-muted {
+            color: rgba(255, 255, 255, 0.7) !important;
+        }
+        .main-content {
+            padding: 20px;
+            margin-bottom: 0;
+        }
+        .container-fluid .row {
+            margin-bottom: 0;
+        }
+        .main-content h1 {
+            font-size: 1.75rem;
+        }
+        .main-content h2 {
+            font-size: 1.5rem;
+        }
+        .main-content h3 {
+            font-size: 1.25rem;
+        }
+        .main-content h4 {
+            font-size: 1.1rem;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            border-top: 2px solid #336B87;
+            padding: 15px 0;
+            margin-top: 0;
+        }
+        .footer h6 {
+            color: #336B87;
             font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
         }
-        .setup-sidebar .heading {
-            color: #8b8fa3;
-            font-size: 0.7rem;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            margin: 1rem 0.75rem 0.5rem;
+        .footer a {
+            color: #6c757d;
+            text-decoration: none;
+            transition: color 0.3s;
+            font-size: 0.85rem;
         }
-        .setup-main { padding: 1.5rem 1.75rem; }
+        .footer a:hover {
+            color: #336B87;
+            text-decoration: underline;
+        }
+        .footer .footer-links {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .footer .footer-links li {
+            margin-bottom: 4px;
+        }
+        .footer .copyright {
+            color: #6c757d;
+            font-size: 0.85rem;
+            margin-bottom: 0;
+        }
+        .footer .divider {
+            color: #dee2e6;
+            margin: 0 10px;
+        }
+        .footer .row {
+            text-align: center;
+        }
+        .footer .col-md-4 {
+            margin-bottom: 10px;
+        }
     </style>
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
-    <!-- Top Navigation Bar 2 (Dark Blue) — same as main app -->
+    <!-- Top Navigation Bar 2 (Dark Blue) -->
     <nav class="navbar navbar-expand-sm navbar-top-2">
         <div class="container-fluid">
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#setupModuleNavbar" aria-controls="setupModuleNavbar"
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#moduleNavbar" aria-controls="moduleNavbar"
                     aria-expanded="false" aria-label="Toggle navigation" style="border-color: white;">
                 <span class="navbar-toggler-icon" style="filter: invert(1);"></span>
             </button>
-            <div class="collapse navbar-collapse" id="setupModuleNavbar">
+            <div class="collapse navbar-collapse" id="moduleNavbar">
                 <div class="d-flex flex-column flex-sm-row align-items-start align-items-sm-center flex-grow-1 me-sm-3 mb-2 mb-sm-0 gap-sm-2">
                     <span class="navbar-text modules-heading">Modules</span>
                     <ul class="navbar-nav navbar-modules-nav flex-grow-1 flex-wrap">
@@ -176,7 +236,7 @@
         </div>
     </nav>
 
-    <!-- Top Navigation Bar 1 (White) — same as main app -->
+    <!-- Top Navigation Bar 1 (White) -->
     <nav class="navbar navbar-expand-sm navbar-top-1">
         <div class="container-fluid">
             <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">HR Management Bahria Town</a>
@@ -189,42 +249,87 @@
                 {
                     <span class="navbar-text"><span class="fw-semibold">@(displayName ?? authName)</span></span>
                 }
-                else
-                {
-                    <span class="navbar-text text-white-50 small">Not signed in · open Setup to add users, then log in from HR Login</span>
-                }
             </div>
         </div>
     </nav>
 
-    <div class="container-fluid setup-shell g-0">
-        <div class="row g-0">
-            <nav class="col-12 col-md-3 col-lg-2 setup-sidebar">
-                <div class="heading">Setup menu</div>
-                <ul class="nav flex-column px-1">
-                    @{
-                        var ctrl = ViewContext.RouteData.Values["controller"]?.ToString();
-                        var act = ViewContext.RouteData.Values["action"]?.ToString();
-                        string A(string a, string c = "Setup") => (ctrl == c && act == a) ? "nav-link active" : "nav-link";
-                    }
-                    <li class="nav-item"><a class="@A("Index")" asp-controller="Setup" asp-action="Index">Overview</a></li>
-                    <li class="nav-item"><a class="@A("Users")" asp-controller="Setup" asp-action="Users">Users</a></li>
-                    <li class="nav-item"><a class="@A("Config")" asp-controller="Setup" asp-action="Config">Config</a></li>
-                </ul>
-                <div class="heading mt-3">Application</div>
-                <ul class="nav flex-column px-1">
-                    <li class="nav-item">
-                        <a class="nav-link" asp-controller="Home" asp-action="Index">← Home dashboard</a>
-                    </li>
-                </ul>
-            </nav>
-            <main class="col-12 col-md-9 col-lg-10 setup-main">
-                @RenderBody()
-            </main>
+    <!-- Main Content Area with Sidebar -->
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar (20% width) -->
+            <div class="col-2 sidebar">
+                @await Html.PartialAsync("_DeductionsSidebar")
+            </div>
+            
+            <!-- Main Content (80% width) -->
+            <div class="col-10 main-content">
+                <main role="main">
+                    @RenderBody()
+                </main>
+            </div>
         </div>
     </div>
+
+    <footer class="footer">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-md-4 mb-2 mb-md-0">
+                    <h6>HR Management System</h6>
+                    <p class="copyright mb-0">
+                        &copy; 2026 HRMBT.Web - Bahria Town<br>
+                        <small>All rights reserved</small>
+                    </p>
+                </div>
+                <div class="col-md-4 mb-2 mb-md-0">
+                    <h6>Quick Links</h6>
+                    <ul class="footer-links">
+                        <li>
+                            <a href="mailto:support@hrmbt.com?subject=Technical Support">
+                                <span style="margin-right: 5px;">🔧</span>Technical Support
+                            </a>
+                        </li>
+                        <li>
+                            <a href="mailto:suggestions@hrmbt.com?subject=Suggestion">
+                                <span style="margin-right: 5px;">💡</span>Suggestion
+                            </a>
+                        </li>
+                        <li>
+                            <a href="mailto:discussion@hrmbt.com?subject=Discussion">
+                                <span style="margin-right: 5px;">💬</span>Discussion
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="col-md-4">
+                    <h6>Legal</h6>
+                    <ul class="footer-links">
+                        <li>
+                            <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy Policy</a>
+                        </li>
+                        <li>
+                            <a href="#">Terms of Service</a>
+                        </li>
+                        <li>
+                            <a href="#">Contact Us</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <hr style="border-color: #dee2e6; margin: 10px 0;">
+            <div class="row">
+                <div class="col-12 text-center">
+                    <p class="copyright mb-0">
+                        <small>Powered by HRMBT.Web | Bahria Town HR Management System</small>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
+
+

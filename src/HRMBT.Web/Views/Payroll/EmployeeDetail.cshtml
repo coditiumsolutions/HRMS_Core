@@ -8,6 +8,8 @@
         ? "GeneratePayroll"
         : "EmployeeDetail";
 
+    var grossByUid = ViewBag.GrossSalaryByUid as Dictionary<int, decimal> ?? new Dictionary<int, decimal>();
+
     string MonthName(int m) => m >= 1 && m <= 12 ? System.Globalization.CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(m) : m.ToString();
 
     string Initials(string? name)
@@ -17,8 +19,6 @@
         if (parts.Length == 1) return parts[0].Substring(0, Math.Min(2, parts[0].Length)).ToUpperInvariant();
         return (parts[0][0].ToString() + parts[^1][0].ToString()).ToUpperInvariant();
     }
-
-    int activeCount = Model?.Count(e => e.EmployeeStatus == "Active") ?? 0;
 }
 
 @section Styles {
@@ -36,40 +36,6 @@
                 <li class="breadcrumb-item active" aria-current="page">Generate Payroll</li>
             </ol>
         </nav>
-
-        <div class="page-header-card p-4 mb-4">
-            <div class="row align-items-center g-3">
-                <div class="col-lg">
-                    <h1 class="h2 mb-1 fw-bold text-dark">
-                        <i class="bi bi-people text-primary me-2"></i>Employees for Payroll
-                    </h1>
-                    <p class="text-muted mb-0">Filter employees, select the active ones to include, and generate payroll for the chosen month and year.</p>
-                </div>
-                <div class="col-lg-auto">
-                    <div class="d-flex flex-wrap align-items-center gap-2">
-                        <a asp-action="Index" class="btn btn-action-outline">
-                            <i class="bi bi-arrow-left-short me-1"></i>Back to Payroll
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Stats pills -->
-        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-            <span class="badge rounded-pill text-bg-light border px-3 py-2 text-secondary">
-                <i class="bi bi-people me-1 text-primary"></i>Total: <span class="fw-bold ms-1">@(Model?.TotalCount ?? 0)</span>
-            </span>
-            <span class="badge rounded-pill text-bg-light border px-3 py-2 text-secondary">
-                <i class="bi bi-eye me-1 text-info"></i>Showing: <span class="fw-bold ms-1">@(Model?.Count ?? 0)</span>
-            </span>
-            <span class="badge rounded-pill text-bg-light border px-3 py-2 text-secondary">
-                <i class="bi bi-check2-circle me-1 text-success"></i>Active on page: <span class="fw-bold ms-1">@activeCount</span>
-            </span>
-            <span class="badge rounded-pill text-bg-light border px-3 py-2 text-secondary">
-                <i class="bi bi-ui-checks me-1 text-warning"></i>Selected: <span class="fw-bold ms-1" id="selectedCount">0</span>
-            </span>
-        </div>
 
         @if (TempData["SuccessMessage"] != null)
         {
@@ -201,13 +167,12 @@
                                         <input type="checkbox" id="selectAllCheckbox" class="form-check-input" onclick="toggleAll(this)" title="Select all on this page" />
                                     </th>
                                     <th style="width: 56px;">&nbsp;</th>
+                                    <th class="col-payroll-id">Id</th>
                                     <th>Employee</th>
                                     <th>Department</th>
-                                    <th>Designation</th>
-                                    <th>Mobile</th>
-                                    <th>Joining Date</th>
-                                    <th>Status</th>
                                     <th class="text-end">Basic Salary</th>
+                                    <th class="text-end">Gross Salary</th>
+                                    <th class="col-generation-status">Generation Status</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -231,41 +196,19 @@
                                                 @Initials(item.EmployeeName)
                                             </span>
                                         </td>
+                                        <td class="col-payroll-id text-muted small font-monospace">@item.uid</td>
                                         <td>
                                             <div class="fw-semibold">@item.EmployeeName</div>
                                             <div class="text-muted small">@item.EmployeeID</div>
                                         </td>
                                         <td>@item.Department</td>
-                                        <td>@item.Designation</td>
-                                        <td class="text-nowrap">
-                                            @if (!string.IsNullOrWhiteSpace(item.MobileNo))
-                                            {
-                                                <i class="bi bi-telephone text-muted me-1"></i>@item.MobileNo
-                                            }
-                                            else
-                                            {
-                                                <span class="text-muted">—</span>
-                                            }
-                                        </td>
-                                        <td class="text-nowrap">
-                                            @(item.DateOfJoining.HasValue ? item.DateOfJoining.Value.ToString("yyyy-MM-dd") : "—")
-                                        </td>
-                                        <td>
-                                            @if (!string.IsNullOrEmpty(item.EmployeeStatus))
-                                            {
-                                                if (isActive)
-                                                {
-                                                    <span class="status-pill status-locked">@item.EmployeeStatus</span>
-                                                }
-                                                else
-                                                {
-                                                    <span class="status-pill status-unlocked">@item.EmployeeStatus</span>
-                                                }
-                                            }
-                                        </td>
                                         <td class="text-end salary">
                                             @(item.BasicSalary.HasValue ? item.BasicSalary.Value.ToString("N2") : "—")
                                         </td>
+                                        <td class="text-end salary">
+                                            @(grossByUid.TryGetValue(item.uid, out var grossVal) ? grossVal.ToString("N2") : "—")
+                                        </td>
+                                        <td class="col-generation-status">@(string.IsNullOrWhiteSpace(item.GenStatus) ? "—" : item.GenStatus)</td>
                                     </tr>
                                 }
                             </tbody>

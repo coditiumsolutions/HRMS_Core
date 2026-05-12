@@ -1,0 +1,23 @@
+@{
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+    var currentAction = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
+    string C(string action) =>
+        string.Equals(currentController, "Deductions", StringComparison.OrdinalIgnoreCase) &&
+        string.Equals(currentAction, action, StringComparison.OrdinalIgnoreCase)
+            ? "nav-link active fw-bold text-primary"
+            : "nav-link text-white";
+}
+
+<strong class="sidebar-title text-white">Deductions</strong>
+<hr />
+<ul class="nav flex-column">
+    <li class="nav-item">
+        <a class="@C("Index")" asp-controller="Deductions" asp-action="Index">📋 All deductions</a>
+    </li>
+    <li class="nav-item">
+        <a class="@C("Add")" asp-controller="Deductions" asp-action="Add">📋 Bulk add</a>
+    </li>
+    <li class="nav-item">
+        <a class="@C("Create")" asp-controller="Deductions" asp-action="Create">➕ Single deduction</a>
+    </li>
+</ul>

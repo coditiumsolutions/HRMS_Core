@@ -17,6 +17,50 @@ namespace HRMBT.Web.Services.Payroll
             _context = context;
         }
 
+        /// <summary>Computed monetary amount for one allowance row (percentage of basic vs fixed).</summary>
+        public static decimal AllowanceComputedAmount(Allowance a, decimal basicSalary) =>
+            a.IsPercentage
+                ? basicSalary * (a.PercentageValue ?? 0m) / 100m
+                : a.Amount;
+
+        /// <summary>Percentage of gross when <see cref="Deduction.CalculationMethod"/> is Percentage; otherwise fixed PKR from <see cref="Deduction.PercentageValue"/> (dbo has no Amount column — see db.txt).</summary>
+        public static bool IsPercentageDeduction(Deduction d) =>
+            string.Equals(d.CalculationMethod, "Percentage", StringComparison.OrdinalIgnoreCase);
+
+        public static decimal DeductionComputedAmount(Deduction d, decimal grossSalary) =>
+            IsPercentageDeduction(d)
+                ? grossSalary * (d.PercentageValue ?? 0m) / 100m
+                : (d.PercentageValue ?? 0m);
+
+        /// <summary>Active allowance total using the same rules as payslip gross (percentage of basic vs fixed amount).</summary>
+        public static decimal SumAllowancesForBasic(decimal basic, IEnumerable<Allowance> allowances) =>
+            allowances.Sum(a => AllowanceComputedAmount(a, basic));
+
+        /// <summary>Preview gross (basic + active allowances) per employee — matches <see cref="GeneratePayslip"/> gross before deductions.</summary>
+        public Dictionary<int, decimal> ComputeGrossPreviewForEmployees(IEnumerable<Employee> employees)
+        {
+            var list = employees?.ToList() ?? new List<Employee>();
+            var result = new Dictionary<int, decimal>();
+            if (list.Count == 0) return result;
+
+            var ids = list.Select(e => e.uid).ToList();
+            var byEmpId = _context.Allowances.AsNoTracking()
+                .Where(a => ids.Contains(a.EmployeeId) && a.IsActive)
+                .ToList()
+                .GroupBy(a => a.EmployeeId)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            foreach (var emp in list)
+            {
+                var basic = emp.BasicSalary ?? 0m;
+                byEmpId.TryGetValue(emp.uid, out var allowances);
+                allowances ??= new List<Allowance>();
+                result[emp.uid] = basic + SumAllowancesForBasic(basic, allowances);
+            }
+
+            return result;
+        }
+
         public Payslip GeneratePayslip(int employeeId, int month, int year, string generatedBy)
         {
             try
@@ -38,23 +82,17 @@ namespace HRMBT.Web.Services.Payroll
                     .Where(d => d.EmployeeId == employeeId && d.IsActive)
                     .ToList();
 
-                decimal totalAllowances = allowances.Sum(a =>
-                    a.IsPercentage
-                        ? basic * (a.PercentageValue ?? 0m) / 100m
-                        : a.Amount);
+                decimal totalAllowances = SumAllowancesForBasic(basic, allowances);
 
                 decimal gross = basic + totalAllowances;
 
-                decimal payrollDeductions = deductions.Sum(d =>
-                    d.PercentageValue.HasValue
-                        ? gross * (d.PercentageValue.Value / 100m)
-                        : d.Amount ?? 0m);
+                decimal totalPayrollDeductions = deductions.Sum(d => DeductionComputedAmount(d, gross));
 
                 // Tax is calculated on BasicSalary as requested.
                 var taxResult = CalculateTax(employee, basic);
 
-                decimal totalDeductions = payrollDeductions + taxResult.TaxAmount;
-                decimal netSalary = gross - totalDeductions;
+                decimal totalWithheld = totalPayrollDeductions + taxResult.TaxAmount;
+                decimal netSalary = gross - totalWithheld;
 
                 var payslip = new Payslip
                 {
@@ -62,10 +100,11 @@ namespace HRMBT.Web.Services.Payroll
                     Month = month,
                     Year = year,
                     BasicSalary = basic,
+                    TotalAllowances = totalAllowances,
                     GrossSalary = gross,
                     TaxPercentage = taxResult.TaxPercentage,
                     TaxAmount = taxResult.TaxAmount,
-                    TotalDeductions = totalDeductions,
+                    TotalDeductions = totalPayrollDeductions,
                     NetSalary = netSalary,
                     GeneratedDate = DateTime.Now,
                     GeneratedBy = generatedBy,
@@ -74,15 +113,43 @@ namespace HRMBT.Web.Services.Payroll
                     Notes = "",
                     CalculationDetails = BuildDetails(
                         basic,
+                        totalAllowances,
                         gross,
                         allowances,
                         deductions,
-                        payrollDeductions,
+                        totalPayrollDeductions,
                         taxResult.TaxPercentage,
                         taxResult.TaxAmount,
-                        totalDeductions,
+                        totalWithheld,
                         netSalary)
                 };
+
+                int sort = 1;
+                foreach (var a in allowances)
+                {
+                    var lineAmount = AllowanceComputedAmount(a, basic);
+                    payslip.PayslipDetails.Add(new PayslipDetail
+                    {
+                        ItemType = "Allowance",
+                        ItemName = a.Name,
+                        ItemCategory = a.AllowanceType,
+                        Amount = lineAmount,
+                        SortOrder = sort++
+                    });
+                }
+
+                foreach (var d in deductions)
+                {
+                    var lineAmount = DeductionComputedAmount(d, gross);
+                    payslip.PayslipDetails.Add(new PayslipDetail
+                    {
+                        ItemType = "Deduction",
+                        ItemName = d.DeductionName,
+                        ItemCategory = d.DeductionType,
+                        Amount = lineAmount,
+                        SortOrder = sort++
+                    });
+                }
 
                 _context.Payslips.Add(payslip);
                 _context.SaveChanges();
@@ -154,13 +221,14 @@ namespace HRMBT.Web.Services.Payroll
 
         private string BuildDetails(
             decimal basicSalary,
+            decimal totalAllowancesSum,
             decimal grossSalary,
             List<Allowance> allowances,
             List<Deduction> deductions,
-            decimal payrollDeductions,
+            decimal totalPayrollDeductions,
             decimal taxPercentage,
             decimal taxAmount,
-            decimal totalDeductions,
+            decimal totalWithheld,
             decimal netSalary)
         {
             var sb = new StringBuilder();
@@ -169,17 +237,26 @@ namespace HRMBT.Web.Services.Payroll
             sb.AppendLine();
             sb.AppendLine("Allowances:");
             foreach (var a in allowances)
-                sb.AppendLine($"{a.Name}: {a.Amount}");
+            {
+                var amt = AllowanceComputedAmount(a, basicSalary);
+                var pctNote = a.IsPercentage ? $" ({a.PercentageValue:N2}% of basic)" : string.Empty;
+                sb.AppendLine($"{a.Name}: {amt:N2}{pctNote}");
+            }
 
+            sb.AppendLine($"Total Allowances: {totalAllowancesSum:N2}");
             sb.AppendLine($"Gross Salary: {grossSalary:N2}");
             sb.AppendLine();
-            sb.AppendLine("Deductions:");
+            sb.AppendLine("Deductions (from Deductions table):");
             foreach (var d in deductions)
-                sb.AppendLine($"{d.Name}: {d.Amount}");
+            {
+                var amt = DeductionComputedAmount(d, grossSalary);
+                var note = IsPercentageDeduction(d) ? $" ({d.PercentageValue:N2}% of gross)" : " (fixed)";
+                sb.AppendLine($"{d.DeductionName}: {amt:N2}{note}");
+            }
 
-            sb.AppendLine($"Payroll Deductions Total: {payrollDeductions:N2}");
+            sb.AppendLine($"Total payroll deductions (Payslips.TotalDeductions): {totalPayrollDeductions:N2}");
             sb.AppendLine($"Tax ({taxPercentage:N2}% of BasicSalary): {taxAmount:N2}");
-            sb.AppendLine($"Total Deductions: {totalDeductions:N2}");
+            sb.AppendLine($"Total withheld (payroll + tax): {totalWithheld:N2}");
             sb.AppendLine($"Net Salary: {netSalary:N2}");
 
             return sb.ToString();

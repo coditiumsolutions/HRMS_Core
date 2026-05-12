@@ -93,4 +93,9 @@ public class Employee
     [Display(Name = "Apply Tax")]
     [StringLength(10)]
     public string? ApplyTax { get; set; }
+
+    /// <summary>Generation / payroll generation status (maps to dbo.Employee.GenStatus, nvarchar(50)).</summary>
+    [Display(Name = "Gen Status")]
+    [StringLength(50)]
+    public string? GenStatus { get; set; }
 }

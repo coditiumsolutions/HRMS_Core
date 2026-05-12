@@ -1,6 +1,6 @@
 Database: HRMS
 Connection: DefaultConnection (src/HRMBT.Web/appsettings.json)
-Generated: 2026-05-09 15:03:45
+Generated: 2026-05-12 15:19:50
 
 [dbo].[__EFMigrationsHistory]
   - MigrationId (nvarchar(150), Nullable: NO)
@@ -61,18 +61,18 @@ Generated: 2026-05-09 15:03:45
   - Id (int, Nullable: NO)
   - EmployeeId (int, Nullable: NO)
   - DeductionType (nvarchar(50), Nullable: NO)
-  - Name (nvarchar(200), Nullable: NO)
-  - Amount (decimal(18,2), Nullable: YES)
+  - DeductionName (nvarchar(100), Nullable: NO)
+  - Frequency (nvarchar(50), Nullable: NO)
   - CalculationMethod (nvarchar(50), Nullable: NO)
   - PercentageValue (decimal(5,2), Nullable: YES)
   - IsMandatory (bit, Nullable: NO)
-  - EffectiveDate (datetime2, Nullable: NO)
-  - EndDate (datetime2, Nullable: YES)
+  - EffectiveDate (date, Nullable: NO)
+  - EndDate (date, Nullable: YES)
   - IsActive (bit, Nullable: NO)
   - CreatedDate (datetime2, Nullable: NO)
   - CreatedBy (nvarchar(100), Nullable: NO)
   - ModifiedDate (datetime2, Nullable: YES)
-  - ModifiedBy (nvarchar(max), Nullable: YES)
+  - ModifiedBy (nvarchar(100), Nullable: YES)
 
 [dbo].[Departments]
   - DepartmentID (int, Nullable: NO)
@@ -103,6 +103,7 @@ Generated: 2026-05-09 15:03:45
   - Year2023New (decimal(18,2), Nullable: YES)
   - BasicSalary (decimal(18,2), Nullable: YES)
   - ApplyTax (nvarchar(10), Nullable: YES)
+  - GenStatus (nvarchar(50), Nullable: YES)
 
 [dbo].[EmployeeLeaves]
   - uid (int, Nullable: NO)
@@ -155,7 +156,8 @@ Generated: 2026-05-09 15:03:45
   - Year (int, Nullable: NO)
   - BasicSalary (decimal(18,2), Nullable: NO)
   - GrossSalary (decimal(18,2), Nullable: NO)
-  - TotalDeductions (decimal(18,2), Nullable: NO)
+  - TotalDeductions (decimal(18,2), Nullable: YES)
+  - TotalAllowances (decimal(18,2), Nullable: YES)
   - NetSalary (decimal(18,2), Nullable: NO)
   - WorkingDays (int, Nullable: YES)
   - LeaveDays (decimal(5,2), Nullable: YES)

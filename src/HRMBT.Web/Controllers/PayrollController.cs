@@ -5,6 +5,7 @@ using HRMBT.Web.Services.Payroll;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -19,6 +20,17 @@ namespace HRMBT.Web.Controllers
         {
             _context = context;
             _payrollService = payrollService;
+        }
+
+        private static string FormatMonthYearForGenStatus(int month, int year) =>
+            $"{CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(month)} {year}";
+
+        /// <summary>GenStatus is nvarchar(50) on dbo.Employee — keep messages within limit.</summary>
+        private static string ClampGenStatus(string? value, int maxLen = 50)
+        {
+            if (string.IsNullOrEmpty(value)) return string.Empty;
+            if (value.Length <= maxLen) return value;
+            return value.Substring(0, maxLen - 3) + "...";
         }
 
         // GET: Payroll
@@ -185,6 +197,7 @@ namespace HRMBT.Web.Controllers
 
             var payslip = await _context.Payslips
                 .Include(p => p.Employee)
+                .Include(p => p.PayslipDetails)
                 .FirstOrDefaultAsync(m => m.Id == id);
 
             if (payslip == null)
@@ -443,6 +456,8 @@ namespace HRMBT.Web.Controllers
             // Get paginated results
             var paginatedEmployees = await PaginatedList<Employee>.CreateAsync(query, page, pageSize);
 
+            ViewBag.GrossSalaryByUid = _payrollService.ComputeGrossPreviewForEmployees(paginatedEmployees);
+
             // Get distinct departments for dropdown
             var departments = await _context.Employees
                 .Where(e => e.Department != null && e.Department != "")
@@ -497,6 +512,7 @@ namespace HRMBT.Web.Controllers
             int skipCount = 0;
             int errorCount = 0;
             var errors = new List<string>();
+            var monthYearLabel = FormatMonthYearForGenStatus(month, year);
 
             foreach (var employeeId in selectedEmployeeIds)
             {
@@ -504,22 +520,32 @@ namespace HRMBT.Web.Controllers
                 {
                     // Check if payslip already exists
                     bool exists = await _context.Payslips
-                        .AnyAsync(p => p.EmployeeId == employeeId && 
-                                      p.Month == month && 
+                        .AnyAsync(p => p.EmployeeId == employeeId &&
+                                      p.Month == month &&
                                       p.Year == year);
 
                     if (exists)
                     {
+                        var empSkip = await _context.Employees.FindAsync(employeeId);
+                        if (empSkip != null)
+                            empSkip.GenStatus = ClampGenStatus($"Already Created for {monthYearLabel}");
                         skipCount++;
                         continue;
                     }
 
-                    // Check if employee is active
                     var employee = await _context.Employees.FindAsync(employeeId);
-                    if (employee == null || employee.EmployeeStatus != "Active")
+                    if (employee == null)
                     {
                         errorCount++;
-                        errors.Add($"Employee ID {employee?.EmployeeID ?? employeeId.ToString()} is not active or not found.");
+                        errors.Add($"Employee ID {employeeId} not found.");
+                        continue;
+                    }
+
+                    if (!string.Equals(employee.EmployeeStatus, "Active", StringComparison.OrdinalIgnoreCase))
+                    {
+                        employee.GenStatus = ClampGenStatus($"Not created: not active for {monthYearLabel}");
+                        errorCount++;
+                        errors.Add($"Employee ID {employee.EmployeeID} is not active.");
                         continue;
                     }
 
@@ -529,15 +555,24 @@ namespace HRMBT.Web.Controllers
                         year,
                         User.Identity?.Name ?? "System");
 
+                    employee.GenStatus = ClampGenStatus($"Payroll Created for {monthYearLabel}");
                     successCount++;
                 }
                 catch (Exception ex)
                 {
                     errorCount++;
-                    var employee = await _context.Employees.FindAsync(employeeId);
-                    errors.Add($"Error for Employee ID {employee?.EmployeeID ?? employeeId.ToString()}: {ex.Message}");
+                    var empErr = await _context.Employees.FindAsync(employeeId);
+                    if (empErr != null)
+                    {
+                        var coreReason = ex.InnerException != null ? ex.InnerException.Message : ex.Message;
+                        empErr.GenStatus = ClampGenStatus($"Not created: {coreReason}");
+                    }
+
+                    errors.Add($"Error for Employee ID {empErr?.EmployeeID ?? employeeId.ToString()}: {ex.Message}");
                 }
             }
+
+            await _context.SaveChangesAsync();
 
             // Build result message
             var message = $"Payroll generation completed: {successCount} successful";

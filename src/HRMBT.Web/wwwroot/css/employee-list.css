@@ -208,6 +208,30 @@
   border-bottom: 0;
 }
 
+/* Emp ID: narrow column (full value on hover via title optional — ellipsis if long) */
+.employee-list-page table.employee-grid th.col-emp-id,
+.employee-list-page table.employee-grid td.col-emp-id {
+  width: 4.75rem;
+  max-width: 5.5rem;
+  padding-left: 0.4rem;
+  padding-right: 0.4rem;
+  box-sizing: border-box;
+}
+
+.employee-list-page table.employee-grid td.col-emp-id .emp-id-cell {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.employee-list-page table.employee-grid th.col-salary,
+.employee-list-page table.employee-grid td.col-salary {
+  white-space: nowrap;
+  width: 1%;
+}
+
 /* Avatar */
 .employee-list-page .avatar {
   width: 36px;

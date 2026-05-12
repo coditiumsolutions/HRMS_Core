@@ -1,93 +1,97 @@
 @model HRMBT.Web.Models.Allowance
 
 @{
-    ViewData["Title"] = "Create Allowance";
-    ViewData["Module"] = "Payroll";
+    ViewData["Title"] = "Add allowance";
+    ViewData["Module"] = "Allowances";
 }
 
-<h1>Create Allowance</h1>
+@section Styles {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" crossorigin="anonymous" />
+    <link rel="stylesheet" href="~/css/employee-create.css" asp-append-version="true" />
+}
 
-<hr />
-<div class="row">
-    <div class="col-md-6">
-        <form asp-action="Create">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <div class="form-group mb-3">
-                <label asp-for="EmployeeId" class="control-label">Employee</label>
-                <select asp-for="EmployeeId" class="form-control" asp-items="ViewBag.EmployeeId">
-                    <option value="">-- Select Employee --</option>
-                </select>
-                <span asp-validation-for="EmployeeId" class="text-danger"></span>
-            </div>
-            <div class="form-group mb-3">
-                <label asp-for="AllowanceType" class="control-label">Allowance Type</label>
-                <select asp-for="AllowanceType" class="form-control" asp-items="ViewBag.AllowanceType">
-                    <option value="">-- Select Type --</option>
-                </select>
-                <span asp-validation-for="AllowanceType" class="text-danger"></span>
-            </div>
-            <div class="form-group mb-3">
-                <label asp-for="Name" class="control-label"></label>
-                <input asp-for="Name" class="form-control" />
-                <span asp-validation-for="Name" class="text-danger"></span>
-            </div>
-            <div class="form-group mb-3">
-                <div class="form-check">
-                    <input type="checkbox" asp-for="IsPercentage" class="form-check-input" id="IsPercentage" />
-                    <label class="form-check-label" for="IsPercentage">
-                        Is Percentage Based
-                    </label>
+<div class="employee-create-page py-4">
+    <div class="container-fluid px-3 px-lg-4">
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb mb-0 small">
+                <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Home</a></li>
+                <li class="breadcrumb-item"><a asp-action="Index">Allowances</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Add</li>
+            </ol>
+        </nav>
+
+        <div class="page-header-card p-4 mb-4">
+            <h1 class="h2 mb-1 fw-bold text-dark">Add allowance</h1>
+            <p class="text-muted mb-0">Create a row in <strong>dbo.Allowances</strong> for an employee.</p>
+        </div>
+
+        <form asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="All" class="alert alert-danger" role="alert"></div>
+
+            <div class="card section-card mb-4">
+                <div class="card-header"><i class="bi bi-cash-stack"></i>Allowance</div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="EmployeeId" class="form-label"></label>
+                            <select asp-for="EmployeeId" class="form-select" asp-items="ViewBag.EmployeeOptions"></select>
+                            <span asp-validation-for="EmployeeId" class="field-validation-error"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="AllowanceType" class="form-label"></label>
+                            <input asp-for="AllowanceType" class="form-control" maxlength="50" placeholder="e.g. Housing" />
+                            <span asp-validation-for="AllowanceType" class="field-validation-error"></span>
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="Name" class="form-label"></label>
+                            <input asp-for="Name" class="form-control" maxlength="200" />
+                            <span asp-validation-for="Name" class="field-validation-error"></span>
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="Amount" class="form-label"></label>
+                            <input asp-for="Amount" class="form-control" type="number" step="0.01" min="0" />
+                            <span asp-validation-for="Amount" class="field-validation-error"></span>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <div class="form-check mb-2">
+                                <input asp-for="IsPercentage" class="form-check-input" />
+                                <label asp-for="IsPercentage" class="form-check-label"></label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="PercentageValue" class="form-label"></label>
+                            <input asp-for="PercentageValue" class="form-control" type="number" step="0.01" min="0" max="100" />
+                            <span asp-validation-for="PercentageValue" class="field-validation-error"></span>
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="EffectiveDate" class="form-label"></label>
+                            <input asp-for="EffectiveDate" class="form-control" type="date" />
+                            <span asp-validation-for="EffectiveDate" class="field-validation-error"></span>
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="EndDate" class="form-label"></label>
+                            <input asp-for="EndDate" class="form-control" type="date" />
+                            <span asp-validation-for="EndDate" class="field-validation-error"></span>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <div class="form-check mb-2">
+                                <input asp-for="IsActive" class="form-check-input" />
+                                <label asp-for="IsActive" class="form-check-label"></label>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="form-group mb-3" id="amountGroup">
-                <label asp-for="Amount" class="control-label">Amount</label>
-                <input asp-for="Amount" class="form-control" type="number" step="0.01" min="0" />
-                <span asp-validation-for="Amount" class="text-danger"></span>
-            </div>
-            <div class="form-group mb-3" id="percentageGroup" style="display: none;">
-                <label asp-for="PercentageValue" class="control-label">Percentage (%)</label>
-                <input asp-for="PercentageValue" class="form-control" type="number" step="0.01" min="0" max="100" />
-                <span asp-validation-for="PercentageValue" class="text-danger"></span>
-            </div>
-            <div class="form-group mb-3">
-                <label asp-for="EffectiveDate" class="control-label">Effective Date</label>
-                <input asp-for="EffectiveDate" class="form-control" type="date" />
-                <span asp-validation-for="EffectiveDate" class="text-danger"></span>
-            </div>
-            <div class="form-group mb-3">
-                <label asp-for="EndDate" class="control-label">End Date (Optional)</label>
-                <input asp-for="EndDate" class="form-control" type="date" />
-                <span asp-validation-for="EndDate" class="text-danger"></span>
-            </div>
-            <div class="form-group mb-3">
-                <div class="form-check">
-                    <input type="checkbox" asp-for="IsActive" class="form-check-input" checked />
-                    <label class="form-check-label" for="IsActive">
-                        Is Active
-                    </label>
-                </div>
-            </div>
-            <div class="form-group mb-3">
-                <input type="submit" value="Create" class="btn btn-primary" />
-                <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+
+            <div class="d-flex flex-wrap gap-2">
+                <button type="submit" class="btn btn-action-primary"><i class="bi bi-check2 me-1"></i>Save</button>
+                <a asp-action="Index" class="btn btn-action-secondary">Cancel</a>
             </div>
         </form>
     </div>
 </div>
 
 @section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-    <script>
-        document.getElementById('IsPercentage').addEventListener('change', function() {
-            var isPercentage = this.checked;
-            document.getElementById('amountGroup').style.display = isPercentage ? 'none' : 'block';
-            document.getElementById('percentageGroup').style.display = isPercentage ? 'block' : 'none';
-        });
-        // Trigger on page load
-        document.getElementById('IsPercentage').dispatchEvent(new Event('change'));
-    </script>
+    <partial name="_ValidationScriptsPartial" />
 }
-
-
-
-
