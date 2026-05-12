@@ -4,45 +4,28 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace HRMBT.Web.Models;
 
 /// <summary>
-/// LeaveQuota entity representing yearly leave quota definitions per leave type.
-/// Leave quota is defined per LeaveTypeName per Year.
+/// Maps to <c>dbo.LeaveQuota</c>: yearly quota per leave type (see db.txt).
 /// </summary>
 public class LeaveQuota
 {
     [Key]
+    [Column("UID")]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    public int Id { get; set; }
+    public int UID { get; set; }
 
-    /// <summary>
-    /// Leave type name (e.g., Casual, Sick, Annual, Unpaid)
-    /// </summary>
-    [Required(ErrorMessage = "Leave type name is required")]
-    [Display(Name = "Leave Type Name")]
+    [Required]
+    [Display(Name = "Leave type")]
     [StringLength(50)]
     [Column("LeaveTypeName")]
     public string LeaveTypeName { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Year for which this quota applies
-    /// </summary>
-    [Required(ErrorMessage = "Year is required")]
+    [Display(Name = "Total leaves")]
+    [Column("TotalLeaves")]
+    public int TotalLeaves { get; set; }
+
+    [Required]
     [Display(Name = "Year")]
+    [StringLength(50)]
     [Column("Year")]
-    public int Year { get; set; }
-
-    /// <summary>
-    /// Number of leave days allocated for this leave type in this year
-    /// </summary>
-    [Display(Name = "Quota Days")]
-    [Column("QuotaDays")]
-    public decimal? QuotaDays { get; set; }
-
-    /// <summary>
-    /// Optional description or notes
-    /// </summary>
-    [Display(Name = "Description")]
-    [StringLength(255)]
-    [Column("Description")]
-    public string? Description { get; set; }
+    public string Year { get; set; } = string.Empty;
 }
-

@@ -53,9 +53,9 @@ namespace HRMBT.Web.Controllers
             if (fromConfig.Count > 0)
                 return fromConfig;
 
-            var currentYear = DateTime.Now.Year;
+            var yearStr = DateTime.Now.Year.ToString();
             var fromQuota = await _context.LeaveQuotas.AsNoTracking()
-                .Where(lq => lq.Year == currentYear)
+                .Where(lq => lq.Year == yearStr)
                 .Select(lq => lq.LeaveTypeName)
                 .Where(n => n != null && n != "")
                 .Distinct()

@@ -15,7 +15,7 @@ public class LeaveRequest
 
     [Required(ErrorMessage = "Leave type is required")]
     [Display(Name = "Leave Type")]
-    [StringLength(50)]
+    [StringLength(500)]
     public string LeaveType { get; set; } = string.Empty;
 
     [Required(ErrorMessage = "From date is required")]

@@ -93,8 +93,14 @@ namespace HRMBT.Web.Data
             modelBuilder.Entity<LeaveRequest>().ToTable("LeaveRequests");
             modelBuilder.Entity<TaxRule>().ToTable("TaxRules");
 
-            // ✅ LMS TABLES
-            modelBuilder.Entity<LeaveQuota>().ToTable("LeaveQuota");
+            // ✅ LMS TABLES — LeaveQuota matches dbo.LeaveQuota (UID, LeaveTypeName, TotalLeaves, Year)
+            modelBuilder.Entity<LeaveQuota>(entity =>
+            {
+                entity.ToTable("LeaveQuota");
+                entity.HasKey(e => e.UID);
+                entity.Property(e => e.LeaveTypeName).HasMaxLength(50).IsRequired();
+                entity.Property(e => e.Year).HasMaxLength(50).IsRequired();
+            });
             modelBuilder.Entity<GazettedHoliday>().ToTable("GazettedHoliday");
             
             // EmployeeLeave entity configuration

@@ -1,0 +1,54 @@
+@model IEnumerable<HRMBT.Web.Models.LeaveQuota>
+
+@{
+    ViewData["Title"] = "Leaves quota";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Leaves quota</h2>
+                <a asp-action="Index" class="btn btn-outline-secondary">Back to leave requests</a>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <p class="text-muted small mb-3">
+                        All rows from <strong>dbo.LeaveQuota</strong> (leave type, total days, year).
+                    </p>
+                    @if (Model != null && Model.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-striped table-bordered table-hover align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>UID</th>
+                                        <th>Leave type</th>
+                                        <th class="text-end">Total leaves</th>
+                                        <th>Year</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var row in Model)
+                                    {
+                                        <tr>
+                                            <td>@row.UID</td>
+                                            <td>@row.LeaveTypeName</td>
+                                            <td class="text-end">@row.TotalLeaves</td>
+                                            <td>@row.Year</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted mb-0">No leave quota records found.</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

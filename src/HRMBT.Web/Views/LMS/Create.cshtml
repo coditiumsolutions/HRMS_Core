@@ -1,149 +1,172 @@
-@model HRMBT.Web.Models.EmployeeLeave
+@model HRMBT.Web.Models.LeaveRequest
 
 @{
-    ViewData["Title"] = "Create Leave Application";
+    ViewData["Title"] = "New leave request";
 }
 
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-md-8 offset-md-2">
-            <div class="card">
-                <div class="card-header">
-                    <h3>Create Leave Application</h3>
+<style>
+    .lms-create-hero {
+        background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 55%, #052c65 100%);
+        color: #fff;
+        border-radius: 1rem;
+        padding: 1.75rem 2rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 0.5rem 1.25rem rgba(13, 110, 253, 0.25);
+    }
+    .lms-create-hero h1 { font-size: 1.35rem; font-weight: 600; margin: 0 0 .35rem; }
+    .lms-create-hero p { margin: 0; opacity: .9; font-size: .9rem; }
+    .lms-panel {
+        border-radius: 1rem;
+        border: 1px solid rgba(0,0,0,.06);
+        box-shadow: 0 .125rem .5rem rgba(0,0,0,.04);
+    }
+    .lms-panel .card-header {
+        background: #f8f9fa;
+        border-bottom: 1px solid rgba(0,0,0,.06);
+        font-weight: 600;
+        font-size: .95rem;
+    }
+    .lms-summary {
+        position: sticky;
+        top: 1rem;
+    }
+    .lms-summary dt { font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; color: #6c757d; }
+    .lms-summary dd { font-size: .95rem; margin-bottom: .75rem; }
+</style>
+
+<div class="container-fluid py-3">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb mb-0 small">
+            <li class="breadcrumb-item"><a asp-action="Index">Leave Management</a></li>
+            <li class="breadcrumb-item active" aria-current="page">New request</li>
+        </ol>
+    </nav>
+
+    <div class="lms-create-hero">
+        <h1><i class="bi bi-calendar-plus me-2"></i>New leave request</h1>
+        <p>Submit a row to <strong>dbo.LeaveRequests</strong> — employee, leave type, inclusive dates, and status.</p>
+    </div>
+
+    <form asp-action="Create" method="post" class="row g-4" novalidate>
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger col-12" role="alert"></div>
+
+        <div class="col-lg-8">
+            <div class="card lms-panel mb-4">
+                <div class="card-header"><i class="bi bi-person-badge me-2 text-primary"></i>Employee &amp; leave type</div>
+                <div class="card-body row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="EmployeeId" class="form-label">Employee <span class="text-danger">*</span></label>
+                        <select asp-for="EmployeeId" class="form-select form-select-lg" asp-items="ViewBag.Employees" id="EmployeeId">
+                            <option value="0">Choose employee…</option>
+                        </select>
+                        <span asp-validation-for="EmployeeId" class="text-danger small d-block mt-1"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="LeaveType" class="form-label">Leave type <span class="text-danger">*</span></label>
+                        <select asp-for="LeaveType" class="form-select form-select-lg" asp-items="ViewBag.LeaveTypes" id="LeaveType">
+                            <option value="">Choose type…</option>
+                        </select>
+                        <span asp-validation-for="LeaveType" class="text-danger small d-block mt-1"></span>
+                    </div>
                 </div>
+            </div>
+
+            <div class="card lms-panel mb-4">
+                <div class="card-header"><i class="bi bi-calendar-range me-2 text-primary"></i>Dates (inclusive)</div>
+                <div class="card-body row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="FromDate" class="form-label">From date <span class="text-danger">*</span></label>
+                        <input asp-for="FromDate" class="form-control form-control-lg" type="date" id="FromDate" />
+                        <span asp-validation-for="FromDate" class="text-danger small d-block mt-1"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="ToDate" class="form-label">To date <span class="text-danger">*</span></label>
+                        <input asp-for="ToDate" class="form-control form-control-lg" type="date" id="ToDate" />
+                        <span asp-validation-for="ToDate" class="text-danger small d-block mt-1"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card lms-panel mb-4">
+                <div class="card-header"><i class="bi bi-flag me-2 text-primary"></i>Workflow</div>
+                <div class="card-body row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="Status" class="form-label">Status</label>
+                        <select asp-for="Status" class="form-select" asp-items="ViewBag.Statuses"></select>
+                        <span asp-validation-for="Status" class="text-danger small d-block mt-1"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2 pb-4">
+                <button type="submit" class="btn btn-primary btn-lg px-4 rounded-pill">
+                    <i class="bi bi-check2-circle me-1"></i> Submit request
+                </button>
+                <a asp-action="Index" class="btn btn-outline-secondary btn-lg rounded-pill">
+                    <i class="bi bi-x-lg me-1"></i> Cancel
+                </a>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card lms-panel lms-summary">
+                <div class="card-header"><i class="bi bi-info-circle me-2"></i>Summary</div>
                 <div class="card-body">
-                    <form asp-action="Create" method="post">
-                        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
-
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label asp-for="EmployeeID" class="form-label"></label>
-                                <select asp-for="EmployeeID" class="form-select" asp-items="ViewBag.Employees">
-                                    <option value="">-- Select Employee --</option>
-                                </select>
-                                <span asp-validation-for="EmployeeID" class="text-danger"></span>
-                            </div>
-
-                            <div class="col-md-6 mb-3">
-                                <label asp-for="LeaveTypeName" class="form-label"></label>
-                                <select asp-for="LeaveTypeName" class="form-select" asp-items="ViewBag.LeaveTypes">
-                                    <option value="">-- Select Leave Type --</option>
-                                </select>
-                                <span asp-validation-for="LeaveTypeName" class="text-danger"></span>
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label asp-for="StartDate" class="form-label"></label>
-                                <input asp-for="StartDate" type="date" class="form-control" />
-                                <span asp-validation-for="StartDate" class="text-danger"></span>
-                            </div>
-
-                            <div class="col-md-6 mb-3">
-                                <label asp-for="EndDate" class="form-label"></label>
-                                <input asp-for="EndDate" type="date" class="form-control" />
-                                <span asp-validation-for="EndDate" class="text-danger"></span>
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label asp-for="AddDays" class="form-label"></label>
-                                <input asp-for="AddDays" type="number" step="0.5" class="form-control" placeholder="0" />
-                                <small class="form-text text-muted">Additional days to add</small>
-                                <span asp-validation-for="AddDays" class="text-danger"></span>
-                            </div>
-
-                            <div class="col-md-4 mb-3">
-                                <label asp-for="ExcludeDays" class="form-label"></label>
-                                <input asp-for="ExcludeDays" type="number" step="0.5" class="form-control" placeholder="0" />
-                                <small class="form-text text-muted">Days to exclude</small>
-                                <span asp-validation-for="ExcludeDays" class="text-danger"></span>
-                            </div>
-
-                            <div class="col-md-4 mb-3">
-                                <label asp-for="Short_Adj" class="form-label"></label>
-                                <input asp-for="Short_Adj" type="text" class="form-control" placeholder="Short leave adjustment" />
-                                <small class="form-text text-muted">Short leave adjustment (text)</small>
-                                <span asp-validation-for="Short_Adj" class="text-danger"></span>
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label asp-for="Status" class="form-label"></label>
-                                <select asp-for="Status" class="form-select" asp-items="ViewBag.Statuses">
-                                    <option value="">-- Select Status --</option>
-                                </select>
-                                <span asp-validation-for="Status" class="text-danger"></span>
-                            </div>
-
-                            <div class="col-md-6 mb-3">
-                                <label asp-for="TotalDays" class="form-label"></label>
-                                <input asp-for="TotalDays" type="number" step="0.1" class="form-control" readonly />
-                                <small class="form-text text-muted">Calculated automatically (leave empty to auto-calculate)</small>
-                                <span asp-validation-for="TotalDays" class="text-danger"></span>
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label asp-for="Comments" class="form-label"></label>
-                            <textarea asp-for="Comments" class="form-control" rows="3" placeholder="Optional comments or remarks"></textarea>
-                            <span asp-validation-for="Comments" class="text-danger"></span>
-                        </div>
-
-                        <div class="form-actions">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-circle"></i> Create Leave Application
-                            </button>
-                            <a asp-action="Index" class="btn btn-secondary">
-                                <i class="bi bi-arrow-left"></i> Back to List
-                            </a>
-                        </div>
-                    </form>
+                    <dl class="mb-0 lms-summary">
+                        <dt>Calendar days</dt>
+                        <dd id="summaryDays" class="fs-4 fw-semibold text-primary">—</dd>
+                        <dt>Leave type</dt>
+                        <dd id="summaryLeaveType">—</dd>
+                        <dt>Date range</dt>
+                        <dd id="summaryRange" class="text-break">—</dd>
+                    </dl>
+                    <hr class="my-3" />
+                    <p class="small text-muted mb-0">
+                        Maps to columns: <code>EmployeeId</code> (employee uid), <code>LeaveType</code>, <code>FromDate</code>, <code>ToDate</code>, <code>Status</code>.
+                    </p>
                 </div>
             </div>
         </div>
-    </div>
+    </form>
 </div>
 
 @section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-    
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
     <script>
-        // Auto-calculate total days when dates change
-        document.addEventListener('DOMContentLoaded', function() {
-            const startDateInput = document.querySelector('#StartDate');
-            const endDateInput = document.querySelector('#EndDate');
-            const totalDaysInput = document.querySelector('#TotalDays');
-            const addDaysInput = document.querySelector('#AddDays');
-            const excludeDaysInput = document.querySelector('#ExcludeDays');
+        (function () {
+            const fromEl = document.getElementById('FromDate');
+            const toEl = document.getElementById('ToDate');
+            const leaveEl = document.getElementById('LeaveType');
+            const daysEl = document.getElementById('summaryDays');
+            const rangeEl = document.getElementById('summaryRange');
+            const typeEl = document.getElementById('summaryLeaveType');
 
-            function calculateTotalDays() {
-                if (startDateInput.value && endDateInput.value) {
-                    const start = new Date(startDateInput.value);
-                    const end = new Date(endDateInput.value);
-                    
-                    if (end >= start) {
-                        let days = Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1;
-                        
-                        // Add/Exclude days adjustments
-                        const addDays = parseInt(addDaysInput.value) || 0;
-                        const excludeDays = parseInt(excludeDaysInput.value) || 0;
-                        
-                        days = days + addDays - excludeDays;
-                        totalDaysInput.value = Math.max(0, days).toFixed(1);
-                    } else {
-                        totalDaysInput.value = '';
-                    }
-                }
+            function parseLocalDate(s) {
+                if (!s) return null;
+                const p = s.split('-');
+                if (p.length !== 3) return null;
+                return new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
             }
 
-            startDateInput.addEventListener('change', calculateTotalDays);
-            endDateInput.addEventListener('change', calculateTotalDays);
-            addDaysInput.addEventListener('input', calculateTotalDays);
-            excludeDaysInput.addEventListener('input', calculateTotalDays);
-        });
+            function refresh() {
+                const d0 = parseLocalDate(fromEl.value);
+                const d1 = parseLocalDate(toEl.value);
+                if (d0 && d1 && d1 >= d0) {
+                    const days = Math.floor((d1 - d0) / 86400000) + 1;
+                    daysEl.textContent = days;
+                    rangeEl.textContent = fromEl.value + ' → ' + toEl.value;
+                } else {
+                    daysEl.textContent = '—';
+                    rangeEl.textContent = '—';
+                }
+                const opt = leaveEl.options[leaveEl.selectedIndex];
+                typeEl.textContent = (opt && opt.value) ? opt.text : '—';
+            }
+
+            fromEl.addEventListener('change', refresh);
+            toEl.addEventListener('change', refresh);
+            leaveEl.addEventListener('change', refresh);
+            refresh();
+        })();
     </script>
 }

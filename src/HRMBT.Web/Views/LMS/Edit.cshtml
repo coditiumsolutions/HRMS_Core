@@ -1,126 +1,74 @@
-@model HRMBT.Web.Models.EmployeeLeave
+@model HRMBT.Web.Models.LeaveRequest
 
 @{
-    ViewData["Title"] = "Edit Leave Application";
+    ViewData["Title"] = "Edit leave request";
 }
 
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-md-8 offset-md-2">
-            <div class="card">
-                <div class="card-header">
-                    <h3>Edit Leave Application</h3>
+<div class="container-fluid py-3">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb mb-0 small">
+            <li class="breadcrumb-item"><a asp-action="Index">Leave Management</a></li>
+            <li class="breadcrumb-item"><a asp-action="Details" asp-route-id="@Model.Id">Request #@Model.Id</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Edit</li>
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0 rounded-3">
+                <div class="card-header bg-white py-3 border-bottom">
+                    <h3 class="h5 mb-0"><i class="bi bi-pencil-square me-2 text-primary"></i>Edit leave request</h3>
+                    <small class="text-muted">dbo.LeaveRequests · Id @Model.Id</small>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-4">
                     <form asp-action="Edit" method="post">
                         <input type="hidden" asp-for="Id" />
                         <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
 
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label asp-for="EmployeeID" class="form-label"></label>
-                                <select asp-for="EmployeeID" class="form-select" asp-items="ViewBag.Employees">
-                                    <option value="">-- Select Employee --</option>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label asp-for="EmployeeId" class="form-label">Employee <span class="text-danger">*</span></label>
+                                <select asp-for="EmployeeId" class="form-select form-select-lg" asp-items="ViewBag.Employees">
+                                    <option value="0">Choose employee…</option>
                                 </select>
-                                <span asp-validation-for="EmployeeID" class="text-danger"></span>
+                                <span asp-validation-for="EmployeeId" class="text-danger small"></span>
                             </div>
-
-                            <div class="col-md-6 mb-3">
-                                <label asp-for="LeaveTypeName" class="form-label"></label>
-                                <select asp-for="LeaveTypeName" class="form-select" asp-items="ViewBag.LeaveTypes">
-                                    <option value="">-- Select Leave Type --</option>
+                            <div class="col-md-6">
+                                <label asp-for="LeaveType" class="form-label">Leave type <span class="text-danger">*</span></label>
+                                <select asp-for="LeaveType" class="form-select form-select-lg" asp-items="ViewBag.LeaveTypes">
+                                    <option value="">Choose type…</option>
                                 </select>
-                                <span asp-validation-for="LeaveTypeName" class="text-danger"></span>
+                                <span asp-validation-for="LeaveType" class="text-danger small"></span>
                             </div>
                         </div>
 
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label asp-for="StartDate" class="form-label"></label>
-                                <input asp-for="StartDate" type="date" class="form-control" />
-                                <span asp-validation-for="StartDate" class="text-danger"></span>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label asp-for="FromDate" class="form-label">From date <span class="text-danger">*</span></label>
+                                <input asp-for="FromDate" class="form-control form-control-lg" type="date" />
+                                <span asp-validation-for="FromDate" class="text-danger small"></span>
                             </div>
-
-                            <div class="col-md-6 mb-3">
-                                <label asp-for="EndDate" class="form-label"></label>
-                                <input asp-for="EndDate" type="date" class="form-control" />
-                                <span asp-validation-for="EndDate" class="text-danger"></span>
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label asp-for="AddDays" class="form-label"></label>
-                                <input asp-for="AddDays" type="number" step="0.5" class="form-control" placeholder="0" />
-                                <small class="form-text text-muted">Additional days to add</small>
-                                <span asp-validation-for="AddDays" class="text-danger"></span>
-                            </div>
-
-                            <div class="col-md-4 mb-3">
-                                <label asp-for="ExcludeDays" class="form-label"></label>
-                                <input asp-for="ExcludeDays" type="number" step="0.5" class="form-control" placeholder="0" />
-                                <small class="form-text text-muted">Days to exclude</small>
-                                <span asp-validation-for="ExcludeDays" class="text-danger"></span>
-                            </div>
-
-                            <div class="col-md-4 mb-3">
-                                <label asp-for="Short_Adj" class="form-label"></label>
-                                <input asp-for="Short_Adj" type="text" class="form-control" placeholder="Short leave adjustment" />
-                                <small class="form-text text-muted">Short leave adjustment (text)</small>
-                                <span asp-validation-for="Short_Adj" class="text-danger"></span>
+                            <div class="col-md-6">
+                                <label asp-for="ToDate" class="form-label">To date <span class="text-danger">*</span></label>
+                                <input asp-for="ToDate" class="form-control form-control-lg" type="date" />
+                                <span asp-validation-for="ToDate" class="text-danger small"></span>
                             </div>
                         </div>
 
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label asp-for="Status" class="form-label"></label>
-                                <select asp-for="Status" class="form-select" asp-items="ViewBag.Statuses">
-                                    <option value="">-- Select Status --</option>
-                                </select>
-                                <span asp-validation-for="Status" class="text-danger"></span>
-                            </div>
-
-                            <div class="col-md-6 mb-3">
-                                <label asp-for="TotalDays" class="form-label"></label>
-                                <input asp-for="TotalDays" type="number" step="0.1" class="form-control" readonly />
-                                <small class="form-text text-muted">Calculated automatically</small>
-                                <span asp-validation-for="TotalDays" class="text-danger"></span>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label asp-for="Status" class="form-label">Status</label>
+                                <select asp-for="Status" class="form-select" asp-items="ViewBag.Statuses"></select>
+                                <span asp-validation-for="Status" class="text-danger small"></span>
                             </div>
                         </div>
 
-                        @if (Model.Status == "Approved")
-                        {
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label asp-for="ApprovedBy" class="form-label"></label>
-                                    <input asp-for="ApprovedBy" class="form-control" readonly />
-                                    <span asp-validation-for="ApprovedBy" class="text-danger"></span>
-                                </div>
-
-                                <div class="col-md-6 mb-3">
-                                    <label asp-for="ApprovedOn" class="form-label"></label>
-                                    <input asp-for="ApprovedOn" type="date" class="form-control" readonly />
-                                    <span asp-validation-for="ApprovedOn" class="text-danger"></span>
-                                </div>
-                            </div>
-                        }
-
-                        <div class="mb-3">
-                            <label asp-for="Comments" class="form-label"></label>
-                            <textarea asp-for="Comments" class="form-control" rows="3" placeholder="Optional comments or remarks"></textarea>
-                            <span asp-validation-for="Comments" class="text-danger"></span>
-                        </div>
-
-                        <div class="form-actions">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-circle"></i> Update Leave Application
+                        <div class="d-flex flex-wrap gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg px-4 rounded-pill">
+                                <i class="bi bi-check2-circle me-1"></i> Save changes
                             </button>
-                            <a asp-action="Index" class="btn btn-secondary">
-                                <i class="bi bi-arrow-left"></i> Back to List
-                            </a>
-                            <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-info">
-                                <i class="bi bi-eye"></i> View Details
-                            </a>
+                            <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary btn-lg rounded-pill">Cancel</a>
+                            <a asp-action="Index" class="btn btn-outline-secondary btn-lg rounded-pill ms-auto">List</a>
                         </div>
                     </form>
                 </div>
@@ -130,42 +78,5 @@
 </div>
 
 @section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-    
-    <script>
-        // Auto-calculate total days when dates change
-        document.addEventListener('DOMContentLoaded', function() {
-            const startDateInput = document.querySelector('#StartDate');
-            const endDateInput = document.querySelector('#EndDate');
-            const totalDaysInput = document.querySelector('#TotalDays');
-            const addDaysInput = document.querySelector('#AddDays');
-            const excludeDaysInput = document.querySelector('#ExcludeDays');
-
-            function calculateTotalDays() {
-                if (startDateInput.value && endDateInput.value) {
-                    const start = new Date(startDateInput.value);
-                    const end = new Date(endDateInput.value);
-                    
-                    if (end >= start) {
-                        let days = Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1;
-                        
-                        // Add/Exclude days adjustments
-                        const addDays = parseInt(addDaysInput.value) || 0;
-                        const excludeDays = parseInt(excludeDaysInput.value) || 0;
-                        
-                        days = days + addDays - excludeDays;
-                        totalDaysInput.value = Math.max(0, days).toFixed(1);
-                    } else {
-                        totalDaysInput.value = '';
-                    }
-                }
-            }
-
-            startDateInput.addEventListener('change', calculateTotalDays);
-            endDateInput.addEventListener('change', calculateTotalDays);
-            addDaysInput.addEventListener('input', calculateTotalDays);
-            excludeDaysInput.addEventListener('input', calculateTotalDays);
-        });
-    </script>
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
 }
-

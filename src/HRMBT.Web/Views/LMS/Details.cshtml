@@ -1,46 +1,58 @@
-@model HRMBT.Web.Models.EmployeeLeave
+@model HRMBT.Web.Models.LeaveRequest
 
 @{
-    ViewData["Title"] = "Leave Application Details";
+    ViewData["Title"] = "Leave request details";
+    var empCode = ViewBag.EmployeeCode as string ?? "(unknown)";
+    var empName = ViewBag.EmployeeName as string;
 }
 
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-md-8 offset-md-2">
-            <div class="card">
-                <div class="card-header">
-                    <h3>Leave Application Details</h3>
+<div class="container-fluid py-3">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb mb-0 small">
+            <li class="breadcrumb-item"><a asp-action="Index">Leave Management</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Request #@Model.Id</li>
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0 rounded-3">
+                <div class="card-header bg-white py-3 border-bottom">
+                    <h3 class="h5 mb-0"><i class="bi bi-file-earmark-text me-2 text-primary"></i>Leave request</h3>
+                    <small class="text-muted">dbo.LeaveRequests</small>
                 </div>
-                <div class="card-body">
-                    <dl class="row">
-                        <dt class="col-sm-4">ID</dt>
-                        <dd class="col-sm-8">@Html.DisplayFor(model => model.Id)</dd>
+                <div class="card-body p-4">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4 text-muted small text-uppercase">Id</dt>
+                        <dd class="col-sm-8">@Model.Id</dd>
 
-                        <dt class="col-sm-4">Employee ID</dt>
-                        <dd class="col-sm-8">@Html.DisplayFor(model => model.EmployeeID)</dd>
+                        <dt class="col-sm-4 text-muted small text-uppercase">Employee uid</dt>
+                        <dd class="col-sm-8"><code>@Model.EmployeeId</code></dd>
 
-                        <dt class="col-sm-4">Leave Type</dt>
-                        <dd class="col-sm-8">@Html.DisplayFor(model => model.LeaveTypeName)</dd>
+                        <dt class="col-sm-4 text-muted small text-uppercase">Employee</dt>
+                        <dd class="col-sm-8">
+                            <span class="fw-semibold">@empCode</span>
+                            @if (!string.IsNullOrEmpty(empName))
+                            {
+                                <div class="text-muted">@empName</div>
+                            }
+                        </dd>
 
-                        <dt class="col-sm-4">Start Date</dt>
-                        <dd class="col-sm-8">@Model.StartDate.ToString("yyyy-MM-dd")</dd>
+                        <dt class="col-sm-4 text-muted small text-uppercase">Leave type</dt>
+                        <dd class="col-sm-8">@Model.LeaveType</dd>
 
-                        <dt class="col-sm-4">End Date</dt>
-                        <dd class="col-sm-8">@Model.EndDate.ToString("yyyy-MM-dd")</dd>
+                        <dt class="col-sm-4 text-muted small text-uppercase">From date</dt>
+                        <dd class="col-sm-8">@Model.FromDate.ToString("yyyy-MM-dd")</dd>
 
-                        <dt class="col-sm-4">Total Days</dt>
-                        <dd class="col-sm-8">@Html.DisplayFor(model => model.TotalDays)</dd>
+                        <dt class="col-sm-4 text-muted small text-uppercase">To date</dt>
+                        <dd class="col-sm-8">@Model.ToDate.ToString("yyyy-MM-dd")</dd>
 
-                        <dt class="col-sm-4">Add Days</dt>
-                        <dd class="col-sm-8">@Html.DisplayFor(model => model.AddDays)</dd>
+                        <dt class="col-sm-4 text-muted small text-uppercase">Calendar days</dt>
+                        <dd class="col-sm-8">
+                            @(Model.ToDate.Date >= Model.FromDate.Date ? (Model.ToDate.Date - Model.FromDate.Date).Days + 1 : 0)
+                        </dd>
 
-                        <dt class="col-sm-4">Exclude Days</dt>
-                        <dd class="col-sm-8">@Html.DisplayFor(model => model.ExcludeDays)</dd>
-
-                        <dt class="col-sm-4">Short Adjustment</dt>
-                        <dd class="col-sm-8">@Html.DisplayFor(model => model.Short_Adj)</dd>
-
-                        <dt class="col-sm-4">Status</dt>
+                        <dt class="col-sm-4 text-muted small text-uppercase">Status</dt>
                         <dd class="col-sm-8">
                             @{
                                 var statusClass = Model.Status switch
@@ -51,34 +63,19 @@
                                     _ => "badge bg-warning"
                                 };
                             }
-                            <span class="@statusClass">@Html.DisplayFor(model => model.Status)</span>
+                            <span class="@statusClass">@(Model.Status ?? "—")</span>
                         </dd>
-
-                        @if (!string.IsNullOrEmpty(Model.ApprovedBy))
-                        {
-                            <dt class="col-sm-4">Approved By</dt>
-                            <dd class="col-sm-8">@Html.DisplayFor(model => model.ApprovedBy)</dd>
-
-                            <dt class="col-sm-4">Approved On</dt>
-                            <dd class="col-sm-8">@(Model.ApprovedOn?.ToString("yyyy-MM-dd") ?? "N/A")</dd>
-                        }
-
-                        @if (!string.IsNullOrEmpty(Model.Comments))
-                        {
-                            <dt class="col-sm-4">Comments</dt>
-                            <dd class="col-sm-8">@Html.DisplayFor(model => model.Comments)</dd>
-                        }
                     </dl>
 
-                    <div class="form-actions mt-4">
+                    <div class="d-flex flex-wrap gap-2 mt-4 pt-3 border-top">
                         <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">
                             <i class="bi bi-pencil"></i> Edit
                         </a>
-                        <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-danger">
+                        <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-outline-danger">
                             <i class="bi bi-trash"></i> Delete
                         </a>
-                        <a asp-action="Index" class="btn btn-secondary">
-                            <i class="bi bi-arrow-left"></i> Back to List
+                        <a asp-action="Index" class="btn btn-outline-secondary ms-auto">
+                            <i class="bi bi-arrow-left"></i> Back to list
                         </a>
                     </div>
                 </div>
@@ -86,4 +83,3 @@
         </div>
     </div>
 </div>
-

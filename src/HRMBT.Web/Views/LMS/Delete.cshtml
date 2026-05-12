@@ -1,83 +1,50 @@
-@model HRMBT.Web.Models.EmployeeLeave
+@model HRMBT.Web.Models.LeaveRequest
 
 @{
-    ViewData["Title"] = "Delete Leave Application";
+    ViewData["Title"] = "Delete leave request";
+    var empCode = ViewBag.EmployeeCode as string ?? "(unknown)";
+    var empName = ViewBag.EmployeeName as string;
+    var days = Model.ToDate.Date >= Model.FromDate.Date ? (Model.ToDate.Date - Model.FromDate.Date).Days + 1 : 0;
 }
 
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-md-8 offset-md-2">
-            <div class="card">
-                <div class="card-header bg-danger text-white">
-                    <h3>Delete Leave Application</h3>
+<div class="container-fluid py-3">
+    <div class="row justify-content-center">
+        <div class="col-lg-7">
+            <div class="card border-danger shadow-sm rounded-3">
+                <div class="card-header bg-danger text-white py-3">
+                    <h3 class="h5 mb-0"><i class="bi bi-exclamation-octagon me-2"></i>Delete leave request</h3>
                 </div>
-                <div class="card-body">
-                    <div class="alert alert-warning">
-                        <i class="bi bi-exclamation-triangle"></i> 
-                        <strong>Are you sure you want to delete this leave application?</strong> This action cannot be undone.
+                <div class="card-body p-4">
+                    <div class="alert alert-warning d-flex align-items-start gap-2">
+                        <i class="bi bi-exclamation-triangle-fill mt-1"></i>
+                        <div>This removes row <strong>#@Model.Id</strong> from <strong>LeaveRequests</strong>. This cannot be undone.</div>
                     </div>
 
-                    <dl class="row">
-                        <dt class="col-sm-4">ID</dt>
-                        <dd class="col-sm-8">@Html.DisplayFor(model => model.Id)</dd>
-
-                        <dt class="col-sm-4">Employee ID</dt>
-                        <dd class="col-sm-8">@Html.DisplayFor(model => model.EmployeeID)</dd>
-
-                        <dt class="col-sm-4">Leave Type</dt>
-                        <dd class="col-sm-8">@Html.DisplayFor(model => model.LeaveTypeName)</dd>
-
-                        <dt class="col-sm-4">Start Date</dt>
-                        <dd class="col-sm-8">@Model.StartDate.ToString("yyyy-MM-dd")</dd>
-
-                        <dt class="col-sm-4">End Date</dt>
-                        <dd class="col-sm-8">@Model.EndDate.ToString("yyyy-MM-dd")</dd>
-
-                        <dt class="col-sm-4">Total Days</dt>
-                        <dd class="col-sm-8">@Html.DisplayFor(model => model.TotalDays)</dd>
-
-                        <dt class="col-sm-4">Status</dt>
+                    <dl class="row mb-4">
+                        <dt class="col-sm-4">Employee</dt>
                         <dd class="col-sm-8">
-                            @{
-                                var statusClass = Model.Status switch
-                                {
-                                    "Approved" => "badge bg-success",
-                                    "Rejected" => "badge bg-danger",
-                                    "Cancelled" => "badge bg-secondary",
-                                    _ => "badge bg-warning"
-                                };
+                            <span class="fw-semibold">@empCode</span>
+                            @if (!string.IsNullOrEmpty(empName))
+                            {
+                                <div class="text-muted small">@empName</div>
                             }
-                            <span class="@statusClass">@Html.DisplayFor(model => model.Status)</span>
                         </dd>
-
-                        @if (!string.IsNullOrEmpty(Model.ApprovedBy))
-                        {
-                            <dt class="col-sm-4">Approved By</dt>
-                            <dd class="col-sm-8">@Html.DisplayFor(model => model.ApprovedBy)</dd>
-
-                            <dt class="col-sm-4">Approved On</dt>
-                            <dd class="col-sm-8">@(Model.ApprovedOn?.ToString("yyyy-MM-dd HH:mm") ?? "N/A")</dd>
-                        }
-
-                        @if (!string.IsNullOrEmpty(Model.Comments))
-                        {
-                            <dt class="col-sm-4">Comments</dt>
-                            <dd class="col-sm-8">@Html.DisplayFor(model => model.Comments)</dd>
-                        }
+                        <dt class="col-sm-4">Leave type</dt>
+                        <dd class="col-sm-8">@Model.LeaveType</dd>
+                        <dt class="col-sm-4">Dates</dt>
+                        <dd class="col-sm-8">@Model.FromDate.ToString("yyyy-MM-dd") → @Model.ToDate.ToString("yyyy-MM-dd") (@days calendar days)</dd>
+                        <dt class="col-sm-4">Status</dt>
+                        <dd class="col-sm-8">@(Model.Status ?? "—")</dd>
                     </dl>
 
                     <form asp-action="Delete" method="post">
                         <input type="hidden" asp-for="Id" />
-                        <div class="form-actions">
+                        <div class="d-flex flex-wrap gap-2">
                             <button type="submit" class="btn btn-danger">
-                                <i class="bi bi-trash"></i> Delete
+                                <i class="bi bi-trash"></i> Delete permanently
                             </button>
-                            <a asp-action="Index" class="btn btn-secondary">
-                                <i class="bi bi-arrow-left"></i> Back to List
-                            </a>
-                            <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-info">
-                                <i class="bi bi-eye"></i> View Details
-                            </a>
+                            <a asp-action="Index" class="btn btn-outline-secondary">Back to list</a>
+                            <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-primary ms-auto">Cancel</a>
                         </div>
                     </form>
                 </div>
@@ -85,5 +52,3 @@
         </div>
     </div>
 </div>
-
-
