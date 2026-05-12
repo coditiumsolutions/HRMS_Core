@@ -2,6 +2,10 @@
 
 @{
     ViewData["Title"] = "Leave Management System";
+    var filterEmployeeId = ViewBag.CurrentEmployeeId as string;
+    var filterStatus = ViewBag.CurrentStatus as string;
+    var filterLeaveType = ViewBag.CurrentLeaveType as string;
+    var leaveTypesList = ViewBag.LeaveTypes as List<string>;
 }
 
 <div class="container-fluid">
@@ -31,27 +35,27 @@
                     <form asp-action="Index" method="get" class="row g-3">
                         <div class="col-md-3">
                             <label class="form-label">Employee ID</label>
-                            <input type="text" name="employeeId" class="form-control" value="@ViewBag.CurrentEmployeeId" placeholder="Search by Employee ID" />
+                            <input type="text" name="employeeId" class="form-control" value="@filterEmployeeId" placeholder="Search by Employee ID" />
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Status</label>
                             <select name="status" class="form-select">
-                                <option value="">All Statuses</option>
-                                <option value="Applied" selected="@("Applied" == ViewBag.CurrentStatus?.ToString())">Applied</option>
-                                <option value="Approved" selected="@("Approved" == ViewBag.CurrentStatus?.ToString())">Approved</option>
-                                <option value="Rejected" selected="@("Rejected" == ViewBag.CurrentStatus?.ToString())">Rejected</option>
-                                <option value="Cancelled" selected="@("Cancelled" == ViewBag.CurrentStatus?.ToString())">Cancelled</option>
+                                <option value="" selected="@(string.IsNullOrEmpty(filterStatus))">All Statuses</option>
+                                <option value="Applied" selected="@(filterStatus == "Applied")">Applied</option>
+                                <option value="Approved" selected="@(filterStatus == "Approved")">Approved</option>
+                                <option value="Rejected" selected="@(filterStatus == "Rejected")">Rejected</option>
+                                <option value="Cancelled" selected="@(filterStatus == "Cancelled")">Cancelled</option>
                             </select>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Leave Type</label>
                             <select name="leaveType" class="form-select">
-                                <option value="">All Leave Types</option>
-                                @if (ViewBag.LeaveTypes != null)
+                                <option value="" selected="@(string.IsNullOrEmpty(filterLeaveType))">All Leave Types</option>
+                                @if (leaveTypesList != null)
                                 {
-                                    @foreach (var leaveType in ViewBag.LeaveTypes as List<string>)
+                                    @foreach (var leaveType in leaveTypesList)
                                     {
-                                        <option value="@leaveType" selected="@(leaveType == ViewBag.CurrentLeaveType?.ToString())">@leaveType</option>
+                                        <option value="@leaveType" selected="@(leaveType == filterLeaveType)">@leaveType</option>
                                     }
                                 }
                             </select>

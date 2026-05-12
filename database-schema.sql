@@ -8,6 +8,8 @@ BEGIN
 END;
 GO
 
+/* HRMS: idempotent EF migration chain + catalog DDL aligned with repo db.txt (2026-05-12). */
+
 BEGIN TRANSACTION;
 IF NOT EXISTS (
     SELECT * FROM [__EFMigrationsHistory]
@@ -886,6 +888,206 @@ BEGIN
     VALUES (N'20260105074407_UpdateAttendanceTableSchema', N'9.0.0');
 END;
 
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260105120000_CreateAttendanceUploadLogsTable'
+)
+BEGIN
+    IF OBJECT_ID(N'[AttendanceUploadLogs]', N'U') IS NULL
+    BEGIN
+        CREATE TABLE [AttendanceUploadLogs] (
+            [Id] int IDENTITY(1,1) NOT NULL,
+            [UploadDate] datetime2 NOT NULL,
+            [UploadedBy] nvarchar(100) NULL,
+            [FileName] nvarchar(255) NULL,
+            [TotalRows] int NOT NULL,
+            [SuccessCount] int NOT NULL,
+            [FailureCount] int NOT NULL,
+            [ErrorDetails] nvarchar(max) NULL,
+            CONSTRAINT [PK_AttendanceUploadLogs] PRIMARY KEY ([Id])
+        );
+    END
+    ELSE
+    BEGIN
+        IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('AttendanceUploadLogs') AND name = 'Id')
+        BEGIN
+            ALTER TABLE [AttendanceUploadLogs] ADD [Id] int IDENTITY(1,1) NOT NULL;
+            ALTER TABLE [AttendanceUploadLogs] ADD CONSTRAINT [PK_AttendanceUploadLogs] PRIMARY KEY ([Id]);
+        END
+        IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('AttendanceUploadLogs') AND name = 'UploadDate')
+            ALTER TABLE [AttendanceUploadLogs] ADD [UploadDate] datetime2 NOT NULL CONSTRAINT [DF_AttendanceUploadLogs_UploadDate] DEFAULT GETDATE();
+        IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('AttendanceUploadLogs') AND name = 'UploadedBy')
+            ALTER TABLE [AttendanceUploadLogs] ADD [UploadedBy] nvarchar(100) NULL;
+        IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('AttendanceUploadLogs') AND name = 'FileName')
+            ALTER TABLE [AttendanceUploadLogs] ADD [FileName] nvarchar(255) NULL;
+        IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('AttendanceUploadLogs') AND name = 'TotalRows')
+            ALTER TABLE [AttendanceUploadLogs] ADD [TotalRows] int NOT NULL CONSTRAINT [DF_AttendanceUploadLogs_TotalRows] DEFAULT 0;
+        IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('AttendanceUploadLogs') AND name = 'SuccessCount')
+            ALTER TABLE [AttendanceUploadLogs] ADD [SuccessCount] int NOT NULL CONSTRAINT [DF_AttendanceUploadLogs_SuccessCount] DEFAULT 0;
+        IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('AttendanceUploadLogs') AND name = 'FailureCount')
+            ALTER TABLE [AttendanceUploadLogs] ADD [FailureCount] int NOT NULL CONSTRAINT [DF_AttendanceUploadLogs_FailureCount] DEFAULT 0;
+        IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('AttendanceUploadLogs') AND name = 'ErrorDetails')
+            ALTER TABLE [AttendanceUploadLogs] ADD [ErrorDetails] nvarchar(max) NULL;
+    END
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20260105120000_CreateAttendanceUploadLogsTable', N'9.0.0');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260512100000_PayslipTotalAllowancesColumn'
+)
+BEGIN
+    IF OBJECT_ID(N'[dbo].[Payslips]', N'U') IS NOT NULL
+       AND COL_LENGTH(N'dbo.Payslips', N'TotalAllowances') IS NULL
+        ALTER TABLE [dbo].[Payslips] ADD [TotalAllowances] decimal(18,2) NULL;
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20260512100000_PayslipTotalAllowancesColumn', N'9.0.0');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260515120000_AlignDeductionsSchemaDbTxt'
+)
+BEGIN
+    IF OBJECT_ID(N'[dbo].[Deductions]', N'U') IS NOT NULL
+    BEGIN
+        IF COL_LENGTH(N'dbo.Deductions', N'DeductionName') IS NULL AND COL_LENGTH(N'dbo.Deductions', N'Name') IS NOT NULL
+            EXEC sp_rename N'dbo.Deductions.Name', N'DeductionName', N'COLUMN';
+        IF COL_LENGTH(N'dbo.Deductions', N'DeductionName') IS NULL
+        BEGIN
+            ALTER TABLE [dbo].[Deductions] ADD [DeductionName] nvarchar(100) NOT NULL CONSTRAINT [DF_Deductions_DeductionName] DEFAULT (N'');
+            ALTER TABLE [dbo].[Deductions] DROP CONSTRAINT [DF_Deductions_DeductionName];
+        END
+        IF COL_LENGTH(N'dbo.Deductions', N'Frequency') IS NULL
+        BEGIN
+            ALTER TABLE [dbo].[Deductions] ADD [Frequency] nvarchar(50) NOT NULL CONSTRAINT [DF_Deductions_Frequency] DEFAULT (N'Monthly');
+            ALTER TABLE [dbo].[Deductions] DROP CONSTRAINT [DF_Deductions_Frequency];
+        END
+        IF COL_LENGTH(N'dbo.Deductions', N'Amount') IS NOT NULL
+            ALTER TABLE [dbo].[Deductions] DROP COLUMN [Amount];
+    END
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20260515120000_AlignDeductionsSchemaDbTxt', N'9.0.0');
+END;
+
 COMMIT;
+GO
+
+/* ----------------------------------------------------------------------------
+   Objects used by HRMS / EF but not created by the migration chain above.
+   Shapes match ApplicationDbContext + models (EmployeeLeaves per dbo.EmployeeLeaves;
+   LeaveQuota, GazettedHoliday, CarryforwardLeaves per EF). Production may still
+   expose legacy column names (see repo db.txt); align those databases manually.
+   Each block is idempotent (skips if the table already exists).
+   ---------------------------------------------------------------------------- */
+
+SET ANSI_NULLS ON;
+SET QUOTED_IDENTIFIER ON;
+GO
+
+IF OBJECT_ID(N'[dbo].[Departments]', N'U') IS NULL
+BEGIN
+    CREATE TABLE [dbo].[Departments] (
+        [DepartmentID] int NOT NULL IDENTITY(1,1),
+        [DepartmentName] nvarchar(100) NULL,
+        CONSTRAINT [PK_Departments] PRIMARY KEY ([DepartmentID])
+    );
+END;
+GO
+
+IF OBJECT_ID(N'[dbo].[EmployeeLeaves]', N'U') IS NULL
+BEGIN
+    CREATE TABLE [dbo].[EmployeeLeaves] (
+        [uid] int NOT NULL IDENTITY(1,1),
+        [EmployeeID] varchar(50) NOT NULL,
+        [LeaveTypeName] varchar(250) NOT NULL,
+        [StartDate] date NOT NULL,
+        [EndDate] date NOT NULL,
+        [TotalDays] float NULL,
+        [AddDays] int NULL,
+        [ExcludeDays] int NULL,
+        [Short_Adj] varchar(max) NULL,
+        [DepSupervisorComments] varchar(max) NULL,
+        [Year] varchar(50) NULL,
+        [Status] nvarchar(50) NULL,
+        [ApprovedBy] varchar(50) NULL,
+        [ApprovedOn] date NULL,
+        [AppliedDate] date NULL,
+        CONSTRAINT [PK_EmployeeLeaves] PRIMARY KEY ([uid])
+    );
+END;
+GO
+
+IF OBJECT_ID(N'[dbo].[LeaveQuota]', N'U') IS NULL
+BEGIN
+    CREATE TABLE [dbo].[LeaveQuota] (
+        [Id] int NOT NULL IDENTITY(1,1),
+        [LeaveTypeName] nvarchar(50) NOT NULL,
+        [Year] int NOT NULL,
+        [QuotaDays] decimal(18,2) NULL,
+        [Description] nvarchar(255) NULL,
+        CONSTRAINT [PK_LeaveQuota] PRIMARY KEY ([Id])
+    );
+END;
+GO
+
+IF OBJECT_ID(N'[dbo].[GazettedHoliday]', N'U') IS NULL
+BEGIN
+    CREATE TABLE [dbo].[GazettedHoliday] (
+        [Id] int NOT NULL IDENTITY(1,1),
+        [HolidayDate] date NOT NULL,
+        [HolidayName] nvarchar(100) NOT NULL,
+        [Description] nvarchar(255) NULL,
+        CONSTRAINT [PK_GazettedHoliday] PRIMARY KEY ([Id])
+    );
+END;
+GO
+
+IF OBJECT_ID(N'[dbo].[CarryforwardLeaves]', N'U') IS NULL
+BEGIN
+    CREATE TABLE [dbo].[CarryforwardLeaves] (
+        [Id] int NOT NULL IDENTITY(1,1),
+        [EmployeeID] nvarchar(50) NOT NULL,
+        [LeaveTypeName] nvarchar(50) NOT NULL,
+        [FromYear] int NOT NULL,
+        [ToYear] int NOT NULL,
+        [CarryForwardDays] decimal(18,2) NOT NULL,
+        [Description] nvarchar(255) NULL,
+        CONSTRAINT [PK_CarryforwardLeaves] PRIMARY KEY ([Id])
+    );
+END;
+GO
+
+IF OBJECT_ID(N'[dbo].[Configuration]', N'U') IS NULL
+BEGIN
+    CREATE TABLE [dbo].[Configuration] (
+        [UID] int NOT NULL IDENTITY(1,1),
+        [ConfigKey] nvarchar(50) NULL,
+        [ConfigValue] nvarchar(max) NULL,
+        CONSTRAINT [PK_Configuration] PRIMARY KEY ([UID])
+    );
+END;
+GO
+
+IF OBJECT_ID(N'[dbo].[Users]', N'U') IS NULL
+BEGIN
+    CREATE TABLE [dbo].[Users] (
+        [uid] int NOT NULL IDENTITY(1,1),
+        [EmployeeId] varchar(50) NULL,
+        [Username] nvarchar(100) NOT NULL,
+        [PasswordHash] nvarchar(255) NOT NULL,
+        [Role] nvarchar(max) NULL,
+        [CreatedBy] varchar(max) NULL,
+        [CreatedOn] varchar(max) NULL,
+        [History] varchar(max) NULL,
+        CONSTRAINT [PK_Users] PRIMARY KEY ([uid])
+    );
+END;
+GO
+
+IF OBJECT_ID(N'[dbo].[Employee]', N'U') IS NOT NULL
+   AND COL_LENGTH(N'dbo.Employee', N'GenStatus') IS NULL
+    ALTER TABLE [dbo].[Employee] ADD [GenStatus] nvarchar(50) NULL;
 GO
 

@@ -12,6 +12,12 @@
         </a>
     </li>
     <li class="nav-item">
+        <a class="nav-link @(currentAction == "OffDay" ? "active fw-bold text-primary" : "text-dark")" 
+           asp-controller="Attendance" asp-action="OffDay">
+            🏝️ Off-Day
+        </a>
+    </li>
+    <li class="nav-item">
         <a class="nav-link @(currentAction == "Index" ? "active fw-bold text-primary" : "text-dark")" 
            asp-controller="Attendance" asp-action="Index">
             📅 Attendance Today

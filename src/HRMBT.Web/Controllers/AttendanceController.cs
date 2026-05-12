@@ -12,6 +12,8 @@ namespace HRMBT.Web.Controllers
 {
     public class AttendanceController : Controller
     {
+        private const string LeaveTypesConfigKey = "LeaveTypes";
+
         private readonly AttendanceService _attendanceService;
         private readonly ApplicationDbContext _context;
 
@@ -19,6 +21,56 @@ namespace HRMBT.Web.Controllers
         {
             _attendanceService = attendanceService;
             _context = context;
+        }
+
+        private static IEnumerable<string> SplitConfigCsv(string? csv)
+        {
+            if (string.IsNullOrWhiteSpace(csv)) yield break;
+            foreach (var item in csv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                if (!string.IsNullOrWhiteSpace(item))
+                    yield return item;
+            }
+        }
+
+        private static bool ConfigKeyMatches(string? key, string match) =>
+            !string.IsNullOrWhiteSpace(key) && string.Equals(key.Trim(), match, StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>Leave types from dbo.Configuration (ConfigKey LeaveTypes, CSV) or LeaveQuota.</summary>
+        private async Task<List<string>> GetOffDayLeaveTypesAsync()
+        {
+            var rows = await _context.HrConfigurations.AsNoTracking()
+                .Where(c => c.ConfigKey != null && c.ConfigValue != null)
+                .ToListAsync();
+
+            var fromConfig = rows
+                .Where(c => ConfigKeyMatches(c.ConfigKey, LeaveTypesConfigKey))
+                .SelectMany(c => SplitConfigCsv(c.ConfigValue))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(v => v, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (fromConfig.Count > 0)
+                return fromConfig;
+
+            var currentYear = DateTime.Now.Year;
+            var fromQuota = await _context.LeaveQuotas.AsNoTracking()
+                .Where(lq => lq.Year == currentYear)
+                .Select(lq => lq.LeaveTypeName)
+                .Where(n => n != null && n != "")
+                .Distinct()
+                .OrderBy(n => n)
+                .ToListAsync();
+
+            if (fromQuota.Count > 0)
+                return fromQuota!;
+
+            return await _context.LeaveQuotas.AsNoTracking()
+                .Select(lq => lq.LeaveTypeName)
+                .Where(n => n != null && n != "")
+                .Distinct()
+                .OrderBy(n => n)
+                .ToListAsync()!;
         }
 
         // GET: Attendance Dashboard
@@ -203,6 +255,180 @@ namespace HRMBT.Web.Controllers
             }
 
             return RedirectToAction(nameof(Create), new { department, page, pageSize });
+        }
+
+        // GET: Attendance/OffDay — bulk leave rows in dbo.LeaveRequests (off-day / single day).
+        public async Task<IActionResult> OffDay(string? department, int page = 1, int pageSize = 20)
+        {
+            ViewData["Module"] = "Attendance";
+
+            if (page < 1) page = 1;
+            if (pageSize < 1) pageSize = 20;
+            if (pageSize > 100) pageSize = 100;
+
+            var query = _context.Employees.AsQueryable();
+            if (!string.IsNullOrWhiteSpace(department))
+                query = query.Where(e => e.Department != null && e.Department == department);
+
+            query = query.OrderBy(e => e.EmployeeName);
+            var paginatedEmployees = await PaginatedList<Employee>.CreateAsync(query, page, pageSize);
+
+            var departments = await _context.Employees
+                .Where(e => e.Department != null && e.Department != "")
+                .Select(e => e.Department)
+                .Distinct()
+                .OrderBy(d => d)
+                .ToListAsync();
+
+            ViewBag.Departments = departments;
+            ViewBag.SelectedDepartment = department;
+            ViewBag.CurrentPageSize = pageSize;
+            ViewBag.LeaveTypeOptions = await GetOffDayLeaveTypesAsync();
+
+            return View(paginatedEmployees);
+        }
+
+        // POST: Attendance/OffDay
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> OffDay(
+            [FromForm] List<string>? selectedEmployeeIds,
+            [FromForm] string? leaveType,
+            [FromForm] DateTime offDayDate,
+            string? department,
+            int page = 1,
+            int pageSize = 20)
+        {
+            ViewData["Module"] = "Attendance";
+
+            selectedEmployeeIds = selectedEmployeeIds?
+                .Select(s => (s ?? "").Trim())
+                .Where(s => !string.IsNullOrEmpty(s))
+                .ToList() ?? new List<string>();
+
+            if (!selectedEmployeeIds.Any())
+            {
+                TempData["ErrorMessage"] = "No employees were submitted. Select at least one row in the grid, choose leave type and date, then click Create off-day records again.";
+                return RedirectToAction(nameof(OffDay), new { department, page, pageSize });
+            }
+
+            if (offDayDate == default)
+            {
+                TempData["ErrorMessage"] = "Please select a valid date.";
+                return RedirectToAction(nameof(OffDay), new { department, page, pageSize });
+            }
+
+            var allowedTypes = await GetOffDayLeaveTypesAsync();
+            var normalizedType = (leaveType ?? "").Trim();
+            if (string.IsNullOrEmpty(normalizedType) || !allowedTypes.Contains(normalizedType, StringComparer.OrdinalIgnoreCase))
+            {
+                TempData["ErrorMessage"] = string.IsNullOrWhiteSpace(leaveType)
+                    ? "Please select a leave type."
+                    : "The selected leave type is not allowed. Configure types under Configuration (LeaveTypes) or LeaveQuota.";
+                return RedirectToAction(nameof(OffDay), new { department, page, pageSize });
+            }
+
+            var canonicalType = allowedTypes.First(t => string.Equals(t, normalizedType, StringComparison.OrdinalIgnoreCase));
+            if (canonicalType.Length > 50)
+            {
+                TempData["ErrorMessage"] = "Leave type exceeds 50 characters.";
+                return RedirectToAction(nameof(OffDay), new { department, page, pageSize });
+            }
+
+            var day = offDayDate.Date;
+            var dayEnd = day.AddDays(1);
+
+            var employees = await _context.Employees
+                .Where(e => e.EmployeeID != null && selectedEmployeeIds.Contains(e.EmployeeID))
+                .ToListAsync();
+
+            var foundIds = new HashSet<string>(employees.Select(e => e.EmployeeID!), StringComparer.OrdinalIgnoreCase);
+            foreach (var sid in selectedEmployeeIds.Distinct())
+            {
+                if (foundIds.Contains(sid)) continue;
+                var one = await _context.Employees
+                    .FirstOrDefaultAsync(e => e.EmployeeID != null && e.EmployeeID.ToLower() == sid.ToLower());
+                if (one != null)
+                {
+                    employees.Add(one);
+                    foundIds.Add(one.EmployeeID!);
+                }
+            }
+
+            Employee? FindEmployee(string id) =>
+                employees.FirstOrDefault(e => string.Equals(e.EmployeeID, id, StringComparison.OrdinalIgnoreCase));
+
+            var uids = employees.Select(e => e.uid).ToList();
+            var existingEmployeeIds = await _context.LeaveRequests.AsNoTracking()
+                .Where(l => uids.Contains(l.EmployeeId)
+                    && l.FromDate >= day && l.FromDate < dayEnd
+                    && l.LeaveType == canonicalType)
+                .Select(l => l.EmployeeId)
+                .ToListAsync();
+            var existingSet = existingEmployeeIds.ToHashSet();
+
+            var toAdd = new List<LeaveRequest>();
+            var skipped = new List<string>();
+            var notFound = new List<string>();
+
+            foreach (var id in selectedEmployeeIds.Distinct())
+            {
+                var emp = FindEmployee(id);
+                if (emp == null)
+                {
+                    notFound.Add(id);
+                    continue;
+                }
+
+                if (existingSet.Contains(emp.uid))
+                {
+                    skipped.Add($"{emp.EmployeeName} ({id})");
+                    continue;
+                }
+
+                toAdd.Add(new LeaveRequest
+                {
+                    EmployeeId = emp.uid,
+                    LeaveType = canonicalType,
+                    FromDate = day,
+                    ToDate = day,
+                    Status = "Approved"
+                });
+                existingSet.Add(emp.uid);
+            }
+
+            var summaryLine = $"Off-day for {day:yyyy-MM-dd}, leave type \"{canonicalType}\": {toAdd.Count} new row(s) to save, {skipped.Count} skipped (duplicate), {notFound.Count} unknown ID(s), {selectedEmployeeIds.Count} checkbox(es) posted.";
+
+            var detailLines = new List<string>();
+            if (skipped.Count > 0)
+                detailLines.AddRange(skipped.Take(20).Select(s => $"Already exists: {s}"));
+            if (notFound.Count > 0)
+                detailLines.Add("Not found: " + string.Join(", ", notFound.Take(20)));
+
+            if (toAdd.Count > 0)
+            {
+                try
+                {
+                    _context.LeaveRequests.AddRange(toAdd);
+                    await _context.SaveChangesAsync();
+                    TempData["SuccessMessage"] = summaryLine + " Database save completed (dbo.LeaveRequests).";
+                }
+                catch (Exception ex)
+                {
+                    _context.ChangeTracker.Clear();
+                    var inner = ex.InnerException?.Message ?? ex.Message;
+                    TempData["ErrorMessage"] = summaryLine + " Save to LeaveRequests failed; no rows were committed.";
+                    TempData["ErrorDetails"] = System.Net.WebUtility.HtmlEncode(inner);
+                }
+            }
+            else
+            {
+                TempData["ErrorMessage"] = summaryLine + " Nothing was written. If every employee was skipped, they already have this leave type on that date. If IDs were not found, the EmployeeID in the grid does not match dbo.Employee. If no checkboxes appeared, set EmployeeStatus to Active.";
+                if (detailLines.Count > 0)
+                    TempData["ErrorDetails"] = string.Join("<br/>", detailLines);
+            }
+
+            return RedirectToAction(nameof(OffDay), new { department, page, pageSize });
         }
 
         // GET: Attendance/Edit/5

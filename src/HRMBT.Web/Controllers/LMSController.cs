@@ -8,6 +8,8 @@ namespace HRMBT.Web.Controllers
 {
     public class LMSController : Controller
     {
+        private const string LeaveTypesConfigKey = "LeaveTypes";
+
         private readonly ApplicationDbContext _context;
 
         public LMSController(ApplicationDbContext context)
@@ -15,10 +17,64 @@ namespace HRMBT.Web.Controllers
             _context = context;
         }
 
+        private static IEnumerable<string> SplitConfigCsv(string? csv)
+        {
+            if (string.IsNullOrWhiteSpace(csv)) yield break;
+            foreach (var item in csv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                if (!string.IsNullOrWhiteSpace(item))
+                    yield return item;
+            }
+        }
+
+        private static bool ConfigKeyMatches(string? key, string match) =>
+            !string.IsNullOrWhiteSpace(key) && string.Equals(key.Trim(), match, StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>Types from dbo.Configuration (ConfigKey LeaveTypes, CSV) or LeaveQuota.</summary>
+        private async Task<List<string>> GetLeaveTypeNamesAsync()
+        {
+            var rows = await _context.HrConfigurations.AsNoTracking()
+                .Where(c => c.ConfigKey != null && c.ConfigValue != null)
+                .ToListAsync();
+
+            var fromConfig = rows
+                .Where(c => ConfigKeyMatches(c.ConfigKey, LeaveTypesConfigKey))
+                .SelectMany(c => SplitConfigCsv(c.ConfigValue))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(v => v, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (fromConfig.Count > 0)
+                return fromConfig;
+
+            var currentYear = DateTime.Now.Year;
+            var typesForYear = await _context.LeaveQuotas.AsNoTracking()
+                .Where(lq => lq.Year == currentYear)
+                .Select(lq => lq.LeaveTypeName)
+                .Where(n => n != null && n != "")
+                .Distinct()
+                .OrderBy(lt => lt)
+                .ToListAsync();
+
+            if (typesForYear.Count > 0)
+                return typesForYear!;
+
+            return await _context.LeaveQuotas.AsNoTracking()
+                .Select(lq => lq.LeaveTypeName)
+                .Where(n => n != null && n != "")
+                .Distinct()
+                .OrderBy(lt => lt)
+                .ToListAsync()!;
+        }
+
         // GET: LMS
         public async Task<IActionResult> Index(string? employeeId, string? status, string? leaveType)
         {
             ViewData["Module"] = "LMS";
+            employeeId = string.IsNullOrWhiteSpace(employeeId) ? null : employeeId.Trim();
+            status = string.IsNullOrWhiteSpace(status) ? null : status.Trim();
+            leaveType = string.IsNullOrWhiteSpace(leaveType) ? null : leaveType.Trim();
+
             var query = _context.EmployeeLeaves.AsQueryable();
 
             // Apply filters
@@ -44,11 +100,7 @@ namespace HRMBT.Web.Controllers
 
             // Populate filter dropdowns
             ViewBag.Statuses = new SelectList(new[] { "Applied", "Approved", "Rejected", "Cancelled" });
-            ViewBag.LeaveTypes = await _context.LeaveQuotas
-                .Select(lq => lq.LeaveTypeName)
-                .Distinct()
-                .OrderBy(lt => lt)
-                .ToListAsync();
+            ViewBag.LeaveTypes = await GetLeaveTypeNamesAsync();
             ViewBag.Employees = await _context.Employees
                 .Where(e => e.EmployeeStatus == "Active")
                 .OrderBy(e => e.EmployeeName)
@@ -330,22 +382,7 @@ namespace HRMBT.Web.Controllers
 
         private async Task<SelectList> BuildLeaveTypesSelectList(string? selected = null)
         {
-            var currentYear = DateTime.Now.Year;
-            var typesForYear = await _context.LeaveQuotas
-                .Where(lq => lq.Year == currentYear)
-                .Select(lq => lq.LeaveTypeName)
-                .Distinct()
-                .OrderBy(lt => lt)
-                .ToListAsync();
-
-            var types = typesForYear.Any()
-                ? typesForYear
-                : await _context.LeaveQuotas
-                    .Select(lq => lq.LeaveTypeName)
-                    .Distinct()
-                    .OrderBy(lt => lt)
-                    .ToListAsync();
-
+            var types = await GetLeaveTypeNamesAsync();
             return new SelectList(types, selected);
         }
     }
