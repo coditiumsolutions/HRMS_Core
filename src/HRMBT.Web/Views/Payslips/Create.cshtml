@@ -77,13 +77,13 @@
                                 </div>
                                 <div class="col-md-6">
                                     <label asp-for="Month" class="form-label"></label>
-                                    <select asp-for="Month" class="form-select" id="monthSelect">
-                                        @for (int m = 1; m <= 12; m++)
-                                        {
-                                            var name = System.Globalization.CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(m);
-                                            <option value="@m" selected="@(Model.Month == m)">@m - @name</option>
-                                        }
-                                    </select>
+                                    @{
+                                        ViewData["MonthFieldName"] = "Month";
+                                        ViewData["MonthFieldId"] = "monthSelect";
+                                        ViewData["SelectedMonth"] = Model.Month;
+                                        ViewData["MonthRequired"] = true;
+                                    }
+                                    <partial name="_PayrollMonthSelect" />
                                     <span asp-validation-for="Month" class="field-validation-error"></span>
                                 </div>
                                 <div class="col-md-6">

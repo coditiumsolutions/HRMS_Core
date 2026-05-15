@@ -24,21 +24,14 @@
             </div>
             <div class="form-group mb-3">
                 <label asp-for="Month" class="control-label"></label>
-                <select asp-for="Month" class="form-control">
-                    <option value="">-- Select Month --</option>
-                    <option value="1">January</option>
-                    <option value="2">February</option>
-                    <option value="3">March</option>
-                    <option value="4">April</option>
-                    <option value="5">May</option>
-                    <option value="6">June</option>
-                    <option value="7">July</option>
-                    <option value="8">August</option>
-                    <option value="9">September</option>
-                    <option value="10">October</option>
-                    <option value="11">November</option>
-                    <option value="12">December</option>
-                </select>
+                @{
+                    ViewData["MonthFieldName"] = "Month";
+                    ViewData["MonthFieldId"] = "Month";
+                    ViewData["SelectedMonth"] = Model.Month;
+                    ViewData["MonthIncludeEmpty"] = true;
+                    ViewData["MonthRequired"] = true;
+                }
+                <partial name="_PayrollMonthSelect" />
                 <span asp-validation-for="Month" class="text-danger"></span>
             </div>
             <div class="form-group mb-3">

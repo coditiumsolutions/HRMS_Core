@@ -1,9 +1,10 @@
+@using HRMBT.Web.Infrastructure
 @model IEnumerable<HRMBT.Web.Models.Payslip>
 
 @{
     ViewData["Title"] = "Search Payroll";
     ViewData["Module"] = "Payroll";
-    string MonthName(int m) => m >= 1 && m <= 12 ? System.Globalization.CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(m) : m.ToString();
+    var selectedMonthFilter = ViewBag.Month as string;
 
     string Initials(string? name)
     {
@@ -62,19 +63,11 @@
                 <form asp-action="Search" method="get" class="row g-3">
                     <div class="col-md-3">
                         <label for="month" class="form-label">Month</label>
-                        @{
-                            int? selectedMonth = null;
-                            if (ViewBag.Month != null)
-                            {
-                                int parsedMonth;
-                                if (int.TryParse(ViewBag.Month.ToString(), out parsedMonth)) { selectedMonth = parsedMonth; }
-                            }
-                        }
                         <select name="month" id="month" class="form-select">
                             <option value="">All Months</option>
-                            @for (int i = 1; i <= 12; i++)
+                            @foreach (var monthName in PayrollMonthHelper.AllMonthNames)
                             {
-                                <option value="@i" selected="@(selectedMonth == i)">@i - @MonthName(i)</option>
+                                <option value="@monthName" selected="@(string.Equals(selectedMonthFilter, monthName, StringComparison.OrdinalIgnoreCase))">@monthName</option>
                             }
                         </select>
                     </div>
@@ -149,7 +142,7 @@
                                         <td>
                                             <div class="fw-semibold">@(item.Employee?.EmployeeName ?? "—")</div>
                                         </td>
-                                        <td class="text-nowrap">@MonthName(item.Month) @item.Year</td>
+                                        <td class="text-nowrap">@item.Month @item.Year</td>
                                         <td class="text-end salary">@item.GrossSalary.ToString("N2")</td>
                                         <td class="text-end salary">@item.NetSalary.ToString("N2")</td>
                                         <td>@(string.IsNullOrWhiteSpace(item.Employee?.GenStatus) ? "—" : item.Employee!.GenStatus)</td>

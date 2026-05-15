@@ -1,0 +1,125 @@
+@model HRMBT.Web.Models.ViewModels.EmployeeDocumentsViewModel
+
+@{
+    var maxMb = Model.MaxFileSizeBytes / (1024.0 * 1024.0);
+    var accept = string.Join(",", Model.AllowedExtensionsDisplay.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
+}
+
+<div class="emp-documents-panel">
+    @if (TempData["DocumentSuccess"] is string successMsg)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fa-solid fa-circle-check me-2"></i>@successMsg
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["DocumentError"] is string errorMsg)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fa-solid fa-circle-exclamation me-2"></i>@errorMsg
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (Model.CanUpload)
+    {
+        <div class="card border-0 bg-light emp-doc-upload-card mb-4">
+            <div class="card-body">
+                <h3 class="h6 fw-bold text-dark mb-3">
+                    <i class="fa-solid fa-cloud-arrow-up text-primary me-2"></i>Upload documents
+                </h3>
+                <form asp-controller="EmployeeDocuments" asp-action="Upload" method="post" enctype="multipart/form-data" id="employeeDocumentsUploadForm" class="emp-documents-upload-form">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="employeeId" value="@Model.EmployeeId" />
+                    <div class="mb-3">
+                        <label for="employeeDocumentFiles" class="form-label">Select files (multiple allowed)</label>
+                        <input type="file"
+                               class="form-control"
+                               id="employeeDocumentFiles"
+                               name="Files"
+                               multiple
+                               accept="@accept" />
+                        <div class="form-text">
+                            Max @Model.MaxFilesPerUpload file(s) per upload · @maxMb.ToString("0.#") MB each ·
+                            Allowed: @Model.AllowedExtensionsDisplay
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-action-primary btn-sm px-4" id="employeeDocumentsUploadBtn">
+                        <i class="fa-solid fa-upload me-1"></i>Upload
+                    </button>
+                </form>
+            </div>
+        </div>
+    }
+
+    <h3 class="h6 fw-bold text-dark mb-3">
+        <i class="fa-solid fa-folder-open text-secondary me-2"></i>Uploaded documents
+        @if (!string.IsNullOrWhiteSpace(Model.EmployeeDisplayName))
+        {
+            <span class="text-muted fw-normal">— @Model.EmployeeDisplayName</span>
+        }
+    </h3>
+
+    @if (Model.Documents.Count == 0)
+    {
+        <div class="alert alert-light border mb-0">
+            <i class="fa-solid fa-file-circle-question me-2 text-muted"></i>No documents uploaded yet.
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive emp-table-wrap">
+            <table class="table table-hover emp-documents-table mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">File name</th>
+                        <th scope="col" class="d-none d-md-table-cell">Type</th>
+                        <th scope="col" class="d-none d-lg-table-cell">Size</th>
+                        <th scope="col" class="d-none d-md-table-cell">Uploaded</th>
+                        <th scope="col" class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var doc in Model.Documents)
+                    {
+                        <tr>
+                            <td>
+                                <i class="fa-solid fa-file-lines text-muted me-2"></i>
+                                <span class="fw-medium">@doc.OriginalFileName</span>
+                            </td>
+                            <td class="d-none d-md-table-cell text-uppercase small text-muted">@doc.FileExtension.TrimStart('.')</td>
+                            <td class="d-none d-lg-table-cell">@doc.FileSizeDisplay</td>
+                            <td class="d-none d-md-table-cell">@doc.UploadedOnDisplay</td>
+                            <td class="text-end text-nowrap">
+                                <a asp-controller="EmployeeDocuments"
+                                   asp-action="Download"
+                                   asp-route-id="@doc.DocumentId"
+                                   class="btn btn-sm btn-outline-primary"
+                                   title="Download">
+                                    <i class="fa-solid fa-download"></i>
+                                    <span class="d-none d-xl-inline ms-1">Download</span>
+                                </a>
+                                @if (Model.CanUpload)
+                                {
+                                    <form asp-controller="EmployeeDocuments"
+                                          asp-action="Delete"
+                                          method="post"
+                                          class="d-inline"
+                                          onsubmit="return confirm('Delete this document?');">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@doc.DocumentId" />
+                                        <input type="hidden" name="employeeId" value="@Model.EmployeeId" />
+                                        <button type="submit" class="btn btn-sm btn-outline-danger ms-1" title="Delete">
+                                            <i class="fa-solid fa-trash"></i>
+                                            <span class="d-none d-xl-inline ms-1">Delete</span>
+                                        </button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

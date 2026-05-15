@@ -61,13 +61,14 @@
 
                         <div class="col-md-3">
                             <label for="month" class="form-label">Month</label>
+                            @{
+                                var selectedMonthFilter = ViewBag.Month as string;
+                            }
                             <select name="month" id="month" class="form-control">
                                 <option value="">-- Select Month --</option>
-                                @for (int i = 1; i <= 12; i++)
+                                @foreach (var monthName in HRMBT.Web.Infrastructure.PayrollMonthHelper.AllMonthNames)
                                 {
-                                    var monthName = System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(i);
-                                    var isSelected = ViewBag.Month != null && (int)ViewBag.Month == i;
-                                    <option value="@i" selected="@isSelected">@monthName</option>
+                                    <option value="@monthName" selected="@(string.Equals(selectedMonthFilter, monthName, StringComparison.OrdinalIgnoreCase))">@monthName</option>
                                 }
                             </select>
                         </div>
@@ -116,7 +117,7 @@
                         <h5 class="mb-0">
                             @if (hasSearched && actualYear.HasValue && ViewBag.Month != null)
                             {
-                                <text>Results for @(System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName((int)ViewBag.Month)) @actualYear</text>
+                                <text>Results for @ViewBag.Month @actualYear</text>
                                 @if (!string.IsNullOrWhiteSpace(ViewBag.Department?.ToString()))
                                 {
                                     <span>- @ViewBag.Department</span>

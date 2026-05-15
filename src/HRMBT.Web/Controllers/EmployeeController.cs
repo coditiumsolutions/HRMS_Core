@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using HRMBT.Web.Data;
 using HRMBT.Web.Models;
 using HRMBT.Web.Models.ViewModels;
+using HRMBT.Web.Services;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
 using System.Drawing;
@@ -13,10 +14,12 @@ namespace HRMBT.Web.Controllers;
 public class EmployeeController : Controller
 {
     private readonly ApplicationDbContext _context;
+    private readonly IEmployeeDocumentService _documentService;
 
-    public EmployeeController(ApplicationDbContext context)
+    public EmployeeController(ApplicationDbContext context, IEmployeeDocumentService documentService)
     {
         _context = context;
+        _documentService = documentService;
     }
 
     // GET: Employee
@@ -255,6 +258,7 @@ public class EmployeeController : Controller
             return NotFound();
         }
 
+        ViewBag.EmployeeDocuments = await _documentService.BuildViewModelAsync(employee.uid, canUpload: false);
         return View(employee);
     }
 
@@ -309,6 +313,8 @@ public class EmployeeController : Controller
         {
             return NotFound();
         }
+
+        ViewBag.EmployeeDocuments = await _documentService.BuildViewModelAsync(employee.uid, canUpload: true);
         return View(employee);
     }
 
@@ -355,6 +361,8 @@ public class EmployeeController : Controller
             }
             return RedirectToAction(nameof(Index));
         }
+
+        ViewBag.EmployeeDocuments = await _documentService.BuildViewModelAsync(employee.uid, canUpload: true);
         return View(employee);
     }
 

@@ -4,6 +4,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using HRMBT.Web.Data;
@@ -19,11 +20,16 @@ public class HomeController : Controller
 {
     private readonly ILogger<HomeController> _logger;
     private readonly ApplicationDbContext _context;
+    private readonly IWebHostEnvironment _env;
 
-    public HomeController(ILogger<HomeController> logger, ApplicationDbContext context)
+    public HomeController(
+        ILogger<HomeController> logger,
+        ApplicationDbContext context,
+        IWebHostEnvironment env)
     {
         _logger = logger;
         _context = context;
+        _env = env;
     }
 
     public async Task<IActionResult> Index()
@@ -169,8 +175,12 @@ public class HomeController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Login failed for username candidate {Candidate}", name);
+            var root = ex.GetBaseException().Message;
+            var hint = _env.IsDevelopment()
+                ? $" Root cause: {root}"
+                : " Check server logs for the full exception.";
             ModelState.AddModelError(string.Empty,
-                $"Sign-in could not talk to the database or complete processing: {ex.Message}. Confirm SQL Server is reachable and table dbo.Users exists for this connection.");
+                $"Sign-in could not talk to the database or complete processing: {ex.Message}.{hint} Confirm SQL Server is reachable and table dbo.Users exists for this connection.");
             return View(model);
         }
     }
@@ -211,6 +221,28 @@ public class HomeController : Controller
                 AllowRefresh = true,
                 IsPersistent = true,
             });
+    }
+
+    /// <summary>Development-only: open a DB connection and report success or the real SqlClient error.</summary>
+    [AllowAnonymous]
+    [HttpGet]
+    public async Task<IActionResult> DbHealth()
+    {
+        if (!_env.IsDevelopment())
+            return NotFound();
+
+        try
+        {
+            var ok = await _context.Database.CanConnectAsync();
+            return Content(ok ? "Database: CanConnect OK." : "Database: CanConnect returned false.", "text/plain");
+        }
+        catch (Exception ex)
+        {
+            var root = ex.GetBaseException();
+            return Content(
+                $"CanConnect failed.\n\n{root.GetType().Name}: {root.Message}",
+                "text/plain");
+        }
     }
 
     [AllowAnonymous]

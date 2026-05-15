@@ -1,0 +1,24 @@
+@using HRMBT.Web.Infrastructure
+@{
+    var fieldName = ViewData["MonthFieldName"] as string ?? "Month";
+    var fieldId = ViewData["MonthFieldId"] as string ?? fieldName;
+    var selectedMonth = ViewData["SelectedMonth"] as string ?? PayrollMonthHelper.CurrentMonthName();
+    var includeEmpty = ViewData["MonthIncludeEmpty"] as bool? ?? false;
+    var cssClass = ViewData["MonthSelectClass"] as string ?? "form-select";
+    var label = ViewData["MonthLabel"] as string;
+    var required = ViewData["MonthRequired"] as bool? ?? true;
+}
+@if (!string.IsNullOrEmpty(label))
+{
+    <label for="@fieldId" class="form-label">@label @(required ? Html.Raw("<span class=\"text-danger\">*</span>") : null)</label>
+}
+<select name="@fieldName" id="@fieldId" class="@cssClass" @(required ? "required" : null)>
+    @if (includeEmpty)
+    {
+        <option value="">-- Select Month --</option>
+    }
+    @foreach (var monthName in PayrollMonthHelper.AllMonthNames)
+    {
+        <option value="@monthName" selected="@(string.Equals(selectedMonth, monthName, StringComparison.OrdinalIgnoreCase))">@monthName</option>
+    }
+</select>

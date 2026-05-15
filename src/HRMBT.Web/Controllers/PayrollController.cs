@@ -1,11 +1,11 @@
 using HRMBT.Web.Data;
+using HRMBT.Web.Infrastructure;
 using HRMBT.Web.Models;
 using HRMBT.Web.Models.ViewModels;
 using HRMBT.Web.Services.Payroll;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System;
-using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -22,8 +22,8 @@ namespace HRMBT.Web.Controllers
             _payrollService = payrollService;
         }
 
-        private static string FormatMonthYearForGenStatus(int month, int year) =>
-            $"{CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(month)} {year}";
+        private static string FormatMonthYearForGenStatus(string month, int year) =>
+            PayrollMonthHelper.FormatPeriod(month, year);
 
         /// <summary>GenStatus is nvarchar(50) on dbo.Employee — keep messages within limit.</summary>
         private static string ClampGenStatus(string? value, int maxLen = 50)
@@ -34,7 +34,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: Payroll
-        public async Task<IActionResult> Index(int? month, int? year, string employeeId, string employeeName, int page = 1, int pageSize = 20)
+        public async Task<IActionResult> Index(string? month, int? year, string employeeId, string employeeName, int page = 1, int pageSize = 20)
         {
             ViewData["Module"] = "Payroll";
             
@@ -43,12 +43,17 @@ namespace HRMBT.Web.Controllers
             if (pageSize < 1) pageSize = 20;
             if (pageSize > 100) pageSize = 100; // Max page size limit
 
+            string? monthFilter = null;
+            if (!string.IsNullOrWhiteSpace(month))
+            {
+                monthFilter = PayrollMonthHelper.Normalize(month);
+            }
+
             var query = _context.Payslips.Include(p => p.Employee).AsQueryable();
 
-            // Filter by month if provided
-            if (month.HasValue && month.Value > 0)
+            if (monthFilter != null)
             {
-                query = query.Where(p => p.Month == month.Value);
+                query = query.Where(p => p.Month == monthFilter);
             }
 
             // Filter by year if provided
@@ -73,17 +78,13 @@ namespace HRMBT.Web.Controllers
                     p.Employee.EmployeeName.Contains(employeeName));
             }
 
-            // Apply ordering before pagination
-            query = query
-                .OrderByDescending(p => p.Year)
-                .ThenByDescending(p => p.Month)
-                .ThenBy(p => p.Employee != null ? p.Employee.EmployeeName : "");
+            query = query.OrderByPeriodDescending();
 
             // Get paginated results
             var paginatedPayslips = await PaginatedList<Payslip>.CreateAsync(query, page, pageSize);
 
             // Pass filter values to view
-            ViewBag.Month = month;
+            ViewBag.Month = monthFilter ?? month;
             ViewBag.Year = year;
             ViewBag.EmployeeId = employeeId;
             ViewBag.EmployeeName = employeeName;
@@ -109,7 +110,7 @@ namespace HRMBT.Web.Controllers
 
             return View(new GeneratePayslipsVM
             {
-                Month = DateTime.Now.Month,
+                Month = PayrollMonthHelper.CurrentMonthName(),
                 Year = DateTime.Now.Year
             });
         }
@@ -120,7 +121,9 @@ namespace HRMBT.Web.Controllers
         public async Task<IActionResult> GeneratePayslips(GeneratePayslipsVM model)
         {
             ViewData["Module"] = "Payroll";
-            if (model.Month < 1 || model.Month > 12)
+            model.Month = PayrollMonthHelper.Normalize(model.Month);
+
+            if (!PayrollMonthHelper.IsValid(model.Month))
                 ModelState.AddModelError("Month", "Invalid month.");
 
             if (model.Year < 2000 || model.Year > 2100)
@@ -209,21 +212,27 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: Payroll/Search
-        public async Task<IActionResult> Search(int? month, int? year, string employeeId, string employeeName)
+        public async Task<IActionResult> Search(string? month, int? year, string employeeId, string employeeName)
         {
             ViewData["Module"] = "Payroll";
             
             var query = _context.Payslips.Include(p => p.Employee).AsQueryable();
 
-            // Default to current month if no filters
-            if (!month.HasValue && !year.HasValue && string.IsNullOrEmpty(employeeId) && string.IsNullOrEmpty(employeeName))
+            string? monthFilter = null;
+            if (!string.IsNullOrWhiteSpace(month))
             {
-                month = DateTime.Now.Month;
+                monthFilter = PayrollMonthHelper.Normalize(month);
+            }
+
+            // Default to current month if no filters
+            if (monthFilter == null && !year.HasValue && string.IsNullOrEmpty(employeeId) && string.IsNullOrEmpty(employeeName))
+            {
+                monthFilter = PayrollMonthHelper.CurrentMonthName();
                 year = DateTime.Now.Year;
             }
 
-            if (month.HasValue)
-                query = query.Where(p => p.Month == month.Value);
+            if (monthFilter != null)
+                query = query.Where(p => p.Month == monthFilter);
 
             if (year.HasValue)
                 query = query.Where(p => p.Year == year.Value);
@@ -235,12 +244,10 @@ namespace HRMBT.Web.Controllers
                 query = query.Where(p => p.Employee != null && p.Employee.EmployeeName.Contains(employeeName));
 
             var payslips = await query
-                .OrderByDescending(p => p.Year)
-                .ThenByDescending(p => p.Month)
-                .ThenBy(p => p.Employee != null ? p.Employee.EmployeeName : "")
+                .OrderByPeriodDescending()
                 .ToListAsync();
 
-            ViewBag.Month = month ?? DateTime.Now.Month;
+            ViewBag.Month = monthFilter ?? PayrollMonthHelper.CurrentMonthName();
             ViewBag.Year = year ?? DateTime.Now.Year;
             ViewBag.EmployeeId = employeeId ?? "";
             ViewBag.EmployeeName = employeeName ?? "";
@@ -254,7 +261,7 @@ namespace HRMBT.Web.Controllers
             ViewData["Module"] = "Payroll";
             return View(new GenerateIndividualVM
             {
-                Month = DateTime.Now.Month,
+                Month = PayrollMonthHelper.CurrentMonthName(),
                 Year = DateTime.Now.Year
             });
         }
@@ -271,7 +278,9 @@ namespace HRMBT.Web.Controllers
                 ModelState.AddModelError("EmployeeID", "Employee ID is required.");
             }
 
-            if (model.Month < 1 || model.Month > 12)
+            model.Month = PayrollMonthHelper.Normalize(model.Month);
+
+            if (!PayrollMonthHelper.IsValid(model.Month))
             {
                 ModelState.AddModelError("Month", "Invalid month.");
             }
@@ -309,7 +318,7 @@ namespace HRMBT.Web.Controllers
 
             if (exists)
             {
-                ModelState.AddModelError("", $"Payslip already exists for Employee {model.EmployeeID} for {model.Month}/{model.Year}.");
+                ModelState.AddModelError("", $"Payslip already exists for Employee {model.EmployeeID} for {PayrollMonthHelper.FormatPeriod(model.Month, model.Year)}.");
                 return View(model);
             }
 
@@ -321,7 +330,7 @@ namespace HRMBT.Web.Controllers
                     model.Year,
                     User.Identity?.Name ?? "System");
 
-                TempData["SuccessMessage"] = $"Payslip generated successfully for Employee {model.EmployeeID} ({employee.EmployeeName}) for {model.Month}/{model.Year}.";
+                TempData["SuccessMessage"] = $"Payslip generated successfully for Employee {model.EmployeeID} ({employee.EmployeeName}) for {PayrollMonthHelper.FormatPeriod(model.Month, model.Year)}.";
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
@@ -336,7 +345,7 @@ namespace HRMBT.Web.Controllers
         {
             ViewData["Module"] = "Payroll";
             ViewData["EmployeeId"] = string.Empty;
-            ViewData["Month"] = DateTime.Now.Month;
+            ViewData["Month"] = PayrollMonthHelper.CurrentMonthName();
             ViewData["Year"] = DateTime.Now.Year;
             return View();
         }
@@ -344,14 +353,17 @@ namespace HRMBT.Web.Controllers
         // POST: Payroll/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(string employeeId, int? month, int? year)
+        public async Task<IActionResult> Create(string employeeId, string? month, int? year)
         {
             ViewData["Module"] = "Payroll";
             
             // Clear model state and set values for view
             ModelState.Clear();
             ViewData["EmployeeId"] = employeeId ?? string.Empty;
-            ViewData["Month"] = month ?? DateTime.Now.Month;
+            var monthName = !string.IsNullOrWhiteSpace(month)
+                ? PayrollMonthHelper.Normalize(month)
+                : PayrollMonthHelper.CurrentMonthName();
+            ViewData["Month"] = monthName;
             ViewData["Year"] = year ?? DateTime.Now.Year;
 
             // Validate Employee ID
@@ -361,8 +373,7 @@ namespace HRMBT.Web.Controllers
                 return View();
             }
 
-            // Validate month and year
-            if (!month.HasValue || month < 1 || month > 12)
+            if (!PayrollMonthHelper.IsValid(monthName))
             {
                 ModelState.AddModelError("Month", "Please select a valid month.");
                 return View();
@@ -401,7 +412,7 @@ namespace HRMBT.Web.Controllers
             // Check if payslip already exists
             var existing = await _context.Payslips
                 .FirstOrDefaultAsync(p => p.EmployeeId == employee.uid && 
-                                         p.Month == month.Value && 
+                                         p.Month == monthName && 
                                          p.Year == year.Value);
 
             if (existing != null)
@@ -414,7 +425,7 @@ namespace HRMBT.Web.Controllers
             {
                 _payrollService.GeneratePayslip(
                     employee.uid,
-                    month.Value,
+                    monthName,
                     year.Value,
                     User.Identity?.Name ?? "System");
 
@@ -483,12 +494,14 @@ namespace HRMBT.Web.Controllers
         // POST: Payroll/GeneratePayrollForSelected
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> GeneratePayrollForSelected(List<int> selectedEmployeeIds, int month, int year, string? sourceAction, string? department)
+        public async Task<IActionResult> GeneratePayrollForSelected(List<int> selectedEmployeeIds, string month, int year, string? sourceAction, string? department)
         {
             ViewData["Module"] = "Payroll";
             var returnAction = string.Equals(sourceAction, nameof(GeneratePayroll), StringComparison.OrdinalIgnoreCase)
                 ? nameof(GeneratePayroll)
                 : nameof(EmployeeDetail);
+
+            var monthName = PayrollMonthHelper.Normalize(month);
 
             if (selectedEmployeeIds == null || !selectedEmployeeIds.Any())
             {
@@ -496,7 +509,7 @@ namespace HRMBT.Web.Controllers
                 return RedirectToAction(returnAction, new { department });
             }
 
-            if (month < 1 || month > 12)
+            if (!PayrollMonthHelper.IsValid(monthName))
             {
                 TempData["ErrorMessage"] = "Invalid month selected.";
                 return RedirectToAction(returnAction, new { department });
@@ -512,7 +525,7 @@ namespace HRMBT.Web.Controllers
             int skipCount = 0;
             int errorCount = 0;
             var errors = new List<string>();
-            var monthYearLabel = FormatMonthYearForGenStatus(month, year);
+            var monthYearLabel = FormatMonthYearForGenStatus(monthName, year);
 
             foreach (var employeeId in selectedEmployeeIds)
             {
@@ -521,7 +534,7 @@ namespace HRMBT.Web.Controllers
                     // Check if payslip already exists
                     bool exists = await _context.Payslips
                         .AnyAsync(p => p.EmployeeId == employeeId &&
-                                      p.Month == month &&
+                                      p.Month == monthName &&
                                       p.Year == year);
 
                     if (exists)
@@ -551,7 +564,7 @@ namespace HRMBT.Web.Controllers
 
                     _payrollService.GeneratePayslip(
                         employeeId,
-                        month,
+                        monthName,
                         year,
                         User.Identity?.Name ?? "System");
 
@@ -597,7 +610,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: Payroll/PayrollStatus
-        public async Task<IActionResult> PayrollStatus(string year, int? month, string department, string payrollStatus, int page = 1, int pageSize = 20)
+        public async Task<IActionResult> PayrollStatus(string year, string? month, string department, string payrollStatus, int page = 1, int pageSize = 20)
         {
             ViewData["Module"] = "Payroll";
             
@@ -606,8 +619,14 @@ namespace HRMBT.Web.Controllers
             if (pageSize < 1) pageSize = 20;
             if (pageSize > 100) pageSize = 100;
 
+            string? monthFilter = null;
+            if (!string.IsNullOrWhiteSpace(month))
+            {
+                monthFilter = PayrollMonthHelper.Normalize(month);
+            }
+
             // Only process if year and month are provided (user has searched)
-            bool hasSearched = !string.IsNullOrWhiteSpace(year) && month.HasValue;
+            bool hasSearched = !string.IsNullOrWhiteSpace(year) && monthFilter != null;
             
             int? actualYear = null;
             if (hasSearched)
@@ -654,7 +673,7 @@ namespace HRMBT.Web.Controllers
 
                 // Get payslip IDs for the selected month/year grouped by employee
                 var payslipData = await _context.Payslips
-                    .Where(p => p.Month == month.Value && p.Year == actualYear.Value)
+                    .Where(p => p.Month == monthFilter && p.Year == actualYear.Value)
                     .Select(p => new { p.EmployeeId, p.Id, p.IsLocked })
                     .ToListAsync();
 
@@ -705,7 +724,7 @@ namespace HRMBT.Web.Controllers
                 // Rebuild payslip lookup with full payslip objects for the paginated results
                 var paginatedEmployeeIds = paginatedEmployees.Select(e => e.uid).ToList();
                 var payslipsForPaginated = await _context.Payslips
-                    .Where(p => p.Month == month.Value && p.Year == actualYear.Value && paginatedEmployeeIds.Contains(p.EmployeeId))
+                    .Where(p => p.Month == monthFilter && p.Year == actualYear.Value && paginatedEmployeeIds.Contains(p.EmployeeId))
                     .ToListAsync();
                 payslipLookupFull = payslipsForPaginated.ToDictionary(p => p.EmployeeId);
             }
@@ -717,7 +736,7 @@ namespace HRMBT.Web.Controllers
 
             // Pass data to view
             ViewBag.Year = year;
-            ViewBag.Month = month;
+            ViewBag.Month = monthFilter ?? month;
             ViewBag.Department = department;
             ViewBag.PayrollStatus = payrollStatus;
             ViewBag.ActualYear = actualYear;
@@ -729,12 +748,13 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: Payroll/Dashboard
-        public async Task<IActionResult> Dashboard(int? month, int? year)
+        public async Task<IActionResult> Dashboard(string? month, int? year)
         {
             ViewData["Module"] = "Payroll";
             
-            // Set defaults to current month/year if not provided
-            int selectedMonth = month ?? DateTime.Now.Month;
+            var selectedMonth = !string.IsNullOrWhiteSpace(month)
+                ? PayrollMonthHelper.Normalize(month)
+                : PayrollMonthHelper.CurrentMonthName();
             int selectedYear = year ?? DateTime.Now.Year;
 
             // Get total active employees
@@ -774,3 +794,4 @@ namespace HRMBT.Web.Controllers
         }
     }
 }
+

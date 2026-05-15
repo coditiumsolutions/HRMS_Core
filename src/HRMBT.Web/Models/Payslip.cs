@@ -11,7 +11,11 @@ namespace HRMBT.Web.Models
         [Key]
         public int Id { get; set; }
         public int EmployeeId { get; set; }
-        public int Month { get; set; }
+
+        [Required]
+        [StringLength(20)]
+        public string Month { get; set; } = string.Empty;
+
         public int Year { get; set; }
         public decimal BasicSalary { get; set; }
         /// <summary>Sum of computed allowance amounts for this period (dbo.Payslips.TotalAllowances).</summary>

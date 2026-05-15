@@ -1,3 +1,5 @@
+using HRMBT.Web.Infrastructure;
+
 namespace HRMBT.Web.Models.ViewModels
 {
     public class PayrollDashboardVM
@@ -6,7 +8,7 @@ namespace HRMBT.Web.Models.ViewModels
         public int EmployeesWithPayrollGenerated { get; set; }
         public int EmployeesWithoutPayroll { get; set; }
         public decimal TotalPayrollAmount { get; set; }
-        public int Month { get; set; }
+        public string Month { get; set; } = PayrollMonthHelper.CurrentMonthName();
         public int Year { get; set; }
     }
 }

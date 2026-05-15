@@ -1,8 +1,9 @@
+@using HRMBT.Web.Infrastructure
 @model HRMBT.Web.Models.PaginatedList<HRMBT.Web.Models.Payslip>
 
 @{
     ViewData["Title"] = "Payslips";
-    string MonthName(int m) => m >= 1 && m <= 12 ? System.Globalization.CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(m) : m.ToString();
+    var selectedMonthFilter = ViewBag.Month as string;
 
     string Initials(string? name)
     {
@@ -123,9 +124,9 @@
                         <label class="form-label">Month</label>
                         <select name="month" class="form-select">
                             <option value="">All</option>
-                            @for (int m = 1; m <= 12; m++)
+                            @foreach (var monthName in PayrollMonthHelper.AllMonthNames)
                             {
-                                <option value="@m" selected="@(ViewBag.Month as int? == m)">@m - @MonthName(m)</option>
+                                <option value="@monthName" selected="@(string.Equals(selectedMonthFilter, monthName, StringComparison.OrdinalIgnoreCase))">@monthName</option>
                             }
                         </select>
                     </div>
@@ -225,7 +226,7 @@
                                             <div class="text-muted small">@(p.Employee?.EmployeeID ?? "—")</div>
                                         </td>
                                         <td>@(p.Employee?.Department ?? "—")</td>
-                                        <td class="text-nowrap">@MonthName(p.Month) @p.Year</td>
+                                        <td class="text-nowrap">@p.Month @p.Year</td>
                                         <td class="text-end salary">@p.BasicSalary.ToString("N0")</td>
                                         <td class="text-end salary">@p.GrossSalary.ToString("N0")</td>
                                         <td class="text-end salary">@p.TotalDeductions.ToString("N0")</td>

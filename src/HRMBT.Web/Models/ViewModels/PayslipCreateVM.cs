@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using HRMBT.Web.Infrastructure;
 
 namespace HRMBT.Web.Models.ViewModels
 {
@@ -21,9 +22,9 @@ namespace HRMBT.Web.Models.ViewModels
         [Display(Name = "Employee")]
         public int? EmployeeId { get; set; }
 
-        [Required]
-        [Range(1, 12, ErrorMessage = "Month must be between 1 and 12.")]
-        public int Month { get; set; } = DateTime.Now.Month;
+        [Required(ErrorMessage = "Please select a month.")]
+        [StringLength(20)]
+        public string Month { get; set; } = PayrollMonthHelper.CurrentMonthName();
 
         [Required]
         [Range(2000, 2100, ErrorMessage = "Year must be between 2000 and 2100.")]

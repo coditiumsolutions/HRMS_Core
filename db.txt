@@ -1,6 +1,6 @@
 Database: HRMS
 Connection: DefaultConnection (src/HRMBT.Web/appsettings.json)
-Generated: 2026-05-12 15:19:50
+Generated: 2026-05-15 16:12:20
 
 [dbo].[__EFMigrationsHistory]
   - MigrationId (nvarchar(150), Nullable: NO)
@@ -105,6 +105,17 @@ Generated: 2026-05-12 15:19:50
   - ApplyTax (nvarchar(10), Nullable: YES)
   - GenStatus (nvarchar(50), Nullable: YES)
 
+[dbo].[EmployeeDocuments]
+  - Id (int, Nullable: NO)
+  - EmployeeId (int, Nullable: NO)
+  - FileName (nvarchar(300), Nullable: NO)
+  - OriginalFileName (nvarchar(300), Nullable: YES)
+  - FilePath (nvarchar(500), Nullable: NO)
+  - FileExtension (nvarchar(50), Nullable: YES)
+  - FileSize (bigint, Nullable: YES)
+  - UploadedOn (datetime, Nullable: YES)
+  - IsDeleted (bit, Nullable: YES)
+
 [dbo].[EmployeeLeaves]
   - uid (int, Nullable: NO)
   - EmployeeID (varchar(50), Nullable: NO)
@@ -152,7 +163,7 @@ Generated: 2026-05-12 15:19:50
 [dbo].[Payslips]
   - Id (int, Nullable: NO)
   - EmployeeId (int, Nullable: NO)
-  - Month (int, Nullable: NO)
+  - Month (nvarchar(20), Nullable: NO)
   - Year (int, Nullable: NO)
   - BasicSalary (decimal(18,2), Nullable: NO)
   - GrossSalary (decimal(18,2), Nullable: NO)

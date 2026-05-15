@@ -2,7 +2,6 @@
 
 @{
     ViewData["Title"] = "Payslip Details";
-    string MonthName(int m) => m >= 1 && m <= 12 ? System.Globalization.CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(m) : m.ToString();
     string Show(string? v) => string.IsNullOrWhiteSpace(v) ? "—" : v!;
 
     string Initials(string? name)
@@ -45,7 +44,7 @@
                 <div class="col-lg">
                     <h1 class="h2 mb-1 fw-bold text-dark">Payslip Details</h1>
                     <p class="text-muted mb-0">
-                        @(Model.Employee?.EmployeeName ?? "—") · <span class="fw-semibold text-dark">@MonthName(Model.Month) @Model.Year</span>
+                        @(Model.Employee?.EmployeeName ?? "—") · <span class="fw-semibold text-dark">@Model.Month @Model.Year</span>
                     </p>
                 </div>
                 <div class="col-lg-auto">
@@ -226,7 +225,7 @@
                         <div class="info-grid">
                             <div class="info-cell">
                                 <span class="info-label">Period</span>
-                                <span class="info-value">@MonthName(Model.Month) @Model.Year</span>
+                                <span class="info-value">@Model.Month @Model.Year</span>
                             </div>
                             <div class="info-cell">
                                 <span class="info-label">Status</span>

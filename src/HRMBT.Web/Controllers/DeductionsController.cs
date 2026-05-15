@@ -134,34 +134,16 @@ public class DeductionsController : Controller
         if (types.Count == 0)
             types = FallbackDeductionTypes.ToList();
 
-        ViewBag.DeductionType = new SelectList(
-            types.Select(t => new SelectListItem
-            {
-                Value = t,
-                Text = t,
-                Selected = !string.IsNullOrEmpty(selected) && string.Equals(t, selected, StringComparison.OrdinalIgnoreCase)
-            }).ToList());
+        ViewBag.DeductionType = new SelectList(types, selected ?? string.Empty);
     }
 
     private void LoadCalculationMethodSelect(string? selected = null) =>
-        ViewBag.CalculationMethod = new SelectList(
-            CalculationMethods.Select(t => new SelectListItem
-            {
-                Value = t,
-                Text = t,
-                Selected = !string.IsNullOrEmpty(selected) && string.Equals(t, selected, StringComparison.OrdinalIgnoreCase)
-            }).ToList());
+        ViewBag.CalculationMethod = new SelectList(CalculationMethods, selected ?? string.Empty);
 
     private void LoadFrequencySelect(string? selected = null)
     {
         var sel = string.IsNullOrWhiteSpace(selected) ? "Monthly" : selected!;
-        ViewBag.Frequency = new SelectList(
-            Frequencies.Select(t => new SelectListItem
-            {
-                Value = t,
-                Text = t,
-                Selected = string.Equals(t, sel, StringComparison.OrdinalIgnoreCase)
-            }).ToList());
+        ViewBag.Frequency = new SelectList(Frequencies, sel);
     }
 
     // GET: Deductions

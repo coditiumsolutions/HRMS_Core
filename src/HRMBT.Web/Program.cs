@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 using HRMBT.Web.Data;
 using HRMBT.Web.Services.Payroll;
@@ -14,13 +15,29 @@ builder.Services.AddControllersWithViews()
 // ✅ DbContext
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(
-        builder.Configuration.GetConnectionString("DefaultConnection")));
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        sql =>
+        {
+            sql.EnableRetryOnFailure(
+                maxRetryCount: 5,
+                maxRetryDelay: TimeSpan.FromSeconds(30),
+                errorNumbersToAdd: null);
+        }));
 
 // ✅ Payroll module services (REQUIRED)
 builder.Services.AddScoped<PayrollCalculationService>();
 
 // ✅ Attendance module services (REQUIRED)
 builder.Services.AddScoped<AttendanceService>();
+
+builder.Services.Configure<EmployeeDocumentOptions>(
+    builder.Configuration.GetSection(EmployeeDocumentOptions.SectionName));
+builder.Services.AddScoped<IEmployeeDocumentService, EmployeeDocumentService>();
+
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 100 * 1024 * 1024;
+});
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>

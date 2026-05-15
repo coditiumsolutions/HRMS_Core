@@ -2,7 +2,6 @@
 
 @{
     ViewData["Title"] = "Delete Payslip";
-    string MonthName(int m) => m >= 1 && m <= 12 ? System.Globalization.CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(m) : m.ToString();
 }
 
 @section Styles {
@@ -43,7 +42,7 @@
                             </div>
                             <div class="info-cell">
                                 <span class="info-label">Period</span>
-                                <span class="info-value">@MonthName(Model.Month) @Model.Year</span>
+                                <span class="info-value">@Model.Month @Model.Year</span>
                             </div>
                             <div class="info-cell">
                                 <span class="info-label">Net salary</span>

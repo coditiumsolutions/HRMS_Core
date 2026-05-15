@@ -1,10 +1,10 @@
+@using HRMBT.Web.Infrastructure
 @model HRMBT.Web.Models.PaginatedList<HRMBT.Web.Models.Payslip>
 
 @{
     ViewData["Title"] = "Payroll";
     ViewData["Module"] = "Payroll";
-
-    string MonthName(int m) => m >= 1 && m <= 12 ? System.Globalization.CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(m) : m.ToString();
+    var selectedMonthFilter = ViewBag.Month as string;
 
     string Initials(string? name)
     {
@@ -73,17 +73,9 @@
                         <label for="month" class="form-label">Month</label>
                         <select name="month" id="month" class="form-select">
                             <option value="">All Months</option>
-                            @for (int i = 1; i <= 12; i++)
+                            @foreach (var monthName in PayrollMonthHelper.AllMonthNames)
                             {
-                                var monthName = System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(i);
-                                if (ViewBag.Month != null && (int)ViewBag.Month == i)
-                                {
-                                    <option value="@i" selected>@monthName</option>
-                                }
-                                else
-                                {
-                                    <option value="@i">@monthName</option>
-                                }
+                                <option value="@monthName" selected="@(string.Equals(selectedMonthFilter, monthName, StringComparison.OrdinalIgnoreCase))">@monthName</option>
                             }
                         </select>
                     </div>
@@ -154,7 +146,7 @@
                                                 @(item.Employee?.EmployeeID ?? ("#" + item.EmployeeId))
                                             </div>
                                         </td>
-                                        <td class="text-nowrap">@MonthName(item.Month) @item.Year</td>
+                                        <td class="text-nowrap">@item.Month @item.Year</td>
                                         <td class="text-end salary">@item.BasicSalary.ToString("N2")</td>
                                         <td class="text-end salary">@item.NetSalary.ToString("N2")</td>
                                         <td>
@@ -187,9 +179,9 @@
                         Showing @Model.StartRecord to @Model.EndRecord of @Model.TotalCount payslip(s)
                         @{
                             var filters = new List<string>();
-                            if (ViewBag.Month != null)
+                            if (!string.IsNullOrWhiteSpace(selectedMonthFilter))
                             {
-                                filters.Add(System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName((int)ViewBag.Month));
+                                filters.Add(selectedMonthFilter);
                             }
                             if (ViewBag.Year != null)
                             {

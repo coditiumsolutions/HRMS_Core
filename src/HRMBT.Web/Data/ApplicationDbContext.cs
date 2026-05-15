@@ -32,6 +32,7 @@ namespace HRMBT.Web.Data
 
         public DbSet<AppUser> AppUsers { get; set; }
         public DbSet<HrConfiguration> HrConfigurations { get; set; }
+        public DbSet<EmployeeDocument> EmployeeDocuments { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -137,6 +138,7 @@ namespace HRMBT.Web.Data
             modelBuilder.Entity<PayslipDetail>().ToTable("PayslipDetails");
             modelBuilder.Entity<Payslip>(entity =>
             {
+                entity.Property(p => p.Month).HasMaxLength(20).IsRequired();
                 entity.Property(p => p.BasicSalary).HasColumnType("decimal(18,2)");
                 entity.Property(p => p.TotalAllowances).HasColumnType("decimal(18,2)");
                 entity.Property(p => p.GrossSalary).HasColumnType("decimal(18,2)");
@@ -163,6 +165,25 @@ namespace HRMBT.Web.Data
                 entity.Property(e => e.UID).HasColumnName("UID");
                 entity.Property(e => e.ConfigKey).HasMaxLength(50);
                 entity.Property(e => e.ConfigValue).HasColumnType("nvarchar(max)");
+            });
+
+            modelBuilder.Entity<EmployeeDocument>(entity =>
+            {
+                entity.ToTable("EmployeeDocuments", "dbo");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("Id");
+                entity.Property(e => e.FileName).HasMaxLength(300).IsRequired();
+                entity.Property(e => e.OriginalFileName).HasMaxLength(300);
+                entity.Property(e => e.FilePath).HasMaxLength(500).IsRequired();
+                entity.Property(e => e.FileExtension).HasMaxLength(50);
+                entity.Property(e => e.FileSize).HasColumnType("bigint");
+                entity.Property(e => e.UploadedOn).HasColumnType("datetime");
+                entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+                entity.HasOne(e => e.Employee)
+                    .WithMany()
+                    .HasForeignKey(e => e.EmployeeId)
+                    .HasPrincipalKey(e => e.uid)
+                    .OnDelete(DeleteBehavior.NoAction);
             });
         }
     }

@@ -5,372 +5,382 @@
 }
 
 @section Styles {
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="stylesheet" href="~/css/employee-create.css" asp-append-version="true" />
 }
 
 <div class="employee-create-page py-4">
     <div class="container-fluid px-3 px-lg-4">
-        <!-- Breadcrumb -->
         <nav aria-label="breadcrumb" class="mb-3">
-            <ol class="breadcrumb mb-0 small">
-                <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Home</a></li>
-                <li class="breadcrumb-item"><a asp-action="Index">Employees</a></li>
-                <li class="breadcrumb-item active" aria-current="page">Edit</li>
+            <ol class="breadcrumb emp-breadcrumb mb-0">
+                <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fa-solid fa-gauge-high me-1"></i>Dashboard</a></li>
+                <li class="breadcrumb-item"><a asp-action="Index"><i class="fa-solid fa-users me-1"></i>Employees</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Edit Employee</li>
             </ol>
         </nav>
 
-        <!-- Page header -->
         <div class="page-header-card p-4 mb-4">
             <div class="row align-items-center g-3">
-                <div class="col-lg">
-                    <h1 class="h2 mb-1 fw-bold text-dark">Edit Employee</h1>
+                <div class="col">
+                    <h1 class="page-title mb-1">
+                        <span class="page-title-icon"><i class="fa-solid fa-user-pen"></i></span>
+                        Edit Employee
+                    </h1>
                     <p class="text-muted mb-0">
                         @if (!string.IsNullOrWhiteSpace(Model.EmployeeName))
                         {
                             <span class="fw-semibold text-dark">@Model.EmployeeName</span>
-                            <span class="mx-2 text-muted">•</span>
+                            <span class="mx-2">•</span>
                         }
-                        <span>Employee Management System — update profile, assignment, and compensation.</span>
+                        Update profile, assignment, and compensation.
                     </p>
                 </div>
-                <div class="col-lg-auto d-none d-lg-flex align-items-center gap-2">
+                <div class="col-auto d-none d-lg-flex align-items-center gap-2 flex-wrap">
                     @if (!string.IsNullOrWhiteSpace(Model.EmployeeID))
                     {
                         <span class="badge rounded-pill text-bg-light border px-3 py-2 text-secondary">
-                            <i class="bi bi-person-vcard me-1 text-primary"></i>@Model.EmployeeID
+                            <i class="fa-solid fa-id-card me-1 text-primary"></i>@Model.EmployeeID
                         </span>
                     }
                     <span class="badge rounded-pill text-bg-light border px-3 py-2 text-secondary">
-                        <i class="bi bi-pencil-square me-1 text-warning"></i> Edit mode
+                        <i class="fa-solid fa-pen me-1 text-warning"></i> Edit mode
                     </span>
                 </div>
             </div>
         </div>
 
-        <form asp-action="Edit" method="post" id="employeeCreateForm">
+        <form asp-action="Edit" method="post" id="employeeCreateForm" data-tab-storage-key="hrms.employeeEdit.activeTab">
             <input type="hidden" asp-for="uid" />
             <input type="hidden" asp-for="ModifiedOn" />
 
             <div asp-validation-summary="All" class="mb-4" role="alert"></div>
 
             <div class="row g-4">
-                <!-- Main form column -->
-                <div class="col-lg-8">
-                    <!-- Personal Information -->
-                    <div class="card section-card mb-4">
-                        <div class="card-header">
-                            <i class="bi bi-person-badge"></i>Personal Information
+                <div class="col-12">
+                    <div class="card section-card emp-tabs-card shadow-sm">
+                        <div class="emp-tabs-nav border-bottom">
+                            <ul class="nav nav-tabs emp-nav-tabs flex-nowrap" id="employeeCreateTabs" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="tab-personal-btn" data-bs-toggle="tab" data-bs-target="#tab-personal" type="button" role="tab" aria-controls="tab-personal" aria-selected="true" data-tab-key="personal">
+                                        <i class="fa-solid fa-id-card"></i><span>Personal Information</span>
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="tab-official-btn" data-bs-toggle="tab" data-bs-target="#tab-official" type="button" role="tab" aria-controls="tab-official" aria-selected="false" data-tab-key="official">
+                                        <i class="fa-solid fa-building"></i><span>Official Information</span>
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="tab-salary-btn" data-bs-toggle="tab" data-bs-target="#tab-salary" type="button" role="tab" aria-controls="tab-salary" aria-selected="false" data-tab-key="salary">
+                                        <i class="fa-solid fa-money-bill-wave"></i><span>Salary Information</span>
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="tab-leave-btn" data-bs-toggle="tab" data-bs-target="#tab-leave" type="button" role="tab" aria-controls="tab-leave" aria-selected="false" data-tab-key="leave">
+                                        <i class="fa-solid fa-calendar-check"></i><span>Leave Balances &amp; Adjustments</span>
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="tab-additional-btn" data-bs-toggle="tab" data-bs-target="#tab-additional" type="button" role="tab" aria-controls="tab-additional" aria-selected="false" data-tab-key="additional">
+                                        <i class="fa-solid fa-circle-info"></i><span>Additional Information</span>
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="tab-attachments-btn" data-bs-toggle="tab" data-bs-target="#tab-attachments" type="button" role="tab" aria-controls="tab-attachments" aria-selected="false" data-tab-key="attachments">
+                                        <i class="fa-solid fa-paperclip"></i><span>Attachments</span>
+                                    </button>
+                                </li>
+                            </ul>
                         </div>
-                        <div class="card-body">
-                            <div class="row g-3">
-                                <div class="col-md-4">
-                                    <label asp-for="EmployeeID" class="form-label"></label>
-                                    <input asp-for="EmployeeID" class="form-control" placeholder="e.g. EMP-1024" autocomplete="off" />
-                                    <span asp-validation-for="EmployeeID" class="field-validation-error"></span>
-                                </div>
-                                <div class="col-md-8">
-                                    <label asp-for="EmployeeName" class="form-label"></label>
-                                    <input asp-for="EmployeeName" class="form-control" placeholder="Full legal name" autocomplete="name" />
-                                    <span asp-validation-for="EmployeeName" class="field-validation-error"></span>
-                                </div>
-                                <div class="col-md-6">
-                                    <label asp-for="FatherName" class="form-label"></label>
-                                    <input asp-for="FatherName" class="form-control" placeholder="Father / guardian name" />
-                                    <span asp-validation-for="FatherName" class="field-validation-error"></span>
-                                </div>
-                                <div class="col-md-6">
-                                    <label asp-for="CNIC" class="form-label"></label>
-                                    <input asp-for="CNIC" class="form-control" placeholder="XXXXX-XXXXXXX-X" />
-                                    <span asp-validation-for="CNIC" class="field-validation-error"></span>
-                                </div>
-                                <div class="col-md-6">
-                                    <label asp-for="DOB" class="form-label"></label>
-                                    <input asp-for="DOB" type="date" class="form-control" />
-                                    <span asp-validation-for="DOB" class="field-validation-error"></span>
-                                </div>
-                                <div class="col-md-6">
-                                    <label asp-for="MobileNo" class="form-label"></label>
-                                    <input asp-for="MobileNo" class="form-control" placeholder="Primary mobile number" inputmode="tel" />
-                                    <span asp-validation-for="MobileNo" class="field-validation-error"></span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
-                    <!-- Official Information -->
-                    <div class="card section-card mb-4">
-                        <div class="card-header">
-                            <i class="bi bi-building"></i>Official Information
-                        </div>
-                        <div class="card-body">
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label asp-for="Department" class="form-label"></label>
-                                    <input asp-for="Department" class="form-control" placeholder="Department name" />
-                                    <span asp-validation-for="Department" class="field-validation-error"></span>
-                                </div>
-                                <div class="col-md-6">
-                                    <label asp-for="Designation" class="form-label"></label>
-                                    <input asp-for="Designation" class="form-control" placeholder="Job title / designation" />
-                                    <span asp-validation-for="Designation" class="field-validation-error"></span>
-                                </div>
-                                <div class="col-md-4">
-                                    <label asp-for="Project" class="form-label"></label>
-                                    <input asp-for="Project" class="form-control" placeholder="Project or cost center" />
-                                    <span asp-validation-for="Project" class="field-validation-error"></span>
-                                </div>
-                                <div class="col-md-4">
-                                    <label asp-for="DateOfJoining" class="form-label"></label>
-                                    <input asp-for="DateOfJoining" type="date" class="form-control" value="@(Model.DateOfJoining?.ToString("yyyy-MM-dd"))" />
-                                    <span asp-validation-for="DateOfJoining" class="field-validation-error"></span>
-                                </div>
-                                <div class="col-md-4">
-                                    <label asp-for="EmployeeStatus" class="form-label"></label>
-                                    <input asp-for="EmployeeStatus" class="form-control" placeholder="Active, Probation, etc." />
-                                    <span asp-validation-for="EmployeeStatus" class="field-validation-error"></span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                        <div class="card-body p-0">
+                            <div class="tab-content emp-tab-content" id="employeeCreateTabContent">
 
-                    <!-- Salary Information -->
-                    <div class="card section-card mb-4">
-                        <div class="card-header">
-                            <i class="bi bi-cash-stack"></i>Salary Information
-                        </div>
-                        <div class="card-body">
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label asp-for="BasicSalary" class="form-label"></label>
-                                    <input asp-for="BasicSalary" class="form-control" type="number" step="0.01" min="0" placeholder="0.00" />
-                                    <span asp-validation-for="BasicSalary" class="field-validation-error"></span>
+                                <div class="tab-pane fade show active" id="tab-personal" role="tabpanel" aria-labelledby="tab-personal-btn" tabindex="0" data-tab-panel="personal">
+                                    <div class="emp-tab-pane-inner">
+                                        <h2 class="emp-section-header"><i class="fa-solid fa-user"></i> Personal Information</h2>
+                                        <p class="emp-section-sub">Identity and primary contact details for the employee record.</p>
+                                        <div class="table-responsive emp-table-wrap">
+                                            <table class="table emp-form-table mb-0">
+                                                <tbody>
+                                                    <tr class="emp-form-row">
+                                                        <th scope="row" class="emp-label-cell"><label asp-for="EmployeeID" class="form-label mb-0"></label></th>
+                                                        <td class="emp-field-cell">
+                                                            <input asp-for="EmployeeID" class="form-control" placeholder="e.g. EMP-1024" autocomplete="off" />
+                                                            <span asp-validation-for="EmployeeID" class="field-validation-error"></span>
+                                                        </td>
+                                                        <th scope="row" class="emp-label-cell"><label asp-for="EmployeeName" class="form-label mb-0"></label></th>
+                                                        <td class="emp-field-cell">
+                                                            <input asp-for="EmployeeName" class="form-control" placeholder="Full legal name" autocomplete="name" />
+                                                            <span asp-validation-for="EmployeeName" class="field-validation-error"></span>
+                                                        </td>
+                                                    </tr>
+                                                    <tr class="emp-form-row">
+                                                        <th scope="row" class="emp-label-cell"><label asp-for="FatherName" class="form-label mb-0"></label></th>
+                                                        <td class="emp-field-cell">
+                                                            <input asp-for="FatherName" class="form-control" placeholder="Father / guardian name" />
+                                                            <span asp-validation-for="FatherName" class="field-validation-error"></span>
+                                                        </td>
+                                                        <th scope="row" class="emp-label-cell"><label asp-for="CNIC" class="form-label mb-0"></label></th>
+                                                        <td class="emp-field-cell">
+                                                            <input asp-for="CNIC" class="form-control" placeholder="XXXXX-XXXXXXX-X" />
+                                                            <span asp-validation-for="CNIC" class="field-validation-error"></span>
+                                                        </td>
+                                                    </tr>
+                                                    <tr class="emp-form-row">
+                                                        <th scope="row" class="emp-label-cell"><label asp-for="DOB" class="form-label mb-0"></label></th>
+                                                        <td class="emp-field-cell">
+                                                            <input asp-for="DOB" type="date" class="form-control" />
+                                                            <span asp-validation-for="DOB" class="field-validation-error"></span>
+                                                        </td>
+                                                        <th scope="row" class="emp-label-cell"><label asp-for="MobileNo" class="form-label mb-0"></label></th>
+                                                        <td class="emp-field-cell">
+                                                            <input asp-for="MobileNo" class="form-control" placeholder="Primary mobile number" inputmode="tel" />
+                                                            <span asp-validation-for="MobileNo" class="field-validation-error"></span>
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="col-md-6">
-                                    <label asp-for="ApplyTax" class="form-label"></label>
-                                    <select asp-for="ApplyTax" class="form-select">
-                                        <option value="">— Select —</option>
-                                        <option value="Yes">Yes</option>
-                                        <option value="No">No</option>
-                                    </select>
-                                    <span asp-validation-for="ApplyTax" class="field-validation-error"></span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
-                    <!-- Contact Information -->
-                    <div class="card section-card mb-4">
-                        <div class="card-header">
-                            <i class="bi bi-telephone"></i>Contact Information
-                        </div>
-                        <div class="card-body">
-                            <div class="alert alert-light border mb-0 d-flex gap-3 align-items-start">
-                                <i class="bi bi-info-circle text-primary fs-4 flex-shrink-0"></i>
-                                <div>
-                                    <strong class="d-block text-dark mb-1">Primary contact</strong>
-                                    <p class="small text-muted mb-0">
-                                        Mobile number is recorded under <strong>Personal Information</strong>. Use it for SMS, attendance alerts, and HR correspondence.
-                                        Additional contact channels (email, extension) can be added to the database when those fields are available.
-                                    </p>
+                                <div class="tab-pane fade" id="tab-official" role="tabpanel" aria-labelledby="tab-official-btn" tabindex="0" data-tab-panel="official">
+                                    <div class="emp-tab-pane-inner">
+                                        <h2 class="emp-section-header"><i class="fa-solid fa-briefcase"></i> Official Information</h2>
+                                        <p class="emp-section-sub">Department, role, project assignment, and employment status.</p>
+                                        <div class="table-responsive emp-table-wrap">
+                                            <table class="table emp-form-table mb-0">
+                                                <tbody>
+                                                    <tr class="emp-form-row">
+                                                        <th scope="row" class="emp-label-cell"><label asp-for="Department" class="form-label mb-0"></label></th>
+                                                        <td class="emp-field-cell">
+                                                            <input asp-for="Department" class="form-control" placeholder="Department name" />
+                                                            <span asp-validation-for="Department" class="field-validation-error"></span>
+                                                        </td>
+                                                        <th scope="row" class="emp-label-cell"><label asp-for="Designation" class="form-label mb-0"></label></th>
+                                                        <td class="emp-field-cell">
+                                                            <input asp-for="Designation" class="form-control" placeholder="Job title / designation" />
+                                                            <span asp-validation-for="Designation" class="field-validation-error"></span>
+                                                        </td>
+                                                    </tr>
+                                                    <tr class="emp-form-row">
+                                                        <th scope="row" class="emp-label-cell"><label asp-for="Project" class="form-label mb-0"></label></th>
+                                                        <td class="emp-field-cell">
+                                                            <input asp-for="Project" class="form-control" placeholder="Project or cost center" />
+                                                            <span asp-validation-for="Project" class="field-validation-error"></span>
+                                                        </td>
+                                                        <th scope="row" class="emp-label-cell"><label asp-for="DateOfJoining" class="form-label mb-0"></label></th>
+                                                        <td class="emp-field-cell">
+                                                            <input asp-for="DateOfJoining" type="date" class="form-control" value="@(Model.DateOfJoining?.ToString("yyyy-MM-dd"))" />
+                                                            <span asp-validation-for="DateOfJoining" class="field-validation-error"></span>
+                                                        </td>
+                                                    </tr>
+                                                    <tr class="emp-form-row">
+                                                        <th scope="row" class="emp-label-cell"><label asp-for="EmployeeStatus" class="form-label mb-0"></label></th>
+                                                        <td class="emp-field-cell" colspan="3">
+                                                            <input asp-for="EmployeeStatus" class="form-control emp-field-narrow" placeholder="Active, Probation, etc." />
+                                                            <span asp-validation-for="EmployeeStatus" class="field-validation-error"></span>
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
 
-                    <!-- Leave balances & adjustments -->
-                    <div class="card section-card mb-4">
-                        <div class="card-header">
-                            <i class="bi bi-calendar2-check"></i>Leave balances &amp; adjustments
-                        </div>
-                        <div class="card-body">
-                            <p class="small text-muted mb-3">Optional fields — used for carry-forward and historical leave totals.</p>
-                            <div class="row g-3">
-                                <div class="col-md-4">
-                                    <label asp-for="CarryForwardLeaves" class="form-label"></label>
-                                    <input asp-for="CarryForwardLeaves" class="form-control" type="number" step="0.01" placeholder="0" />
-                                    <span asp-validation-for="CarryForwardLeaves" class="field-validation-error"></span>
+                                <div class="tab-pane fade" id="tab-salary" role="tabpanel" aria-labelledby="tab-salary-btn" tabindex="0" data-tab-panel="salary">
+                                    <div class="emp-tab-pane-inner">
+                                        <h2 class="emp-section-header"><i class="fa-solid fa-sack-dollar"></i> Salary Information</h2>
+                                        <p class="emp-section-sub">Compensation baseline and tax application for payroll processing.</p>
+                                        <div class="table-responsive emp-table-wrap">
+                                            <table class="table emp-form-table mb-0">
+                                                <tbody>
+                                                    <tr class="emp-form-row">
+                                                        <th scope="row" class="emp-label-cell"><label asp-for="BasicSalary" class="form-label mb-0"></label></th>
+                                                        <td class="emp-field-cell">
+                                                            <input asp-for="BasicSalary" class="form-control" type="number" step="0.01" min="0" placeholder="0.00" />
+                                                            <span asp-validation-for="BasicSalary" class="field-validation-error"></span>
+                                                        </td>
+                                                        <th scope="row" class="emp-label-cell"><label asp-for="ApplyTax" class="form-label mb-0"></label></th>
+                                                        <td class="emp-field-cell">
+                                                            <select asp-for="ApplyTax" class="form-select">
+                                                                <option value="">— Select —</option>
+                                                                <option value="Yes">Yes</option>
+                                                                <option value="No">No</option>
+                                                            </select>
+                                                            <span asp-validation-for="ApplyTax" class="field-validation-error"></span>
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="col-md-4">
-                                    <label asp-for="CarryForwardLeaves1" class="form-label"></label>
-                                    <input asp-for="CarryForwardLeaves1" class="form-control" type="number" step="0.01" placeholder="0" />
-                                    <span asp-validation-for="CarryForwardLeaves1" class="field-validation-error"></span>
-                                </div>
-                                <div class="col-md-4">
-                                    <label asp-for="Year2024" class="form-label"></label>
-                                    <input asp-for="Year2024" class="form-control" type="number" placeholder="e.g. 2024" />
-                                    <span asp-validation-for="Year2024" class="field-validation-error"></span>
-                                </div>
-                                <div class="col-md-4">
-                                    <label asp-for="Year2022" class="form-label"></label>
-                                    <input asp-for="Year2022" class="form-control" type="number" step="0.01" placeholder="0" />
-                                    <span asp-validation-for="Year2022" class="field-validation-error"></span>
-                                </div>
-                                <div class="col-md-4">
-                                    <label asp-for="Year2023" class="form-label"></label>
-                                    <input asp-for="Year2023" class="form-control" type="number" step="0.01" placeholder="0" />
-                                    <span asp-validation-for="Year2023" class="field-validation-error"></span>
-                                </div>
-                                <div class="col-md-4">
-                                    <label asp-for="Year2023New" class="form-label"></label>
-                                    <input asp-for="Year2023New" class="form-control" type="number" step="0.01" placeholder="0" />
-                                    <span asp-validation-for="Year2023New" class="field-validation-error"></span>
-                                </div>
-                                <div class="col-md-6">
-                                    <label asp-for="AdjustedAjusted" class="form-label"></label>
-                                    <input asp-for="AdjustedAjusted" class="form-control" type="number" placeholder="0" />
-                                    <span asp-validation-for="AdjustedAjusted" class="field-validation-error"></span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
-                    <!-- Additional Information -->
-                    <div class="card section-card mb-4">
-                        <div class="card-header">
-                            <i class="bi bi-journal-text"></i>Additional Information
-                        </div>
-                        <div class="card-body">
-                            <div class="row g-3">
-                                <div class="col-12">
-                                    <label asp-for="Details" class="form-label"></label>
-                                    <textarea asp-for="Details" class="form-control" rows="4" placeholder="Notes, remarks, or onboarding context"></textarea>
-                                    <span asp-validation-for="Details" class="field-validation-error"></span>
+                                <div class="tab-pane fade" id="tab-leave" role="tabpanel" aria-labelledby="tab-leave-btn" tabindex="0" data-tab-panel="leave">
+                                    <div class="emp-tab-pane-inner">
+                                        <h2 class="emp-section-header"><i class="fa-solid fa-umbrella-beach"></i> Leave Balances &amp; Adjustments</h2>
+                                        <p class="emp-section-sub">Optional carry-forward and historical leave totals.</p>
+                                        <div class="table-responsive emp-table-wrap">
+                                            <table class="table emp-form-table mb-0">
+                                                <tbody>
+                                                    <tr class="emp-form-row">
+                                                        <th scope="row" class="emp-label-cell"><label asp-for="CarryForwardLeaves" class="form-label mb-0"></label></th>
+                                                        <td class="emp-field-cell">
+                                                            <input asp-for="CarryForwardLeaves" class="form-control" type="number" step="0.01" placeholder="0" />
+                                                            <span asp-validation-for="CarryForwardLeaves" class="field-validation-error"></span>
+                                                        </td>
+                                                        <th scope="row" class="emp-label-cell"><label asp-for="CarryForwardLeaves1" class="form-label mb-0"></label></th>
+                                                        <td class="emp-field-cell">
+                                                            <input asp-for="CarryForwardLeaves1" class="form-control" type="number" step="0.01" placeholder="0" />
+                                                            <span asp-validation-for="CarryForwardLeaves1" class="field-validation-error"></span>
+                                                        </td>
+                                                    </tr>
+                                                    <tr class="emp-form-row">
+                                                        <th scope="row" class="emp-label-cell"><label asp-for="Year2024" class="form-label mb-0"></label></th>
+                                                        <td class="emp-field-cell">
+                                                            <input asp-for="Year2024" class="form-control" type="number" placeholder="e.g. 2024" />
+                                                            <span asp-validation-for="Year2024" class="field-validation-error"></span>
+                                                        </td>
+                                                        <th scope="row" class="emp-label-cell"><label asp-for="Year2022" class="form-label mb-0"></label></th>
+                                                        <td class="emp-field-cell">
+                                                            <input asp-for="Year2022" class="form-control" type="number" step="0.01" placeholder="0" />
+                                                            <span asp-validation-for="Year2022" class="field-validation-error"></span>
+                                                        </td>
+                                                    </tr>
+                                                    <tr class="emp-form-row">
+                                                        <th scope="row" class="emp-label-cell"><label asp-for="Year2023" class="form-label mb-0"></label></th>
+                                                        <td class="emp-field-cell">
+                                                            <input asp-for="Year2023" class="form-control" type="number" step="0.01" placeholder="0" />
+                                                            <span asp-validation-for="Year2023" class="field-validation-error"></span>
+                                                        </td>
+                                                        <th scope="row" class="emp-label-cell"><label asp-for="Year2023New" class="form-label mb-0"></label></th>
+                                                        <td class="emp-field-cell">
+                                                            <input asp-for="Year2023New" class="form-control" type="number" step="0.01" placeholder="0" />
+                                                            <span asp-validation-for="Year2023New" class="field-validation-error"></span>
+                                                        </td>
+                                                    </tr>
+                                                    <tr class="emp-form-row">
+                                                        <th scope="row" class="emp-label-cell"><label asp-for="AdjustedAjusted" class="form-label mb-0"></label></th>
+                                                        <td class="emp-field-cell" colspan="3">
+                                                            <input asp-for="AdjustedAjusted" class="form-control emp-field-narrow" type="number" placeholder="0" />
+                                                            <span asp-validation-for="AdjustedAjusted" class="field-validation-error"></span>
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="col-md-6">
-                                    <label asp-for="ModifiedBy" class="form-label"></label>
-                                    <input asp-for="ModifiedBy" class="form-control" placeholder="Recorder / HR officer name" />
-                                    <span asp-validation-for="ModifiedBy" class="field-validation-error"></span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Photo & summary column -->
-                <div class="col-lg-4">
-                    <div class="card section-card photo-card sticky-lg-top mb-4" style="top: 1rem;">
-                        <div class="card-header">
-                            <i class="bi bi-camera"></i>Employee photo
-                        </div>
-                        <div class="card-body text-center">
-                            <div class="photo-preview-wrap">
-                                <img id="employeePhotoPreview" src="~/images/employee-avatar-placeholder.svg" alt="Profile preview" />
-                            </div>
-                            <input type="file" id="employeePhotoFile" class="d-none" accept="image/*" aria-label="Choose employee photo" />
-                            <button type="button" class="btn btn-upload w-100 py-2 mb-2" id="employeePhotoBrowse">
-                                <i class="bi bi-cloud-upload me-2"></i>Upload photo
-                            </button>
-                            <p class="small text-muted mb-0">Preview only — wire-up storage when your API is ready. Does not affect save.</p>
-                        </div>
-                    </div>
+                                <div class="tab-pane fade" id="tab-additional" role="tabpanel" aria-labelledby="tab-additional-btn" tabindex="0" data-tab-panel="additional">
+                                    <div class="emp-tab-pane-inner">
+                                        <h2 class="emp-section-header"><i class="fa-solid fa-file-lines"></i> Additional Information</h2>
+                                        <p class="emp-section-sub">Notes, remarks, and audit fields.</p>
+                                        <div class="table-responsive emp-table-wrap">
+                                            <table class="table emp-form-table mb-0">
+                                                <tbody>
+                                                    <tr class="emp-form-row">
+                                                        <th scope="row" class="emp-label-cell align-top pt-3"><label asp-for="Details" class="form-label mb-0"></label></th>
+                                                        <td class="emp-field-cell" colspan="3">
+                                                            <textarea asp-for="Details" class="form-control" rows="4" placeholder="Notes, remarks, or onboarding context"></textarea>
+                                                            <span asp-validation-for="Details" class="field-validation-error"></span>
+                                                        </td>
+                                                    </tr>
+                                                    <tr class="emp-form-row">
+                                                        <th scope="row" class="emp-label-cell"><label asp-for="ModifiedBy" class="form-label mb-0"></label></th>
+                                                        <td class="emp-field-cell" colspan="3">
+                                                            <input asp-for="ModifiedBy" class="form-control emp-field-narrow" placeholder="Recorder / HR officer name" />
+                                                            <span asp-validation-for="ModifiedBy" class="field-validation-error"></span>
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <div class="alert alert-light border mt-3 mb-0 d-flex gap-3 align-items-start">
+                                            <i class="fa-solid fa-phone text-primary fs-5 flex-shrink-0 mt-1"></i>
+                                            <div class="small text-muted mb-0">
+                                                <strong class="text-dark d-block mb-1">Primary contact</strong>
+                                                Mobile number is recorded under <strong>Personal Information</strong> for SMS, attendance alerts, and HR correspondence.
+                                            </div>
+                                        </div>
+                                        <div class="card border-0 bg-light mt-3 emp-meta-card">
+                                            <div class="card-body small text-muted">
+                                                <div class="d-flex align-items-start gap-2">
+                                                    <i class="fa-solid fa-clock text-primary fs-5"></i>
+                                                    <div>
+                                                        <strong class="text-dark d-block">Last modified</strong>
+                                                        @if (!string.IsNullOrWhiteSpace(Model.ModifiedOn))
+                                                        {
+                                                            <span>@Model.ModifiedOn</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span>—</span>
+                                                        }
+                                                        @if (!string.IsNullOrWhiteSpace(Model.ModifiedBy))
+                                                        {
+                                                            <span class="d-block">by <span class="text-dark fw-semibold">@Model.ModifiedBy</span></span>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
 
-                    <div class="card border-0 shadow-sm bg-white mb-4">
-                        <div class="card-body small text-muted">
-                            <div class="d-flex align-items-start gap-2 mb-2">
-                                <i class="bi bi-clock-history text-primary fs-5"></i>
-                                <div>
-                                    <strong class="text-dark d-block">Last modified</strong>
-                                    @if (!string.IsNullOrWhiteSpace(Model.ModifiedOn))
-                                    {
-                                        <span>@Model.ModifiedOn</span>
-                                    }
-                                    else
-                                    {
-                                        <span>—</span>
-                                    }
-                                    @if (!string.IsNullOrWhiteSpace(Model.ModifiedBy))
-                                    {
-                                        <span class="d-block">by <span class="text-dark fw-semibold">@Model.ModifiedBy</span></span>
-                                    }
+                            </form>
+
+                                <div class="tab-pane fade" id="tab-attachments" role="tabpanel" aria-labelledby="tab-attachments-btn" tabindex="0" data-tab-panel="attachments">
+                                    <div class="emp-tab-pane-inner">
+                                        <h2 class="emp-section-header"><i class="fa-solid fa-paperclip"></i> Attachments</h2>
+                                        <p class="emp-section-sub">Upload HR documents (PDF, Word, Excel, images). Files save immediately — you do not need to click Save employee.</p>
+                                        @if (ViewBag.EmployeeDocuments is HRMBT.Web.Models.ViewModels.EmployeeDocumentsViewModel docsVm)
+                                        {
+                                            @await Html.PartialAsync("_EmployeeDocuments", docsVm)
+                                        }
+                                        else
+                                        {
+                                            <div class="alert alert-danger mb-0">
+                                                <i class="fa-solid fa-circle-exclamation me-2"></i>
+                                                Document upload could not be loaded. Restart the application and refresh this page.
+                                            </div>
+                                        }
+                                    </div>
                                 </div>
-                            </div>
-                            <hr class="my-2" />
-                            <div class="d-flex align-items-start gap-2">
-                                <i class="bi bi-lightbulb text-warning fs-5"></i>
-                                <div>
-                                    <strong class="text-dark d-block">Tip</strong>
-                                    Changing <span class="text-dark fw-semibold">Employee ID</span> is allowed but must remain unique across the directory.
-                                </div>
+
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Sticky actions -->
             <div class="employee-create-actions">
                 <div class="container-fluid px-3 px-lg-4">
                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
                         <div class="small text-muted d-none d-md-block">
-                            <i class="bi bi-save me-1"></i>Changes are saved to the employee directory.
+                            <i class="fa-solid fa-floppy-disk me-1"></i>Changes are saved to the employee directory.
                         </div>
                         <div class="d-flex flex-wrap align-items-center gap-2 ms-md-auto">
                             <a asp-action="Index" class="btn btn-action-outline">
-                                <i class="bi bi-arrow-left-short me-1"></i>Back to list
+                                <i class="fa-solid fa-arrow-left me-1"></i>Back
                             </a>
-                            <button type="reset" class="btn btn-action-secondary" id="employeeFormReset">
-                                <i class="bi bi-arrow-counterclockwise me-1"></i>Reset
+                            <button type="reset" class="btn btn-action-secondary" id="employeeFormReset" form="employeeCreateForm">
+                                <i class="fa-solid fa-rotate-left me-1"></i>Reset
                             </button>
-                            <button type="submit" class="btn btn-action-primary" id="employeeFormSubmit">
+                            <button type="submit" class="btn btn-action-primary" id="employeeFormSubmit" form="employeeCreateForm">
                                 <span class="spinner-border spinner-border-sm me-2 d-none" id="employeeSaveSpinner" role="status" aria-hidden="true"></span>
-                                <i class="bi bi-check2-circle me-1" id="employeeSaveIcon"></i>Save changes
+                                <i class="fa-solid fa-check me-1" id="employeeSaveIcon"></i>Save
                             </button>
                         </div>
                     </div>
                 </div>
             </div>
-        </form>
     </div>
 </div>
 
 @section Scripts {
     @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
-    <script>
-        (function () {
-            var form = document.getElementById('employeeCreateForm');
-            var fileInput = document.getElementById('employeePhotoFile');
-            var browseBtn = document.getElementById('employeePhotoBrowse');
-            var preview = document.getElementById('employeePhotoPreview');
-            var placeholderSrc = '@Url.Content("~/images/employee-avatar-placeholder.svg")';
-            var submitBtn = document.getElementById('employeeFormSubmit');
-            var spinner = document.getElementById('employeeSaveSpinner');
-            var icon = document.getElementById('employeeSaveIcon');
-
-            if (browseBtn && fileInput) {
-                browseBtn.addEventListener('click', function () { fileInput.click(); });
-                fileInput.addEventListener('change', function () {
-                    var f = fileInput.files && fileInput.files[0];
-                    if (!f || !f.type.match(/^image\//)) return;
-                    var reader = new FileReader();
-                    reader.onload = function (e) { preview.src = e.target.result; };
-                    reader.readAsDataURL(f);
-                });
-            }
-
-            var resetBtn = document.getElementById('employeeFormReset');
-            if (resetBtn && preview) {
-                resetBtn.addEventListener('click', function () {
-                    setTimeout(function () {
-                        preview.src = placeholderSrc;
-                        if (fileInput) fileInput.value = '';
-                    }, 0);
-                });
-            }
-
-            if (form && submitBtn && spinner && icon && window.jQuery) {
-                window.jQuery(function ($) {
-                    var $form = $(form);
-                    $form.on('submit', function () {
-                        if (!$form.valid()) {
-                            return;
-                        }
-                        spinner.classList.remove('d-none');
-                        icon.classList.add('d-none');
-                        submitBtn.disabled = true;
-                    });
-                });
-            }
-        })();
-    </script>
+    <script src="~/js/employee-create.js" asp-append-version="true"></script>
 }

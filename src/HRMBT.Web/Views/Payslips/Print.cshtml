@@ -2,7 +2,6 @@
 @{
     Layout = null;
     ViewData["Title"] = "Payslip — Print";
-    string MonthName(int m) => m >= 1 && m <= 12 ? System.Globalization.CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(m) : m.ToString();
     var allowanceLines = (Model.PayslipDetails ?? Enumerable.Empty<HRMBT.Web.Models.PayslipDetail>())
         .Where(d => string.Equals(d.ItemType, "Allowance", StringComparison.OrdinalIgnoreCase))
         .OrderBy(d => d.SortOrder ?? int.MaxValue)
@@ -18,7 +17,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Payslip @Model.Id — @MonthName(Model.Month) @Model.Year</title>
+    <title>Payslip @Model.Id — @Model.Month @Model.Year</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="~/css/payslips.css" asp-append-version="true" />
@@ -41,7 +40,7 @@
                         <div class="pp-sub">HRMS · HR Management Bahria Town</div>
                         <h1>Salary Slip</h1>
                         <div class="pp-period">
-                            <i class="bi bi-calendar3 me-1"></i>@MonthName(Model.Month) @Model.Year
+                            <i class="bi bi-calendar3 me-1"></i>@Model.Month @Model.Year
                         </div>
                     </div>
                     <div class="text-end">

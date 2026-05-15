@@ -49,23 +49,14 @@
             <div class="form-group mb-3">
                 <label for="month" class="control-label">Month <span class="text-danger">*</span></label>
                 @{
-                    var selectedMonth = ViewData["Month"] != null ? Convert.ToInt32(ViewData["Month"]) : DateTime.Now.Month;
+                    var selectedMonth = ViewData["Month"] as string ?? HRMBT.Web.Infrastructure.PayrollMonthHelper.CurrentMonthName();
+                    ViewData["MonthFieldName"] = "month";
+                    ViewData["MonthFieldId"] = "month";
+                    ViewData["SelectedMonth"] = selectedMonth;
+                    ViewData["MonthIncludeEmpty"] = true;
+                    ViewData["MonthRequired"] = true;
                 }
-                <select id="month" name="month" class="form-control" required>
-                    <option value="">-- Select Month --</option>
-                    @for (int i = 1; i <= 12; i++)
-                    {
-                        var monthName = new DateTime(2000, i, 1).ToString("MMMM");
-                        if (selectedMonth == i)
-                        {
-                            <option value="@i" selected>@monthName</option>
-                        }
-                        else
-                        {
-                            <option value="@i">@monthName</option>
-                        }
-                    }
-                </select>
+                <partial name="_PayrollMonthSelect" />
                 @if (ViewData.ModelState["Month"]?.Errors?.Count > 0)
                 {
                     <span class="text-danger">@ViewData.ModelState["Month"].Errors[0].ErrorMessage</span>
@@ -108,7 +99,7 @@
             // Set default values if not already set
             var monthVal = $('#month').val();
             if (!monthVal || monthVal === '') {
-                $('#month').val('@DateTime.Now.Month');
+                $('#month').val('@HRMBT.Web.Infrastructure.PayrollMonthHelper.CurrentMonthName()');
             }
             var yearVal = $('#year').val();
             if (!yearVal || yearVal === '') {

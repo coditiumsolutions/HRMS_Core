@@ -1,4 +1,5 @@
 using HRMBT.Web.Data;
+using HRMBT.Web.Infrastructure;
 using HRMBT.Web.Models;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -61,11 +62,12 @@ namespace HRMBT.Web.Services.Payroll
             return result;
         }
 
-        public Payslip GeneratePayslip(int employeeId, int month, int year, string generatedBy)
+        public Payslip GeneratePayslip(int employeeId, string month, int year, string generatedBy)
         {
             try
             {
-                if (_context.Payslips.Any(p => p.EmployeeId == employeeId && p.Month == month && p.Year == year))
+                var monthName = PayrollMonthHelper.Normalize(month);
+                if (_context.Payslips.Any(p => p.EmployeeId == employeeId && p.Month == monthName && p.Year == year))
                     throw new InvalidOperationException("Payslip already exists.");
 
                 var employee = _context.Employees.FirstOrDefault(e => e.uid == employeeId);
@@ -97,7 +99,7 @@ namespace HRMBT.Web.Services.Payroll
                 var payslip = new Payslip
                 {
                     EmployeeId = employeeId,
-                    Month = month,
+                    Month = monthName,
                     Year = year,
                     BasicSalary = basic,
                     TotalAllowances = totalAllowances,
