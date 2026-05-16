@@ -8,9 +8,10 @@ using HRMBT.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ✅ MVC
-builder.Services.AddControllersWithViews()
-    .AddRazorRuntimeCompilation();
+// MVC (runtime Razor compilation only in Development — avoids IIS publish issues)
+var mvcBuilder = builder.Services.AddControllersWithViews();
+if (builder.Environment.IsDevelopment())
+    mvcBuilder.AddRazorRuntimeCompilation();
 
 // ✅ DbContext
 builder.Services.AddDbContext<ApplicationDbContext>(options =>

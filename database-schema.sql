@@ -262,7 +262,8 @@ IF NOT EXISTS (
     WHERE [MigrationId] = N'20260102062803_PayrollModule'
 )
 BEGIN
-    DROP TABLE [Payrolls];
+    IF OBJECT_ID(N'[dbo].[Payrolls]', N'U') IS NOT NULL
+        DROP TABLE [Payrolls];
 END;
 
 IF NOT EXISTS (
@@ -270,7 +271,18 @@ IF NOT EXISTS (
     WHERE [MigrationId] = N'20260102062803_PayrollModule'
 )
 BEGIN
-    ALTER SCHEMA [dbo] TRANSFER [Employee];
+    IF OBJECT_ID(N'[dbo].[Employee]', N'U') IS NULL AND OBJECT_ID(N'[dbo].[Employees]', N'U') IS NOT NULL
+        EXEC sp_rename N'dbo.Employees', N'Employee';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260102062803_PayrollModule'
+)
+BEGIN
+    IF OBJECT_ID(N'Employee', N'U') IS NOT NULL
+       AND SCHEMA_NAME(SCHEMA_ID(OBJECT_ID(N'Employee'))) <> N'dbo'
+        ALTER SCHEMA [dbo] TRANSFER [Employee];
 END;
 
 IF NOT EXISTS (
@@ -598,12 +610,12 @@ BEGIN
                         -- Table exists, modify it
                         IF COL_LENGTH('Attendances', 'Department') IS NOT NULL
                         BEGIN
-                            DECLARE @var0 sysname;
-                            SELECT @var0 = [d].[name]
+                            DECLARE @var10 sysname;
+                            SELECT @var10 = [d].[name]
                             FROM [sys].[default_constraints] [d]
                             INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
                             WHERE ([d].[parent_object_id] = OBJECT_ID(N'[Attendances]') AND [c].[name] = N'Department');
-                            IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [Attendances] DROP CONSTRAINT [' + @var0 + '];');
+                            IF @var10 IS NOT NULL EXEC(N'ALTER TABLE [Attendances] DROP CONSTRAINT [' + @var10 + '];');
                             ALTER TABLE [Attendances] DROP COLUMN [Department];
                         END
                         
@@ -814,11 +826,27 @@ BEGIN
                     ELSE
                     BEGIN
                         -- Table exists, ensure columns match
-                        -- Add AttendanceID if missing (shouldn't happen, but safe)
+                        -- Add/rename AttendanceID: legacy rename-from-Attendances uses identity column [Id]; do not add a second IDENTITY
                         IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('Attendance') AND name = 'AttendanceID')
                         BEGIN
-                            ALTER TABLE [Attendance] ADD [AttendanceID] int IDENTITY(1,1) NOT NULL;
-                            ALTER TABLE [Attendance] ADD CONSTRAINT [PK_Attendance] PRIMARY KEY ([AttendanceID]);
+                            IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('Attendance') AND name = 'Id' AND is_identity = 1)
+                            BEGIN
+                                DECLARE @pkAttendance74407 sysname;
+                                SELECT @pkAttendance74407 = [kc].[name]
+                                FROM [sys].[key_constraints] [kc]
+                                WHERE [kc].[parent_object_id] = OBJECT_ID(N'Attendance') AND [kc].[type] = 'PK';
+                                IF @pkAttendance74407 IS NOT NULL
+                                    EXEC(N'ALTER TABLE [Attendance] DROP CONSTRAINT [' + @pkAttendance74407 + '];');
+                                EXEC sp_rename N'Attendance.Id', N'AttendanceID', N'COLUMN';
+                                IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE parent_object_id = OBJECT_ID(N'Attendance') AND type = 'PK')
+                                    ALTER TABLE [Attendance] ADD CONSTRAINT [PK_Attendance] PRIMARY KEY ([AttendanceID]);
+                            END
+                            ELSE
+                            BEGIN
+                                ALTER TABLE [Attendance] ADD [AttendanceID] int IDENTITY(1,1) NOT NULL;
+                                IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE parent_object_id = OBJECT_ID(N'Attendance') AND type = 'PK')
+                                    ALTER TABLE [Attendance] ADD CONSTRAINT [PK_Attendance] PRIMARY KEY ([AttendanceID]);
+                            END
                         END
                         
                         -- Add EmployeeID if missing
@@ -947,6 +975,25 @@ END;
 
 IF NOT EXISTS (
     SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260516120000_PayslipTaxColumns'
+)
+BEGIN
+    IF OBJECT_ID(N'[dbo].[Payslips]', N'U') IS NOT NULL AND COL_LENGTH(N'dbo.Payslips', N'TaxPercentage') IS NULL
+    BEGIN
+        ALTER TABLE [dbo].[Payslips] ADD [TaxPercentage] decimal(18,2) NOT NULL CONSTRAINT [DF_Payslips_TaxPct20260516] DEFAULT (0);
+        ALTER TABLE [dbo].[Payslips] DROP CONSTRAINT [DF_Payslips_TaxPct20260516];
+    END;
+    IF OBJECT_ID(N'[dbo].[Payslips]', N'U') IS NOT NULL AND COL_LENGTH(N'dbo.Payslips', N'TaxAmount') IS NULL
+    BEGIN
+        ALTER TABLE [dbo].[Payslips] ADD [TaxAmount] decimal(18,2) NOT NULL CONSTRAINT [DF_Payslips_TaxAmt20260516] DEFAULT (0);
+        ALTER TABLE [dbo].[Payslips] DROP CONSTRAINT [DF_Payslips_TaxAmt20260516];
+    END;
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20260516120000_PayslipTaxColumns', N'9.0.0');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
     WHERE [MigrationId] = N'20260515120000_AlignDeductionsSchemaDbTxt'
 )
 BEGIN
@@ -1022,12 +1069,11 @@ GO
 IF OBJECT_ID(N'[dbo].[LeaveQuota]', N'U') IS NULL
 BEGIN
     CREATE TABLE [dbo].[LeaveQuota] (
-        [Id] int NOT NULL IDENTITY(1,1),
-        [LeaveTypeName] nvarchar(50) NOT NULL,
-        [Year] int NOT NULL,
-        [QuotaDays] decimal(18,2) NULL,
-        [Description] nvarchar(255) NULL,
-        CONSTRAINT [PK_LeaveQuota] PRIMARY KEY ([Id])
+        [UID] int NOT NULL IDENTITY(1,1),
+        [LeaveTypeName] varchar(50) NOT NULL,
+        [TotalLeaves] int NOT NULL,
+        [Year] varchar(50) NOT NULL,
+        CONSTRAINT [PK_LeaveQuota] PRIMARY KEY ([UID])
     );
 END;
 GO

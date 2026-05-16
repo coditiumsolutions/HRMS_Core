@@ -7,15 +7,28 @@
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2>Leaves quota</h2>
-                <a asp-action="Index" class="btn btn-outline-secondary">Back to leave requests</a>
+            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                <h2 class="mb-0">Leaves quota</h2>
+                <div class="d-flex flex-wrap gap-2">
+                    <a asp-action="CreateLeaveQuota" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> Add quota
+                    </a>
+                    <a asp-action="Index" class="btn btn-outline-secondary">Back to leave requests</a>
+                </div>
             </div>
+
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    @TempData["SuccessMessage"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
 
             <div class="card">
                 <div class="card-body">
                     <p class="text-muted small mb-3">
-                        All rows from <strong>dbo.LeaveQuota</strong> (leave type, total days, year).
+                        Yearly leave entitlements per type (<strong>dbo.LeaveQuota</strong>). One row per leave type per year.
                     </p>
                     @if (Model != null && Model.Any())
                     {
@@ -23,10 +36,11 @@
                             <table class="table table-striped table-bordered table-hover align-middle">
                                 <thead class="table-light">
                                     <tr>
-                                        <th>UID</th>
-                                        <th>Leave type</th>
-                                        <th class="text-end">Total leaves</th>
-                                        <th>Year</th>
+                                        <th>@Html.DisplayNameFor(m => m.First().UID)</th>
+                                        <th>@Html.DisplayNameFor(m => m.First().LeaveTypeName)</th>
+                                        <th class="text-end">@Html.DisplayNameFor(m => m.First().TotalLeaves)</th>
+                                        <th>@Html.DisplayNameFor(m => m.First().Year)</th>
+                                        <th class="text-end" style="width: 10rem;">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -37,6 +51,14 @@
                                             <td>@row.LeaveTypeName</td>
                                             <td class="text-end">@row.TotalLeaves</td>
                                             <td>@row.Year</td>
+                                            <td class="text-end text-nowrap">
+                                                <a asp-action="EditLeaveQuota" asp-route-id="@row.UID" class="btn btn-sm btn-outline-primary" title="Edit">
+                                                    <i class="bi bi-pencil"></i>
+                                                </a>
+                                                <a asp-action="DeleteLeaveQuota" asp-route-id="@row.UID" class="btn btn-sm btn-outline-danger" title="Delete">
+                                                    <i class="bi bi-trash"></i>
+                                                </a>
+                                            </td>
                                         </tr>
                                     }
                                 </tbody>
@@ -45,7 +67,10 @@
                     }
                     else
                     {
-                        <p class="text-muted mb-0">No leave quota records found.</p>
+                        <div class="alert alert-info mb-0">
+                            No leave quota records found.
+                            <a asp-action="CreateLeaveQuota" class="alert-link">Add the first quota</a>.
+                        </div>
                     }
                 </div>
             </div>

@@ -1,0 +1,43 @@
+@model HRMBT.Web.Models.LeaveQuota
+@{
+    var leaveTypes = ViewBag.LeaveTypes as SelectList;
+    var years = ViewBag.Years as SelectList;
+}
+
+<div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <label asp-for="LeaveTypeName" class="form-label"></label>
+        <input asp-for="LeaveTypeName" class="form-control" list="leaveTypeOptions" maxlength="50" required />
+        <datalist id="leaveTypeOptions">
+            @if (leaveTypes != null)
+            {
+                foreach (var item in leaveTypes)
+                {
+                    <option value="@item.Text"></option>
+                }
+            }
+        </datalist>
+        <span asp-validation-for="LeaveTypeName" class="text-danger"></span>
+    </div>
+    <div class="col-md-3">
+        <label asp-for="Year" class="form-label"></label>
+        <input asp-for="Year" class="form-control" list="yearOptions" maxlength="50" required />
+        <datalist id="yearOptions">
+            @if (years != null)
+            {
+                foreach (var item in years)
+                {
+                    <option value="@item.Text"></option>
+                }
+            }
+        </datalist>
+        <span asp-validation-for="Year" class="text-danger"></span>
+    </div>
+    <div class="col-md-3">
+        <label asp-for="TotalLeaves" class="form-label"></label>
+        <input asp-for="TotalLeaves" class="form-control" type="number" min="0" max="366" step="1" required />
+        <span asp-validation-for="TotalLeaves" class="text-danger"></span>
+    </div>
+</div>

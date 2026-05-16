@@ -1,0 +1,54 @@
+@model HRMBT.Web.Models.LeaveQuota
+
+@{
+    ViewData["Title"] = "Delete leave quota";
+}
+
+<div class="container-fluid py-3">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb mb-0 small">
+            <li class="breadcrumb-item"><a asp-action="Index">Leave Management</a></li>
+            <li class="breadcrumb-item"><a asp-action="LeaveQuota">Leaves quota</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Delete</li>
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-7">
+            <div class="card border-danger shadow-sm">
+                <div class="card-header bg-danger text-white py-3">
+                    <h3 class="h5 mb-0"><i class="bi bi-exclamation-octagon me-2"></i>Delete leave quota</h3>
+                </div>
+                <div class="card-body p-4">
+                    <div class="alert alert-warning d-flex align-items-start gap-2">
+                        <i class="bi bi-exclamation-triangle-fill mt-1"></i>
+                        <div>
+                            This removes quota <strong>#@Model.UID</strong> from <strong>dbo.LeaveQuota</strong>.
+                            Leave balance reports for this type and year may change.
+                        </div>
+                    </div>
+
+                    <dl class="row mb-4">
+                        <dt class="col-sm-4">Leave type</dt>
+                        <dd class="col-sm-8">@Model.LeaveTypeName</dd>
+                        <dt class="col-sm-4">Year</dt>
+                        <dd class="col-sm-8">@Model.Year</dd>
+                        <dt class="col-sm-4">Total leaves</dt>
+                        <dd class="col-sm-8">@Model.TotalLeaves</dd>
+                    </dl>
+
+                    <form asp-action="DeleteLeaveQuota" method="post">
+                        <input type="hidden" asp-for="UID" />
+                        <div class="d-flex flex-wrap gap-2">
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-trash"></i> Delete permanently
+                            </button>
+                            <a asp-action="LeaveQuota" class="btn btn-outline-secondary">Cancel</a>
+                            <a asp-action="EditLeaveQuota" asp-route-id="@Model.UID" class="btn btn-outline-primary ms-auto">Back to edit</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

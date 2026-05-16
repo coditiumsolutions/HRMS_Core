@@ -20,6 +20,7 @@ public class LeaveQuota
     public string LeaveTypeName { get; set; } = string.Empty;
 
     [Display(Name = "Total leaves")]
+    [Range(0, 366, ErrorMessage = "Total leaves must be between 0 and 366.")]
     [Column("TotalLeaves")]
     public int TotalLeaves { get; set; }
 

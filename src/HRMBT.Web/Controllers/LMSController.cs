@@ -167,10 +167,118 @@ namespace HRMBT.Web.Controllers
         {
             ViewData["Module"] = "LMS";
             var rows = await _context.LeaveQuotas.AsNoTracking()
-                .OrderBy(lq => lq.Year)
+                .OrderByDescending(lq => lq.Year)
                 .ThenBy(lq => lq.LeaveTypeName)
                 .ToListAsync();
             return View(rows);
+        }
+
+        // GET: LMS/CreateLeaveQuota
+        public async Task<IActionResult> CreateLeaveQuota()
+        {
+            ViewData["Module"] = "LMS";
+            await PopulateLeaveQuotaFormLookupsAsync();
+            return View(new LeaveQuota
+            {
+                Year = DateTime.Now.Year.ToString(),
+                TotalLeaves = 0
+            });
+        }
+
+        // POST: LMS/CreateLeaveQuota
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateLeaveQuota([Bind("LeaveTypeName,TotalLeaves,Year")] LeaveQuota model)
+        {
+            ViewData["Module"] = "LMS";
+            NormalizeLeaveQuota(model);
+            await ValidateLeaveQuotaModelAsync(model, excludeUid: null);
+
+            if (ModelState.IsValid)
+            {
+                _context.LeaveQuotas.Add(model);
+                await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = $"Leave quota for {model.LeaveTypeName} ({model.Year}) created.";
+                return RedirectToAction(nameof(LeaveQuota));
+            }
+
+            await PopulateLeaveQuotaFormLookupsAsync(model.LeaveTypeName, model.Year);
+            return View(model);
+        }
+
+        // GET: LMS/EditLeaveQuota/5
+        public async Task<IActionResult> EditLeaveQuota(int? id)
+        {
+            ViewData["Module"] = "LMS";
+            if (id == null) return NotFound();
+
+            var quota = await _context.LeaveQuotas.FindAsync(id);
+            if (quota == null) return NotFound();
+
+            await PopulateLeaveQuotaFormLookupsAsync(quota.LeaveTypeName, quota.Year);
+            return View(quota);
+        }
+
+        // POST: LMS/EditLeaveQuota/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditLeaveQuota(int id, [Bind("UID,LeaveTypeName,TotalLeaves,Year")] LeaveQuota model)
+        {
+            ViewData["Module"] = "LMS";
+            if (id != model.UID) return NotFound();
+
+            NormalizeLeaveQuota(model);
+            await ValidateLeaveQuotaModelAsync(model, excludeUid: model.UID);
+
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    _context.Update(model);
+                    await _context.SaveChangesAsync();
+                    TempData["SuccessMessage"] = $"Leave quota for {model.LeaveTypeName} ({model.Year}) updated.";
+                    return RedirectToAction(nameof(LeaveQuota));
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    if (!LeaveQuotaExists(model.UID))
+                        return NotFound();
+                    throw;
+                }
+            }
+
+            await PopulateLeaveQuotaFormLookupsAsync(model.LeaveTypeName, model.Year);
+            return View(model);
+        }
+
+        // GET: LMS/DeleteLeaveQuota/5
+        public async Task<IActionResult> DeleteLeaveQuota(int? id)
+        {
+            ViewData["Module"] = "LMS";
+            if (id == null) return NotFound();
+
+            var quota = await _context.LeaveQuotas.AsNoTracking()
+                .FirstOrDefaultAsync(m => m.UID == id);
+            if (quota == null) return NotFound();
+
+            return View(quota);
+        }
+
+        // POST: LMS/DeleteLeaveQuota/5
+        [HttpPost, ActionName("DeleteLeaveQuota")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteLeaveQuotaConfirmed(int id)
+        {
+            ViewData["Module"] = "LMS";
+            var quota = await _context.LeaveQuotas.FindAsync(id);
+            if (quota != null)
+            {
+                _context.LeaveQuotas.Remove(quota);
+                await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = $"Leave quota for {quota.LeaveTypeName} ({quota.Year}) deleted.";
+            }
+
+            return RedirectToAction(nameof(LeaveQuota));
         }
 
         // GET: LMS/LeaveBalance — available (LeaveQuota) minus availed (LeaveRequests) for selected year.
@@ -500,6 +608,64 @@ namespace HRMBT.Web.Controllers
 
         private bool LeaveRequestExists(int id) =>
             _context.LeaveRequests.Any(e => e.Id == id);
+
+        private bool LeaveQuotaExists(int uid) =>
+            _context.LeaveQuotas.Any(e => e.UID == uid);
+
+        private static void NormalizeLeaveQuota(LeaveQuota model)
+        {
+            model.LeaveTypeName = model.LeaveTypeName?.Trim() ?? string.Empty;
+            model.Year = model.Year?.Trim() ?? string.Empty;
+        }
+
+        private async Task ValidateLeaveQuotaModelAsync(LeaveQuota model, int? excludeUid)
+        {
+            if (model.TotalLeaves < 0)
+                ModelState.AddModelError(nameof(Models.LeaveQuota.TotalLeaves), "Total leaves cannot be negative.");
+
+            if (string.IsNullOrWhiteSpace(model.LeaveTypeName) || string.IsNullOrWhiteSpace(model.Year))
+                return;
+
+            var duplicate = await _context.LeaveQuotas.AsNoTracking().AnyAsync(lq =>
+                lq.LeaveTypeName == model.LeaveTypeName
+                && lq.Year == model.Year
+                && (!excludeUid.HasValue || lq.UID != excludeUid.Value));
+
+            if (duplicate)
+            {
+                ModelState.AddModelError(
+                    string.Empty,
+                    $"A quota for \"{model.LeaveTypeName}\" in year {model.Year} already exists.");
+            }
+        }
+
+        private async Task PopulateLeaveQuotaFormLookupsAsync(string? selectedLeaveType = null, string? selectedYear = null)
+        {
+            var types = await GetLeaveTypeNamesAsync();
+            if (!string.IsNullOrWhiteSpace(selectedLeaveType)
+                && !types.Exists(t => string.Equals(t, selectedLeaveType, StringComparison.OrdinalIgnoreCase)))
+            {
+                types.Add(selectedLeaveType);
+                types = types.OrderBy(t => t, StringComparer.OrdinalIgnoreCase).ToList();
+            }
+
+            ViewBag.LeaveTypes = new SelectList(types, selectedLeaveType);
+
+            var yearsFromDb = await _context.LeaveQuotas.AsNoTracking()
+                .Where(lq => lq.Year != null && lq.Year != "")
+                .Select(lq => lq.Year!)
+                .Distinct()
+                .ToListAsync();
+
+            var yearChoices = yearsFromDb
+                .Concat(Enumerable.Range(DateTime.Now.Year - 2, 6).Select(y => y.ToString()))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderByDescending(y => int.TryParse(y, out var yi) ? yi : 0)
+                .ThenBy(y => y, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            ViewBag.Years = new SelectList(yearChoices, selectedYear ?? DateTime.Now.Year.ToString());
+        }
 
         private async Task<SelectList> BuildEmployeeUidSelectListAsync(int? selectedUid = null)
         {

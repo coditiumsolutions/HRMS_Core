@@ -146,6 +146,11 @@ namespace HRMBT.Web.Data
                 entity.Property(p => p.TaxAmount).HasColumnType("decimal(18,2)");
                 entity.Property(p => p.TotalDeductions).HasColumnType("decimal(18,2)");
                 entity.Property(p => p.NetSalary).HasColumnType("decimal(18,2)");
+                entity.HasOne(p => p.Employee)
+                    .WithMany()
+                    .HasForeignKey(p => p.EmployeeId)
+                    .HasPrincipalKey(e => e.uid)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             modelBuilder.Entity<AppUser>(entity =>
