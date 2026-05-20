@@ -490,6 +490,11 @@ namespace HRMBT.Web.Migrations
                     b.Property<decimal>("TaxPercentage")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<string>("TaxYear")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
                     b.HasKey("Id");
 
                     b.ToTable("TaxRules", (string)null);

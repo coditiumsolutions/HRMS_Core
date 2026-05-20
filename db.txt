@@ -1,6 +1,6 @@
 Database: HRMS
 Connection: DefaultConnection (src/HRMBT.Web/appsettings.json)
-Generated: 2026-05-15 16:12:20
+Generated: 2026-05-20 14:47:48
 
 [dbo].[__EFMigrationsHistory]
   - MigrationId (nvarchar(150), Nullable: NO)
@@ -14,13 +14,13 @@ Generated: 2026-05-15 16:12:20
   - Amount (decimal(18,2), Nullable: NO)
   - IsPercentage (bit, Nullable: NO)
   - PercentageValue (decimal(5,2), Nullable: YES)
-  - EffectiveDate (datetime2, Nullable: NO)
-  - EndDate (datetime2, Nullable: YES)
+  - EffectiveDate (datetime2(7), Nullable: NO)
+  - EndDate (datetime2(7), Nullable: YES)
   - IsActive (bit, Nullable: NO)
-  - CreatedDate (datetime2, Nullable: NO)
+  - CreatedDate (datetime2(7), Nullable: NO)
   - CreatedBy (nvarchar(100), Nullable: NO)
-  - ModifiedDate (datetime2, Nullable: YES)
-  - ModifiedBy (nvarchar(max), Nullable: YES)
+  - ModifiedDate (datetime2(7), Nullable: YES)
+  - ModifiedBy (nvarchar(MAX), Nullable: YES)
 
 [dbo].[Attendance]
   - AttendanceID (int, Nullable: NO)
@@ -28,8 +28,8 @@ Generated: 2026-05-15 16:12:20
   - EmployeeName (nvarchar(100), Nullable: NO)
   - DepartmentName (nvarchar(50), Nullable: NO)
   - AttendanceDate (date, Nullable: NO)
-  - TimeIn (time, Nullable: YES)
-  - TimeOut (time, Nullable: YES)
+  - TimeIn (time(7), Nullable: YES)
+  - TimeOut (time(7), Nullable: YES)
   - Status (nvarchar(10), Nullable: YES)
   - Comments (nvarchar(255), Nullable: YES)
 
@@ -39,8 +39,8 @@ Generated: 2026-05-15 16:12:20
   - UploadedBy (nvarchar(100), Nullable: YES)
   - UploadDate (datetime, Nullable: YES)
   - Status (nvarchar(50), Nullable: YES)
-  - Message (nvarchar(max), Nullable: YES)
-  - ErrorDetails (nvarchar(max), Nullable: YES)
+  - Message (nvarchar(MAX), Nullable: YES)
+  - ErrorDetails (nvarchar(MAX), Nullable: YES)
   - SuccessCount (int, Nullable: YES)
   - FailureCount (int, Nullable: YES)
   - TotalRows (int, Nullable: YES)
@@ -55,7 +55,7 @@ Generated: 2026-05-15 16:12:20
 [dbo].[Configuration]
   - UID (int, Nullable: NO)
   - ConfigKey (nvarchar(50), Nullable: YES)
-  - ConfigValue (nvarchar(max), Nullable: YES)
+  - ConfigValue (nvarchar(MAX), Nullable: YES)
 
 [dbo].[Deductions]
   - Id (int, Nullable: NO)
@@ -69,9 +69,9 @@ Generated: 2026-05-15 16:12:20
   - EffectiveDate (date, Nullable: NO)
   - EndDate (date, Nullable: YES)
   - IsActive (bit, Nullable: NO)
-  - CreatedDate (datetime2, Nullable: NO)
+  - CreatedDate (datetime2(7), Nullable: NO)
   - CreatedBy (nvarchar(100), Nullable: NO)
-  - ModifiedDate (datetime2, Nullable: YES)
+  - ModifiedDate (datetime2(7), Nullable: YES)
   - ModifiedBy (nvarchar(100), Nullable: YES)
 
 [dbo].[Departments]
@@ -90,9 +90,9 @@ Generated: 2026-05-15 16:12:20
   - Designation (varchar(250), Nullable: YES)
   - DateOfJoining (date, Nullable: YES)
   - EmployeeStatus (varchar(250), Nullable: YES)
-  - ModifiedBy (varchar(max), Nullable: YES)
-  - ModifiedOn (nvarchar(max), Nullable: YES)
-  - Details (nvarchar(max), Nullable: YES)
+  - ModifiedBy (varchar(MAX), Nullable: YES)
+  - ModifiedOn (nvarchar(MAX), Nullable: YES)
+  - Details (nvarchar(MAX), Nullable: YES)
   - Project (nvarchar(50), Nullable: YES)
   - CarryForwardLeaves (float, Nullable: YES)
   - Year2022 (float, Nullable: YES)
@@ -125,8 +125,8 @@ Generated: 2026-05-15 16:12:20
   - TotalDays (float, Nullable: YES)
   - AddDays (int, Nullable: YES)
   - ExcludeDays (int, Nullable: YES)
-  - Short_Adj (varchar(max), Nullable: YES)
-  - DepSupervisorComments (varchar(max), Nullable: YES)
+  - Short_Adj (varchar(MAX), Nullable: YES)
+  - DepSupervisorComments (varchar(MAX), Nullable: YES)
   - Year (varchar(50), Nullable: YES)
   - Status (nvarchar(50), Nullable: YES)
   - ApprovedBy (varchar(50), Nullable: YES)
@@ -146,10 +146,10 @@ Generated: 2026-05-15 16:12:20
 [dbo].[LeaveRequests]
   - Id (int, Nullable: NO)
   - EmployeeId (int, Nullable: NO)
-  - LeaveType (nvarchar(max), Nullable: NO)
-  - FromDate (datetime2, Nullable: NO)
-  - ToDate (datetime2, Nullable: NO)
-  - Status (nvarchar(max), Nullable: YES)
+  - LeaveType (nvarchar(MAX), Nullable: NO)
+  - FromDate (datetime2(7), Nullable: NO)
+  - ToDate (datetime2(7), Nullable: NO)
+  - Status (nvarchar(MAX), Nullable: YES)
 
 [dbo].[PayslipDetails]
   - Id (int, Nullable: NO)
@@ -172,12 +172,12 @@ Generated: 2026-05-15 16:12:20
   - NetSalary (decimal(18,2), Nullable: NO)
   - WorkingDays (int, Nullable: YES)
   - LeaveDays (decimal(5,2), Nullable: YES)
-  - LeaveBalance (nvarchar(max), Nullable: YES)
-  - CalculationDetails (nvarchar(max), Nullable: NO)
-  - GeneratedDate (datetime2, Nullable: NO)
+  - LeaveBalance (nvarchar(MAX), Nullable: YES)
+  - CalculationDetails (nvarchar(MAX), Nullable: NO)
+  - GeneratedDate (datetime2(7), Nullable: NO)
   - GeneratedBy (nvarchar(100), Nullable: NO)
   - IsLocked (bit, Nullable: NO)
-  - LockedDate (datetime2, Nullable: YES)
+  - LockedDate (datetime2(7), Nullable: YES)
   - Notes (nvarchar(1000), Nullable: YES)
   - TaxPercentage (decimal(18,2), Nullable: NO)
   - TaxAmount (decimal(18,2), Nullable: NO)
@@ -187,13 +187,14 @@ Generated: 2026-05-15 16:12:20
   - MinSalary (decimal(18,2), Nullable: NO)
   - MaxSalary (decimal(18,2), Nullable: YES)
   - TaxPercentage (decimal(18,2), Nullable: NO)
+  - TaxYear (nvarchar(20), Nullable: NO)
 
 [dbo].[Users]
   - uid (int, Nullable: NO)
   - EmployeeId (varchar(50), Nullable: YES)
   - Username (nvarchar(100), Nullable: NO)
   - PasswordHash (nvarchar(255), Nullable: NO)
-  - Role (nvarchar(max), Nullable: YES)
-  - CreatedBy (varchar(max), Nullable: YES)
-  - CreatedOn (varchar(max), Nullable: YES)
-  - History (varchar(max), Nullable: YES)
+  - Role (nvarchar(MAX), Nullable: YES)
+  - CreatedBy (varchar(MAX), Nullable: YES)
+  - CreatedOn (varchar(MAX), Nullable: YES)
+  - History (varchar(MAX), Nullable: YES)

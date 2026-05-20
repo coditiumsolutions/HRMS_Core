@@ -1,3 +1,4 @@
+using System.Globalization;
 using HRMBT.Web.Data;
 using HRMBT.Web.Infrastructure;
 using HRMBT.Web.Models;
@@ -91,7 +92,7 @@ namespace HRMBT.Web.Services.Payroll
                 decimal totalPayrollDeductions = deductions.Sum(d => DeductionComputedAmount(d, gross));
 
                 // Tax is calculated on BasicSalary as requested.
-                var taxResult = CalculateTax(employee, basic);
+                var taxResult = CalculateTax(employee, basic, year);
 
                 decimal totalWithheld = totalPayrollDeductions + taxResult.TaxAmount;
                 decimal netSalary = gross - totalWithheld;
@@ -166,16 +167,18 @@ namespace HRMBT.Web.Services.Payroll
 
         /// <summary>
         /// Matches <see cref="TaxRule"/> to basic salary only: TaxAmount = BasicSalary × TaxPercentage / 100.
+        /// Rules are filtered by <see cref="TaxRule.TaxYear"/> when it matches the payroll year (canonical: <c>year.ToString(CultureInfo.InvariantCulture)</c>).
+        /// If no rows match that year (legacy databases), falls back to all rules.
         /// ApplyTax must be affirmative (yes / y / true / 1); blank/null does not deduct tax — set the flag on the employee row.
         /// Chooses the slab with the greatest MinSalary whose band still contains the salary (proper bracket resolution).
         /// MaxSalary unset or zero is treated as no upper ceiling.
         /// </summary>
-        private (decimal TaxPercentage, decimal TaxAmount) CalculateTax(Employee employee, decimal basicSalary)
+        private (decimal TaxPercentage, decimal TaxAmount) CalculateTax(Employee employee, decimal basicSalary, int payslipYear)
         {
             if (!ShouldApplyIncomeTax(employee.ApplyTax))
                 return (0m, 0m);
 
-            var applicableRule = FindApplicableTaxRule(basicSalary);
+            var applicableRule = FindApplicableTaxRule(basicSalary, payslipYear);
             if (applicableRule == null)
                 return (0m, 0m);
 
@@ -209,13 +212,29 @@ namespace HRMBT.Web.Services.Payroll
         }
 
         /// <summary>
-        /// Loads rules once; picks the slab with largest MinSalary bracket containing basicSalary.
+        /// Loads rules; prefers rows whose <see cref="TaxRule.TaxYear"/> matches the payslip year. If none match (legacy DB), uses all rules.
+        /// Picks the slab with largest MinSalary bracket containing basicSalary.
         /// </summary>
-        private TaxRule? FindApplicableTaxRule(decimal basicSalary)
+        private TaxRule? FindApplicableTaxRule(decimal basicSalary, int payslipYear)
         {
             var rules = _context.TaxRules.AsNoTracking().ToList();
+            var yearKey = payslipYear.ToString(CultureInfo.InvariantCulture);
 
-            return rules
+            var labeled = rules.Where(r => !string.IsNullOrWhiteSpace(r.TaxYear)).ToList();
+            var forYear = labeled
+                .Where(r => string.Equals(r.TaxYear.Trim(), yearKey, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            List<TaxRule> pool;
+            if (forYear.Count > 0)
+                pool = forYear;
+            else
+            {
+                var wildcards = rules.Where(r => string.IsNullOrWhiteSpace(r.TaxYear)).ToList();
+                pool = wildcards.Count > 0 ? wildcards : rules;
+            }
+
+            return pool
                 .Where(r => basicSalary >= r.MinSalary && basicSalary <= EffectiveMaxInclusive(r.MaxSalary))
                 .OrderByDescending(r => r.MinSalary)
                 .FirstOrDefault();

@@ -24,5 +24,11 @@ public class TaxRule
     [Display(Name = "Tax Percentage")]
     [Range(0, 100, ErrorMessage = "Tax percentage must be between 0 and 100")]
     public decimal TaxPercentage { get; set; }
+
+    /// <summary>Fiscal/tax calendar label for this slab (typically matches payroll <see cref="Payslip.Year"/> when stored as a 4-digit year).</summary>
+    [Required(ErrorMessage = "Tax year is required")]
+    [Display(Name = "Tax Year")]
+    [StringLength(20, MinimumLength = 1, ErrorMessage = "Tax year must be between 1 and 20 characters")]
+    public string TaxYear { get; set; } = string.Empty;
 }
 

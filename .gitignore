@@ -196,3 +196,6 @@ $RECYCLE.BIN/
 appsettings.Development.json
 appsettings.Local.json
 
+# Full DB export (schema + data; may contain passwords and PII — regenerate locally)
+database-production.sql
+

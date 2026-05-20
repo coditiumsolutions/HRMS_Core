@@ -1,67 +1,95 @@
-$ErrorActionPreference = "Stop"
-$appsettings = Join-Path $PSScriptRoot "..\src\HRMBT.Web\appsettings.json" | Resolve-Path
-$json = Get-Content -Raw -LiteralPath $appsettings | ConvertFrom-Json
-$cs = $json.ConnectionStrings.DefaultConnection
-if (-not $cs) { throw "DefaultConnection not found in appsettings.json" }
+# One-off: regenerate db.txt from SQL Server DefaultConnection in appsettings.json
+$ErrorActionPreference = 'Stop'
+# Script lives in repo /tools; repo root is one level up
+$root = Split-Path $PSScriptRoot -Parent
+$appsettings = Join-Path $root 'src/HRMBT.Web/appsettings.json'
+$cfg = Get-Content $appsettings -Raw | ConvertFrom-Json
+$cs = $cfg.ConnectionStrings.DefaultConnection
+if (-not $cs) { throw "DefaultConnection missing in appsettings.json" }
 
-$outPath = Join-Path $PSScriptRoot "..\db.txt" | Resolve-Path
+Add-Type -AssemblyName System.Data
 
-function Get-SqlDisplayType {
-    param($r)
-    $t = [string]$r.DataType
-    if ($t -in @("nvarchar", "nchar", "varchar", "char", "varbinary", "binary")) {
-        $ml = [int]$r.max_length
-        if ($ml -lt 0) { return "$t(max)" }
-        $chars = if ($t -like "n*") { [int]($ml / 2) } else { $ml }
-        return "$t($chars)"
+function Format-SqlTypeName([string]$typename, [int]$maxlen, [byte]$precision, [byte]$scale) {
+    $t = $typename.ToLowerInvariant()
+    if ($t -in @('varchar', 'nvarchar', 'char', 'nchar')) {
+        if ($maxlen -eq -1) { return "$typename(MAX)" }
+        $len = if ($t.StartsWith('n')) { $maxlen / 2 } else { $maxlen }
+        return "$typename($([int]$len))"
     }
-    if ($t -in @("decimal", "numeric")) {
-        return "$t($($r.precision),$($r.scale))"
+    if ($t -eq 'decimal' -or $t -eq 'numeric') { return "$typename($precision,$scale)" }
+    if ($t -eq 'float' -and $precision -ne 53) { return "$typename($precision)" }
+    if ($t -eq 'datetimeoffset' -or $t -eq 'datetime2' -or $t -eq 'time') {
+        if ($scale -gt 0) { return "$typename($scale)" }
+        return $typename
     }
-    if ($t -eq "float") {
-        if ([int]$r.precision -eq 53) { return "float" }
-        return "float($($r.precision))"
-    }
-    return $t
+    return $typename
 }
 
 $conn = New-Object System.Data.SqlClient.SqlConnection($cs)
+$query = @'
+SELECT DB_NAME() AS DbName,
+    SCHEMA_NAME(t.schema_id) AS SchemaName,
+    t.name AS TableName,
+    c.name AS ColumnName,
+    TYPE_NAME(c.user_type_id) AS TypeName,
+    c.max_length,
+    c.precision,
+    c.scale,
+    c.is_nullable,
+    c.column_id
+FROM sys.columns c
+INNER JOIN sys.tables t ON c.object_id = t.object_id
+WHERE t.is_ms_shipped = 0
+ORDER BY SchemaName, TableName, c.column_id
+'@
+
 $conn.Open()
-$cmd = $conn.CreateCommand()
-$cmd.CommandText = @"
-SELECT t.name AS TableName, c.column_id, c.name AS ColumnName,
-  TYPE_NAME(c.user_type_id) AS DataType, c.max_length, c.precision, c.scale, c.is_nullable
-FROM sys.tables t
-INNER JOIN sys.columns c ON c.object_id = t.object_id
-WHERE SCHEMA_NAME(t.schema_id) = N'dbo'
-ORDER BY t.name, c.column_id
-"@
-$da = New-Object System.Data.SqlClient.SqlDataAdapter $cmd
-$dt = New-Object System.Data.DataTable
-[void]$da.Fill($dt)
-
-$c2 = $conn.CreateCommand()
-$c2.CommandText = "SELECT DB_NAME()"
-$dbName = [string]$c2.ExecuteScalar()
-$conn.Close()
-
-$sb = New-Object System.Text.StringBuilder
-[void]$sb.AppendLine("Database: $dbName")
-[void]$sb.AppendLine("Connection: DefaultConnection (src/HRMBT.Web/appsettings.json)")
-[void]$sb.AppendLine("Generated: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')")
-[void]$sb.AppendLine("")
-
-$groups = $dt | Group-Object TableName
-foreach ($g in $groups) {
-    [void]$sb.AppendLine("[dbo].[$($g.Name)]")
-    foreach ($row in $g.Group) {
-        $typ = Get-SqlDisplayType $row
-        $nullStr = if ($row.is_nullable) { "YES" } else { "NO" }
-        [void]$sb.AppendLine("  - $($row.ColumnName) ($typ, Nullable: $nullStr)")
+try {
+    $cmd = New-Object System.Data.SqlClient.SqlCommand($query, $conn)
+    $reader = $cmd.ExecuteReader()
+    $rows = New-Object System.Collections.Generic.List[object]
+    while ($reader.Read()) {
+        $rows.Add([ordered]@{
+                DbName      = [string]$reader['DbName']
+                SchemaName  = [string]$reader['SchemaName']
+                TableName   = [string]$reader['TableName']
+                ColumnName  = [string]$reader['ColumnName']
+                TypeName    = [string]$reader['TypeName']
+                max_length  = [int]$reader['max_length']
+                precision   = [byte]$reader['precision']
+                scale       = [byte]$reader['scale']
+                is_nullable = [bool]$reader['is_nullable']
+            })
     }
-    [void]$sb.AppendLine("")
+    $reader.Dispose()
+}
+finally {
+    $conn.Dispose()
 }
 
-$text = ($sb.ToString().TrimEnd() + "`r`n")
-[System.IO.File]::WriteAllText($outPath, $text, [System.Text.UTF8Encoding]::new($false))
-Write-Host "OK: $($groups.Count) tables, $($dt.Rows.Count) columns -> $outPath"
+if ($rows.Count -eq 0) { throw 'No tables/columns returned (empty database?).' }
+
+$stamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+$db = $rows[0].DbName
+$outPath = Join-Path $root 'db.txt'
+$lines = New-Object System.Collections.Generic.List[string]
+[void]$lines.Add("Database: $db")
+[void]$lines.Add('Connection: DefaultConnection (src/HRMBT.Web/appsettings.json)')
+[void]$lines.Add("Generated: $stamp")
+
+$currentKey = $null
+foreach ($r in $rows) {
+    $key = "$($r.SchemaName)|$($r.TableName)"
+    if ($key -ne $currentKey) {
+        [void]$lines.Add('')
+        [void]$lines.Add("[$($r.SchemaName)].[$($r.TableName)]")
+        $currentKey = $key
+    }
+    $ftype = Format-SqlTypeName $r.TypeName $r.max_length $r.precision $r.scale
+    $nullStr = if ($r.is_nullable) { 'YES' } else { 'NO' }
+    [void]$lines.Add("  - $($r.ColumnName) ($ftype, Nullable: $nullStr)")
+}
+
+$content = ($lines | ForEach-Object { $_ }) -join "`r`n"
+[System.IO.File]::WriteAllText($outPath, $content, [System.Text.UTF8Encoding]::new($false))
+Write-Host "Wrote $($rows.Count) columns to $outPath"
