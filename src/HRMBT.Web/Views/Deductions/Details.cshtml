@@ -4,6 +4,12 @@
     ViewData["Title"] = "Deduction details";
     ViewData["Module"] = "Deductions";
     var isPct = string.Equals(Model.CalculationMethod, "Percentage", StringComparison.OrdinalIgnoreCase);
+    var empName = Model.Employee?.EmployeeName;
+    var empCode = Model.Employee?.EmployeeID;
+    var valueLabel = isPct ? "Percentage" : "Fixed (PKR)";
+    var valueText = isPct
+        ? $"{Model.PercentageValue:N2} %"
+        : $"PKR {Model.PercentageValue:N2}";
 }
 
 @section Styles {
@@ -17,58 +23,78 @@
             <ol class="breadcrumb mb-0 small">
                 <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Home</a></li>
                 <li class="breadcrumb-item"><a asp-action="Index">Deductions</a></li>
-                <li class="breadcrumb-item active" aria-current="page">Details</li>
+                <li class="breadcrumb-item active" aria-current="page">Details #@Model.Id</li>
             </ol>
         </nav>
 
-        <div class="section-card mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-eye"></i>Deduction #@Model.Id</span>
-                <div class="d-flex gap-2">
-                    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-sm btn-action-secondary"><i class="bi bi-pencil me-1"></i>Edit</a>
-                    <a asp-action="Index" class="btn btn-sm btn-outline-secondary">Back</a>
+        <div class="grid-card mb-3">
+            <div class="card-header">
+                <span><i class="bi bi-eye"></i>Deduction details</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="payroll-details-table mb-0">
+                        <tbody>
+                            <tr>
+                                <th scope="row" class="pd-label">Name</th>
+                                <td class="pd-value">@(string.IsNullOrWhiteSpace(empName) ? "—" : empName)</td>
+                                <th scope="row" class="pd-label">Employee ID</th>
+                                <td class="pd-value">@(string.IsNullOrWhiteSpace(empCode) ? Model.EmployeeId.ToString() : empCode)</td>
+                            </tr>
+                            <tr>
+                                <th scope="row" class="pd-label">Deduction ID</th>
+                                <td class="pd-value">@Model.Id</td>
+                                <th scope="row" class="pd-label">Deduction type</th>
+                                <td class="pd-value">@Model.DeductionType</td>
+                            </tr>
+                            <tr>
+                                <th scope="row" class="pd-label">Deduction name</th>
+                                <td class="pd-value">@Model.DeductionName</td>
+                                <th scope="row" class="pd-label">Frequency</th>
+                                <td class="pd-value">@Model.Frequency</td>
+                            </tr>
+                            <tr>
+                                <th scope="row" class="pd-label">Calculation</th>
+                                <td class="pd-value">@Model.CalculationMethod</td>
+                                <th scope="row" class="pd-label">@valueLabel</th>
+                                <td class="pd-value">@valueText</td>
+                            </tr>
+                            <tr>
+                                <th scope="row" class="pd-label">Mandatory</th>
+                                <td class="pd-value">@(Model.IsMandatory ? "Yes" : "No")</td>
+                                <th scope="row" class="pd-label">Active</th>
+                                <td class="pd-value">@(Model.IsActive ? "Yes" : "No")</td>
+                            </tr>
+                            <tr>
+                                <th scope="row" class="pd-label">Effective</th>
+                                <td class="pd-value">@Model.EffectiveDate.ToString("yyyy-MM-dd")</td>
+                                <th scope="row" class="pd-label">End</th>
+                                <td class="pd-value">@(Model.EndDate?.ToString("yyyy-MM-dd") ?? "—")</td>
+                            </tr>
+                            <tr>
+                                <th scope="row" class="pd-label">Created</th>
+                                <td class="pd-value">@Model.CreatedDate.ToString("yyyy-MM-dd HH:mm")</td>
+                                <th scope="row" class="pd-label">Created by</th>
+                                <td class="pd-value">@(string.IsNullOrWhiteSpace(Model.CreatedBy) ? "—" : Model.CreatedBy)</td>
+                            </tr>
+                            @if (Model.ModifiedDate.HasValue)
+                            {
+                                <tr>
+                                    <th scope="row" class="pd-label">Modified</th>
+                                    <td class="pd-value">@Model.ModifiedDate.Value.ToString("yyyy-MM-dd HH:mm")</td>
+                                    <th scope="row" class="pd-label">Modified by</th>
+                                    <td class="pd-value">@(string.IsNullOrWhiteSpace(Model.ModifiedBy) ? "—" : Model.ModifiedBy)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
                 </div>
             </div>
-            <div class="card-body p-3 p-lg-4">
-                <dl class="row mb-0">
-                    <dt class="col-sm-3">Employee</dt>
-                    <dd class="col-sm-9">@(Model.Employee?.EmployeeName ?? "—") <span class="text-muted">(@(Model.Employee?.EmployeeID ?? Model.EmployeeId.ToString()))</span></dd>
-                    <dt class="col-sm-3">Deduction type</dt>
-                    <dd class="col-sm-9">@Model.DeductionType</dd>
-                    <dt class="col-sm-3">Deduction name</dt>
-                    <dd class="col-sm-9">@Model.DeductionName</dd>
-                    <dt class="col-sm-3">Frequency</dt>
-                    <dd class="col-sm-9">@Model.Frequency</dd>
-                    <dt class="col-sm-3">Calculation</dt>
-                    <dd class="col-sm-9">@Model.CalculationMethod</dd>
-                    <dt class="col-sm-3">@(isPct ? "Percentage" : "Fixed (PKR)")</dt>
-                    <dd class="col-sm-9">
-                        @if (isPct)
-                        {
-                            @($"{Model.PercentageValue:N2} %")
-                        }
-                        else
-                        {
-                            @($"PKR {Model.PercentageValue:N2}")
-                        }
-                    </dd>
-                    <dt class="col-sm-3">Mandatory</dt>
-                    <dd class="col-sm-9">@(Model.IsMandatory ? "Yes" : "No")</dd>
-                    <dt class="col-sm-3">Effective</dt>
-                    <dd class="col-sm-9">@Model.EffectiveDate.ToString("yyyy-MM-dd")</dd>
-                    <dt class="col-sm-3">End</dt>
-                    <dd class="col-sm-9">@(Model.EndDate?.ToString("yyyy-MM-dd") ?? "—")</dd>
-                    <dt class="col-sm-3">Active</dt>
-                    <dd class="col-sm-9">@(Model.IsActive ? "Yes" : "No")</dd>
-                    <dt class="col-sm-3">Created</dt>
-                    <dd class="col-sm-9">@Model.CreatedDate.ToString("yyyy-MM-dd HH:mm") by @Model.CreatedBy</dd>
-                    @if (Model.ModifiedDate.HasValue)
-                    {
-                        <dt class="col-sm-3">Modified</dt>
-                        <dd class="col-sm-9">@Model.ModifiedDate.Value.ToString("yyyy-MM-dd HH:mm") by @(Model.ModifiedBy ?? "—")</dd>
-                    }
-                </dl>
-            </div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 justify-content-end mb-4">
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-sm btn-action-secondary"><i class="bi bi-pencil me-1"></i>Edit</a>
+            <a asp-action="Index" class="btn btn-sm btn-action-secondary"><i class="bi bi-arrow-left me-1"></i>Back to list</a>
         </div>
     </div>
 </div>

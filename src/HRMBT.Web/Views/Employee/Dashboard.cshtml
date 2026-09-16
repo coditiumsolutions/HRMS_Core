@@ -11,19 +11,6 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" crossorigin="anonymous" />
     <link rel="stylesheet" href="~/css/employee-list.css" asp-append-version="true" />
     <style>
-        .employee-list-page .page-title {
-            font-size: 2.25rem;
-            line-height: 1.2;
-            letter-spacing: -0.01em;
-        }
-        .employee-list-page .page-title i { font-size: 2.1rem; vertical-align: -0.15em; }
-        .employee-list-page .page-subtitle { font-size: 1rem; }
-        @@media (max-width: 767.98px) {
-            .employee-list-page .page-title { font-size: 1.75rem; }
-            .employee-list-page .page-title i { font-size: 1.65rem; }
-            .employee-list-page .page-subtitle { font-size: 0.95rem; }
-        }
-
         .kpi-card {
             background: #fff;
             border: 1px solid rgba(0, 32, 63, 0.08);
@@ -87,37 +74,6 @@
 
 <div class="employee-list-page py-4">
     <div class="container-fluid px-3 px-lg-4">
-
-        <!-- Breadcrumb -->
-        <nav aria-label="breadcrumb" class="mb-3">
-            <ol class="breadcrumb mb-0 small">
-                <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Home</a></li>
-                <li class="breadcrumb-item"><a asp-action="Index">Employees</a></li>
-                <li class="breadcrumb-item active" aria-current="page">Dashboard</li>
-            </ol>
-        </nav>
-
-        <!-- Header -->
-        <div class="page-header-card p-4 mb-4">
-            <div class="row align-items-center g-3">
-                <div class="col-lg">
-                    <h1 class="page-title mb-1 fw-bold text-dark">
-                        <i class="bi bi-bar-chart-line-fill text-primary me-2"></i>Employee Dashboard
-                    </h1>
-                    <p class="text-muted mb-0 page-subtitle">Workforce overview — headcount, status mix, and distribution by department.</p>
-                </div>
-                <div class="col-lg-auto">
-                    <div class="toolbar-actions d-flex flex-wrap align-items-center gap-2">
-                        <a asp-action="Index" class="btn btn-action-outline">
-                            <i class="bi bi-arrow-left-short me-1"></i>Back to list
-                        </a>
-                        <a asp-action="Create" class="btn btn-action-primary">
-                            <i class="bi bi-plus-lg me-1"></i>Add Employee
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
 
         <!-- KPI cards -->
         <div class="row g-3 mb-4">

@@ -20,19 +20,46 @@
 .payslip-page .section-card .card-header,
 .payslip-page .filter-card .card-header,
 .payslip-page .grid-card .card-header {
-  background: linear-gradient(90deg, #00203f 0%, #0b2d52 100%);
+  background: linear-gradient(90deg, #336b87 0%, #2a5a73 100%);
   color: #fff;
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 0.82rem;
   letter-spacing: 0.02em;
-  border-bottom: 3px solid #d4af37;
-  padding: 0.85rem 1.25rem;
+  border-bottom: 2px solid #d4af37;
+  padding: 0.45rem 1rem;
 }
 
 .payslip-page .card-header i {
-  color: #d4af37;
+  color: #f0d78c;
   margin-right: 0.5rem;
   vertical-align: -0.125em;
+}
+
+/* Generate payroll — compact square-corner action buttons (single row) */
+.payslip-page .payroll-run-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.payslip-page .payroll-run-actions-left {
+  flex: 1 1 auto;
+}
+
+.payslip-page .btn-payroll-corner {
+  border-radius: 0 !important;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: 0.02em;
+}
+
+.payslip-page .btn-payroll-corner .bi {
+  font-size: 0.75rem;
+  vertical-align: -0.1em;
 }
 
 .payslip-page .form-label {
@@ -211,7 +238,7 @@
 
 /* Modern table (list view) */
 .payslip-page .grid-card .card-body { padding: 0; }
-.payslip-page .table-wrap { max-height: 65vh; overflow: auto; }
+.payslip-page .table-wrap { overflow: visible; }
 .payslip-page table.payslip-grid {
   width: 100%; margin-bottom: 0; font-size: 0.9rem;
   border-collapse: separate; border-spacing: 0;
@@ -318,6 +345,90 @@
   display: block; font-size: 0.95rem; color: #212529; font-weight: 500; word-break: break-word;
 }
 .payslip-page .info-value.text-empty { color: #adb5bd; font-style: italic; font-weight: 400; }
+
+/* Payroll Details — 4-column title / field / title / field */
+.payslip-page .payroll-details-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.payslip-page .payroll-details-table tr {
+  border-bottom: 1px solid #eef0f2;
+}
+.payslip-page .payroll-details-table tr:last-child {
+  border-bottom: 0;
+}
+.payslip-page .payroll-details-table .pd-label {
+  width: 16%;
+  padding: 0.65rem 0.85rem;
+  vertical-align: middle;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #000;
+  background: #f8fafc;
+  border-right: 1px solid #eef0f2;
+}
+.payslip-page .payroll-details-table .pd-value {
+  width: 34%;
+  padding: 0.65rem 0.85rem;
+  vertical-align: middle;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #0d6efd;
+  word-break: break-word;
+}
+.payslip-page .payroll-details-table .pd-value-emphasis {
+  font-weight: 700;
+  color: #0a58ca;
+}
+.payslip-page .payroll-details-table .pd-value .status-pill {
+  display: inline-flex;
+}
+@media (max-width: 767.98px) {
+  .payslip-page .payroll-details-table,
+  .payslip-page .payroll-details-table tbody,
+  .payslip-page .payroll-details-table tr,
+  .payslip-page .payroll-details-table th,
+  .payslip-page .payroll-details-table td {
+    display: block;
+    width: 100%;
+  }
+  .payslip-page .payroll-details-table .pd-label {
+    border-right: 0;
+    border-bottom: 0;
+    padding-bottom: 0.15rem;
+  }
+  .payslip-page .payroll-details-table .pd-value {
+    padding-top: 0.15rem;
+    padding-bottom: 0.75rem;
+  }
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #payrollDetailsPrintArea,
+  #payrollDetailsPrintArea * {
+    visibility: visible;
+  }
+  #payrollDetailsPrintArea {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    box-shadow: none;
+    border: 1px solid #ccc;
+  }
+  .no-print,
+  .sidebar,
+  .navbar,
+  .site-footer,
+  .breadcrumb {
+    display: none !important;
+  }
+}
 
 @media (max-width: 991.98px) {
   .payslip-page { padding-bottom: 7.5rem; }

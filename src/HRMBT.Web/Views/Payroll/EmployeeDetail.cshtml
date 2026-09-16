@@ -1,4 +1,5 @@
 @model HRMBT.Web.Models.PaginatedList<HRMBT.Web.Models.Employee>
+@using HRMBT.Web.Infrastructure
 
 @{
     ViewData["Title"] = "Employee Detail";
@@ -9,16 +10,6 @@
         : "EmployeeDetail";
 
     var grossByUid = ViewBag.GrossSalaryByUid as Dictionary<int, decimal> ?? new Dictionary<int, decimal>();
-
-@using HRMBT.Web.Infrastructure
-
-    string Initials(string? name)
-    {
-        if (string.IsNullOrWhiteSpace(name)) return "?";
-        var parts = name.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length == 1) return parts[0].Substring(0, Math.Min(2, parts[0].Length)).ToUpperInvariant();
-        return (parts[0][0].ToString() + parts[^1][0].ToString()).ToUpperInvariant();
-    }
 }
 
 @section Styles {
@@ -61,17 +52,27 @@
             </div>
         }
 
-        <!-- Department filter -->
-        <div class="filter-card mb-4">
-            <div class="card-header"><i class="bi bi-funnel"></i>Filter employees</div>
-            <div class="card-body p-3 p-lg-4">
-                <form asp-action="@routeAction" method="get" class="row g-3" onsubmit="document.getElementById('deptPageInput').value = '1';">
-                    <input type="hidden" name="page" id="deptPageInput" value="1" />
-                    <input type="hidden" name="pageSize" value="@(ViewBag.CurrentPageSize ?? 20)" />
-                    <div class="col-md-4">
-                        <label for="department" class="form-label">Department</label>
-                        <select name="department" id="department" class="form-select"
-                                onchange="document.getElementById('deptPageInput').value = '1'; this.form.submit();">
+        <!-- Department filter (GET) — fields/buttons use form= attribute -->
+        <form asp-action="@routeAction" method="get" id="deptFilterForm" onsubmit="document.getElementById('deptPageInput').value = '1';">
+            <input type="hidden" name="page" id="deptPageInput" value="1" />
+            <input type="hidden" name="pageSize" value="@(ViewBag.CurrentPageSize ?? 20)" />
+        </form>
+
+        <!-- Pay-run controls (POST) -->
+        <form asp-action="GeneratePayrollForSelected" method="post" id="generatePayrollForm">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="sourceAction" value="@routeAction" />
+            <input type="hidden" name="department" value="@ViewBag.SelectedDepartment" />
+        </form>
+
+        <div class="section-card mb-3">
+            <div class="card-header"><i class="bi bi-cash-coin"></i>Run payroll for selected</div>
+            <div class="card-body p-2 p-lg-3">
+                <div class="row g-2 align-items-end">
+                    <div class="col-12 col-md-5">
+                        <label for="department" class="form-label mb-1">Department</label>
+                        <select name="department" id="department" class="form-select form-select-sm" form="deptFilterForm"
+                                onchange="document.getElementById('deptPageInput').value = '1'; document.getElementById('deptFilterForm').submit();">
                             <option value="">All Departments</option>
                             @if (ViewBag.Departments != null)
                             {
@@ -83,66 +84,48 @@
                             }
                         </select>
                     </div>
-                    <div class="col-md-4 d-flex align-items-end gap-2">
-                        <button type="submit" class="btn btn-action-primary">
-                            <i class="bi bi-search me-1"></i>Apply
-                        </button>
-                        <a asp-action="@routeAction" class="btn btn-action-secondary">
-                            <i class="bi bi-x-lg me-1"></i>Clear
-                        </a>
+                    <div class="col-6 col-md-4">
+                        <label for="month" class="form-label mb-1">Month</label>
+                        @{
+                            ViewData["MonthFieldName"] = "month";
+                            ViewData["MonthFieldId"] = "month";
+                            ViewData["SelectedMonth"] = PayrollMonthHelper.CurrentMonthName();
+                            ViewData["MonthRequired"] = true;
+                            ViewData["MonthFormId"] = "generatePayrollForm";
+                            ViewData["MonthSelectClass"] = "form-select form-select-sm";
+                        }
+                        <partial name="_PayrollMonthSelect" />
                     </div>
-                </form>
+                    <div class="col-6 col-md-3">
+                        <label for="year" class="form-label mb-1">Year</label>
+                        <input type="number" name="year" id="year" class="form-control form-control-sm"
+                               form="generatePayrollForm"
+                               value="@DateTime.Now.Year" min="2000" max="2100" required />
+                    </div>
+                </div>
+                <div class="payroll-run-actions mt-2">
+                    <div class="payroll-run-actions-left d-flex flex-wrap gap-2">
+                        <button type="button" class="btn btn-payroll-corner btn-action-secondary" onclick="selectAll()">
+                            <i class="bi bi-check2-all me-1"></i>Select all
+                        </button>
+                        <button type="button" class="btn btn-payroll-corner btn-action-outline" onclick="deselectAll()">
+                            <i class="bi bi-x-lg me-1"></i>Deselect all
+                        </button>
+                        <button type="submit" class="btn btn-payroll-corner btn-action-primary" form="deptFilterForm">
+                            <i class="bi bi-funnel-fill me-1"></i>Apply
+                        </button>
+                    </div>
+                    <button type="submit" class="btn btn-payroll-corner btn-action-primary" form="generatePayrollForm" onclick="return confirmGenerate()">
+                        <span class="spinner-border spinner-border-sm me-1 d-none" id="genSpinner" role="status"></span>
+                        <i class="bi bi-play-fill me-1" id="genIcon"></i>Generate payroll
+                    </button>
+                </div>
             </div>
         </div>
 
-        <!-- Pay-run controls -->
-        <form asp-action="GeneratePayrollForSelected" method="post" id="generatePayrollForm">
-            @Html.AntiForgeryToken()
-            <input type="hidden" name="sourceAction" value="@routeAction" />
-            <input type="hidden" name="department" value="@ViewBag.SelectedDepartment" />
-
-            <div class="section-card mb-4">
-                <div class="card-header"><i class="bi bi-cash-coin"></i>Run payroll for selected</div>
-                <div class="card-body p-3 p-lg-4">
-                    <div class="row g-3 align-items-end">
-                        <div class="col-md-3">
-                            <label for="month" class="form-label">Month</label>
-                            @{
-                                ViewData["MonthFieldName"] = "month";
-                                ViewData["MonthFieldId"] = "month";
-                                ViewData["SelectedMonth"] = PayrollMonthHelper.CurrentMonthName();
-                                ViewData["MonthRequired"] = true;
-                            }
-                            <partial name="_PayrollMonthSelect" />
-                        </div>
-                        <div class="col-md-3">
-                            <label for="year" class="form-label">Year</label>
-                            <input type="number" name="year" id="year" class="form-control"
-                                   value="@DateTime.Now.Year" min="2000" max="2100" required />
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label invisible d-none d-md-block">Bulk actions</label>
-                            <div class="d-flex flex-wrap gap-2">
-                                <button type="button" class="btn btn-action-secondary" onclick="selectAll()">
-                                    <i class="bi bi-check2-all me-1"></i>Select all
-                                </button>
-                                <button type="button" class="btn btn-action-outline" onclick="deselectAll()">
-                                    <i class="bi bi-x-lg me-1"></i>Deselect all
-                                </button>
-                                <button type="submit" class="btn btn-action-primary ms-auto" onclick="return confirmGenerate()">
-                                    <span class="spinner-border spinner-border-sm me-2 d-none" id="genSpinner" role="status"></span>
-                                    <i class="bi bi-play-fill me-1" id="genIcon"></i>Generate payroll
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </form>
-
         <!-- Employee Grid -->
-        <div class="grid-card mb-4">
-            <div class="card-header d-flex align-items-center justify-content-between">
+        <div class="grid-card mb-3">
+            <div class="card-header d-flex align-items-center justify-content-between py-2">
                 <span><i class="bi bi-table"></i>Employees</span>
                 @if (Model != null && Model.Any())
                 {
@@ -167,7 +150,6 @@
                                     <th style="width: 56px;">
                                         <input type="checkbox" id="selectAllCheckbox" class="form-check-input" onclick="toggleAll(this)" title="Select all on this page" />
                                     </th>
-                                    <th style="width: 56px;">&nbsp;</th>
                                     <th class="col-payroll-id">Id</th>
                                     <th>Employee</th>
                                     <th>Department</th>
@@ -190,12 +172,6 @@
                                             {
                                                 <span class="text-muted" title="Employee is not active">—</span>
                                             }
-                                        </td>
-                                        <td>
-                                            <span class="d-inline-flex align-items-center justify-content-center rounded-circle text-white fw-bold"
-                                                  style="width:36px;height:36px;font-size:.85rem;background:linear-gradient(135deg,#336b87 0%,#00203f 100%);">
-                                                @Initials(item.EmployeeName)
-                                            </span>
                                         </td>
                                         <td class="col-payroll-id text-muted small font-monospace">@item.uid</td>
                                         <td>

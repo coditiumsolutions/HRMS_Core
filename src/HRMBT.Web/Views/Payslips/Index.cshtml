@@ -87,12 +87,12 @@
         <div class="filter-card mb-4">
             <div class="card-header"><i class="bi bi-funnel"></i>Search &amp; filters</div>
             <div class="card-body p-3 p-lg-4">
-                <form asp-action="Index" method="get" class="row g-3">
-                    <div class="col-md-4 col-lg-3">
+                <form asp-action="Index" method="get" class="row g-3 align-items-end">
+                    <div class="col-12 col-md">
                         <label class="form-label">Search</label>
                         <input type="text" name="employeeQuery" class="form-control" placeholder="Name or Employee ID…" value="@ViewBag.EmployeeQuery" />
                     </div>
-                    <div class="col-md-4 col-lg-3">
+                    <div class="col-12 col-md">
                         <label class="form-label">Department</label>
                         <select name="department" class="form-select">
                             <option value="">All</option>
@@ -105,7 +105,7 @@
                             }
                         </select>
                     </div>
-                    <div class="col-md-4 col-lg-3">
+                    <div class="col-12 col-md">
                         <label class="form-label">Employee</label>
                         <select name="employeeId" class="form-select">
                             <option value="">All employees</option>
@@ -120,7 +120,7 @@
                             }
                         </select>
                     </div>
-                    <div class="col-md-4 col-lg-2">
+                    <div class="col-12 col-md">
                         <label class="form-label">Month</label>
                         <select name="month" class="form-select">
                             <option value="">All</option>
@@ -130,7 +130,7 @@
                             }
                         </select>
                     </div>
-                    <div class="col-md-4 col-lg-2">
+                    <div class="col-12 col-md">
                         <label class="form-label">Year</label>
                         <select name="year" class="form-select">
                             <option value="">All</option>
@@ -140,7 +140,7 @@
                             }
                         </select>
                     </div>
-                    <div class="col-md-4 col-lg-2">
+                    <div class="col-12 col-md">
                         <label class="form-label">Status</label>
                         <select name="status" class="form-select">
                             <option value="">All</option>
@@ -148,7 +148,7 @@
                             <option value="Unlocked" selected="@(string.Equals(ViewBag.Status as string, "Unlocked", StringComparison.OrdinalIgnoreCase))">Unlocked</option>
                         </select>
                     </div>
-                    <div class="col-md-4 col-lg-2">
+                    <div class="col-12 col-md-auto">
                         <label class="form-label">Per page</label>
                         <select name="pageSize" class="form-select">
                             @if (ViewBag.PageSizeOptions != null)
@@ -160,9 +160,9 @@
                             }
                         </select>
                     </div>
-                    <div class="col-12 d-flex flex-wrap gap-2">
+                    <div class="col-12 col-md-auto d-flex gap-2">
                         <button type="submit" class="btn btn-action-primary">
-                            <i class="bi bi-funnel-fill me-1"></i>Apply filters
+                            <i class="bi bi-funnel-fill me-1"></i>Apply
                         </button>
                         <a asp-action="Index" class="btn btn-action-secondary">
                             <i class="bi bi-x-lg me-1"></i>Clear

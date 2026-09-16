@@ -6,34 +6,33 @@
 <hr />
 <ul class="nav flex-column">
     <li class="nav-item">
-        <a class="nav-link @(currentAction == "EmployeeDetail" ? "active fw-bold text-primary" : "text-dark")" 
-           asp-controller="Payroll" asp-action="EmployeeDetail">
-            👥 Employee Detail
-        </a>
-    </li>
-    <li class="nav-item">
         <a class="nav-link @(currentAction == "GeneratePayroll" ? "active fw-bold text-primary" : "text-dark")"
            asp-controller="Payroll" asp-action="GeneratePayroll">
             ⚙️ Generate Payroll
         </a>
     </li>
     <li class="nav-item">
-        <a class="nav-link @(currentAction == "GeneratePayslips" ? "active fw-bold text-primary" : "text-dark")" 
+        <a class="nav-link @(currentAction == "Index" || currentAction == "Details" ? "active fw-bold text-primary" : "text-dark")"
+           asp-controller="Payroll" asp-action="Index">
+            📋 All Payrolls
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link @(currentAction == "GeneratePayslips" ? "active fw-bold text-primary" : "text-dark")"
            asp-controller="Payroll" asp-action="GeneratePayslips">
             💰 Run Payroll
         </a>
     </li>
     <li class="nav-item">
-        <a class="nav-link @(currentAction == "Search" ? "active fw-bold text-primary" : "text-dark")" 
+        <a class="nav-link @(currentAction == "Search" ? "active fw-bold text-primary" : "text-dark")"
            asp-controller="Payroll" asp-action="Search">
             🔍 Search Payroll
         </a>
     </li>
     <li class="nav-item">
-        <a class="nav-link @(currentAction == "GenerateIndividual" || currentAction == "Create" ? "active fw-bold text-primary" : "text-dark")" 
+        <a class="nav-link @(currentAction == "GenerateIndividual" || currentAction == "Create" ? "active fw-bold text-primary" : "text-dark")"
            asp-controller="Payroll" asp-action="GenerateIndividual">
             👤 Run Single Pay
         </a>
     </li>
 </ul>
-

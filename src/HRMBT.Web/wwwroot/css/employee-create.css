@@ -3,19 +3,46 @@
 .employee-create-page {
   background: linear-gradient(180deg, #f1f3f5 0%, #e9ecef 100%);
   min-height: calc(100vh - 120px);
-  padding-bottom: 6.5rem;
+  padding-bottom: 5.5rem;
+}
+
+.employee-create-page.py-4 {
+  padding-top: 1rem !important;
+  padding-bottom: 5.5rem !important;
+}
+
+.employee-create-page .row.g-4 {
+  --bs-gutter-x: 0.85rem;
+  --bs-gutter-y: 0.85rem;
+}
+
+.employee-create-page .row.g-3 {
+  --bs-gutter-x: 0.65rem;
+  --bs-gutter-y: 0.65rem;
+}
+
+.employee-create-page .mb-4 {
+  margin-bottom: 0.85rem !important;
+}
+
+.employee-create-page .mb-3 {
+  margin-bottom: 0.65rem !important;
 }
 
 .employee-create-page .page-header-card {
   background: #fff;
-  border-radius: 0.75rem;
+  border-radius: 0.65rem;
   box-shadow: 0 0.125rem 0.5rem rgba(0, 32, 63, 0.08);
   border: 1px solid rgba(0, 32, 63, 0.06);
 }
 
+.employee-create-page .page-header-card.p-4 {
+  padding: 0.85rem 1.1rem !important;
+}
+
 .employee-create-page .section-card {
   background: #fff;
-  border-radius: 0.75rem;
+  border-radius: 0.65rem;
   border: 1px solid rgba(0, 32, 63, 0.08);
   box-shadow: 0 0.25rem 1rem rgba(0, 32, 63, 0.06);
   overflow: hidden;
@@ -28,40 +55,41 @@
 }
 
 .employee-create-page .section-card .card-header {
-  background: linear-gradient(90deg, #00203f 0%, #0b2d52 100%);
+  background: linear-gradient(90deg, #336b87 0%, #2a5a73 100%);
   color: #fff;
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   letter-spacing: 0.02em;
-  border-bottom: 3px solid #d4af37;
-  padding: 0.85rem 1.25rem;
+  border-bottom: 2px solid #d4af37;
+  padding: 0.5rem 1rem;
 }
 
 .employee-create-page .section-card .card-header i {
-  color: #d4af37;
+  color: #f0d78c;
   margin-right: 0.5rem;
   vertical-align: -0.125em;
 }
 
 .employee-create-page .section-card .card-body {
-  padding: 1.5rem 1.25rem;
+  padding: 0.85rem 1rem;
 }
 
 .employee-create-page .form-label {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 600;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   color: #495057;
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.2rem;
 }
 
 .employee-create-page .form-control,
 .employee-create-page .form-select {
-  min-height: 2.65rem;
-  border-radius: 0.5rem;
+  min-height: 2.15rem;
+  border-radius: 0.4rem;
   border: 1px solid #ced4da;
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
+  padding: 0.3rem 0.65rem;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -77,7 +105,7 @@
 }
 
 .employee-create-page textarea.form-control {
-  min-height: 5rem;
+  min-height: 3.5rem;
 }
 
 /* jQuery unobtrusive validation */
@@ -112,13 +140,13 @@
 
 /* Photo card */
 .employee-create-page .photo-card .photo-preview-wrap {
-  width: 140px;
-  height: 140px;
-  margin: 0 auto 1rem;
+  width: 110px;
+  height: 110px;
+  margin: 0 auto 0.65rem;
   border-radius: 50%;
   overflow: hidden;
-  border: 4px solid #d4af37;
-  box-shadow: 0 0.25rem 0.75rem rgba(0, 32, 63, 0.15);
+  border: 3px solid #d4af37;
+  box-shadow: 0 0.2rem 0.55rem rgba(0, 32, 63, 0.15);
   background: #f8f9fa;
 }
 
@@ -153,13 +181,14 @@
   backdrop-filter: blur(8px);
   border-top: 1px solid rgba(0, 32, 63, 0.1);
   box-shadow: 0 -0.25rem 1rem rgba(0, 32, 63, 0.08);
-  padding: 0.75rem 0;
+  padding: 0.5rem 0;
 }
 
 .employee-create-actions .btn-action-primary {
   border-radius: 2rem;
-  padding: 0.55rem 1.5rem;
+  padding: 0.4rem 1.25rem;
   font-weight: 600;
+  font-size: 0.875rem;
   background: linear-gradient(135deg, #00203f 0%, #1a4a7a 100%);
   border: none;
   color: #fff;
@@ -179,8 +208,9 @@
 
 .employee-create-actions .btn-action-secondary {
   border-radius: 2rem;
-  padding: 0.55rem 1.35rem;
+  padding: 0.4rem 1.15rem;
   font-weight: 600;
+  font-size: 0.875rem;
   border: 1px solid #ced4da;
   color: #495057;
   background: #fff;
@@ -195,8 +225,9 @@
 
 .employee-create-actions .btn-action-outline {
   border-radius: 2rem;
-  padding: 0.55rem 1.35rem;
+  padding: 0.4rem 1.15rem;
   font-weight: 600;
+  font-size: 0.875rem;
   border: 2px solid #d4af37;
   color: #856404;
   background: #fff;
@@ -229,7 +260,7 @@
 .employee-create-page .info-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem 1.25rem;
+  gap: 0.55rem 0.85rem;
 }
 
 @media (max-width: 575.98px) {
@@ -251,8 +282,8 @@
 .employee-create-page .info-cell {
   background: #f8fafc;
   border: 1px solid #eef0f2;
-  border-radius: 0.5rem;
-  padding: 0.6rem 0.85rem;
+  border-radius: 0.4rem;
+  padding: 0.4rem 0.65rem;
 }
 
 .employee-create-page .info-cell.info-cell-wide {
@@ -271,7 +302,7 @@
 
 .employee-create-page .info-value {
   display: block;
-  font-size: 0.95rem;
+  font-size: 0.875rem;
   color: #212529;
   font-weight: 500;
   word-break: break-word;
@@ -400,22 +431,22 @@
 
 .employee-create-page .emp-nav-tabs {
   border-bottom: none;
-  gap: 0.15rem;
-  min-height: 3.25rem;
+  gap: 0.1rem;
+  min-height: 2.5rem;
   flex-wrap: nowrap;
 }
 
 .employee-create-page .emp-nav-tabs .nav-link {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.4rem;
   border: none;
   border-bottom: 3px solid transparent;
   border-radius: 0;
   color: #495057;
-  font-size: 0.8125rem;
+  font-size: 0.78rem;
   font-weight: 600;
-  padding: 0.85rem 1rem;
+  padding: 0.55rem 0.85rem;
   white-space: nowrap;
   transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
 }
@@ -451,17 +482,17 @@
 }
 
 .employee-create-page .emp-tab-pane-inner {
-  padding: 1.5rem 1.25rem 1.75rem;
+  padding: 0.85rem 1rem 1rem;
 }
 
 .employee-create-page .emp-section-header {
-  font-size: 1.05rem;
+  font-size: 0.92rem;
   font-weight: 700;
   color: #00203f;
-  margin: 0 0 0.35rem;
+  margin: 0 0 0.2rem;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
 
 .employee-create-page .emp-section-header i {
@@ -469,14 +500,14 @@
 }
 
 .employee-create-page .emp-section-sub {
-  font-size: 0.875rem;
+  font-size: 0.8rem;
   color: #6c757d;
-  margin-bottom: 1.25rem;
+  margin-bottom: 0.75rem;
 }
 
 /* Form table — 2-column responsive grid */
 .employee-create-page .emp-table-wrap {
-  border-radius: 0.5rem;
+  border-radius: 0.4rem;
   border: 1px solid #eef0f2;
   overflow: hidden;
 }
@@ -496,19 +527,20 @@
 }
 
 .employee-create-page .emp-form-table .emp-label-cell {
-  width: 18%;
-  min-width: 7.5rem;
+  width: 16%;
+  min-width: 6.5rem;
   vertical-align: middle;
-  padding: 0.85rem 1rem;
+  padding: 0.4rem 0.65rem;
   border-bottom: 1px solid #eef0f2;
   font-weight: 600;
+  font-size: 0.78rem;
   color: #495057;
 }
 
 .employee-create-page .emp-form-table .emp-field-cell {
-  width: 32%;
+  width: 34%;
   vertical-align: middle;
-  padding: 0.75rem 1rem;
+  padding: 0.3rem 0.65rem;
   border-bottom: 1px solid #eef0f2;
 }
 
@@ -528,12 +560,12 @@
 }
 
 .employee-create-page .photo-preview-wrap {
-  width: 140px;
-  height: 140px;
+  width: 110px;
+  height: 110px;
   border-radius: 50%;
   overflow: hidden;
-  border: 4px solid #d4af37;
-  box-shadow: 0 0.25rem 0.75rem rgba(0, 32, 63, 0.15);
+  border: 3px solid #d4af37;
+  box-shadow: 0 0.2rem 0.55rem rgba(0, 32, 63, 0.15);
   background: #f8f9fa;
 }
 
@@ -566,28 +598,43 @@
 /* Details (read-only) tables */
 .employee-create-page .emp-details-table .info-label {
   display: block;
-  font-size: 0.7rem;
+  font-size: 0.875rem;
   font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: #6c757d;
+  letter-spacing: normal;
+  text-transform: none;
+  color: #000;
   margin-bottom: 0;
 }
 
 .employee-create-page .emp-details-table .info-value {
   display: block;
-  font-size: 0.95rem;
-  color: #212529;
+  font-size: 0.875rem;
+  color: #0d6efd;
   font-weight: 500;
   word-break: break-word;
 }
 
+.employee-create-page .emp-details-table .info-value.text-empty {
+  color: #adb5bd;
+  font-style: italic;
+  font-weight: 400;
+}
+
 .employee-create-page .emp-details-table .emp-label-cell {
   vertical-align: middle;
+  color: #000;
+}
+
+.employee-create-page .emp-details-table .emp-field-cell {
+  color: #0d6efd;
 }
 
 .employee-create-page .emp-details-table .emp-field-cell .status-pill {
   display: inline-flex;
+}
+
+#employeeDetailsView .page-title {
+  color: #000;
 }
 
 /* Employee documents */
@@ -602,19 +649,19 @@
 
 .employee-create-page .emp-documents-table thead th {
   background: #f1f3f5;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: #495057;
   border-bottom-width: 1px;
-  padding: 0.75rem 1rem;
+  padding: 0.45rem 0.75rem;
 }
 
 .employee-create-page .emp-documents-table tbody td {
-  padding: 0.85rem 1rem;
+  padding: 0.45rem 0.75rem;
   vertical-align: middle;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 
 .employee-create-page .emp-documents-table tbody tr:nth-child(even) {
@@ -627,7 +674,7 @@
   }
 
   .employee-create-page .emp-nav-tabs .nav-link {
-    padding: 0.85rem 0.75rem;
+    padding: 0.55rem 0.65rem;
   }
 
   .employee-create-page .emp-form-table,
@@ -640,7 +687,7 @@
   }
 
   .employee-create-page .emp-form-table .emp-form-row {
-    padding: 0.5rem 0;
+    padding: 0.25rem 0;
     border-bottom: 1px solid #eef0f2;
   }
 
@@ -648,22 +695,22 @@
   .employee-create-page .emp-form-table .emp-field-cell {
     width: 100%;
     border: none;
-    padding: 0.35rem 1rem;
+    padding: 0.2rem 0.75rem;
   }
 
   .employee-create-page .emp-form-table .emp-label-cell {
-    padding-top: 0.75rem;
-    padding-bottom: 0.15rem;
+    padding-top: 0.45rem;
+    padding-bottom: 0.1rem;
   }
 
   .employee-create-page .emp-form-table .emp-field-cell[colspan] {
-    padding-bottom: 0.75rem;
+    padding-bottom: 0.45rem;
   }
 }
 
 @media (max-width: 575.98px) {
   .employee-create-page .emp-nav-tabs .nav-link {
-    padding: 0.75rem 0.6rem;
+    padding: 0.5rem 0.5rem;
   }
 
   .employee-create-page .page-title {

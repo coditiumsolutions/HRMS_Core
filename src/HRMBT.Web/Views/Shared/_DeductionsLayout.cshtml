@@ -29,6 +29,7 @@
         .navbar-top-1 .navbar-text {
             padding-top: 0.25rem;
             padding-bottom: 0.25rem;
+            color: #0d6efd;
         }
         .navbar-top-2 {
             background-color: #00203F;
@@ -36,23 +37,40 @@
         .navbar-top-2 .nav-link {
             color: white !important;
         }
-        .navbar-top-2 .nav-link:hover {
-            color: #f0f0f0 !important;
-        }
-        .navbar-top-2 .modules-heading {
-            color: #D4AF37 !important;
-            font-weight: 700;
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            letter-spacing: 0.07em;
-            padding-top: 0.5rem;
-            padding-bottom: 0.5rem;
-            margin-bottom: 0;
-            white-space: nowrap;
+        .navbar-top-2 .navbar-nav.ms-auto .nav-link {
+            font-size: 0.95rem;
         }
         .navbar-top-2 .navbar-modules-nav .nav-link {
-            font-weight: 700 !important;
-            font-size: 0.875rem;
+            font-weight: 400 !important;
+            font-size: 0.95rem;
+        }
+        .navbar-top-2 .dropdown-toggle::after {
+            margin-left: 0.4em;
+            vertical-align: 0.15em;
+            border-top-color: #D4AF37;
+        }
+        .navbar-top-2 .dropdown-menu {
+            background-color: #0b2d52;
+            border: 1px solid rgba(212, 175, 55, 0.4);
+            border-radius: 0.4rem;
+            padding: 0.35rem 0;
+            min-width: 11rem;
+            box-shadow: 0 0.5rem 1.25rem rgba(0, 32, 63, 0.35);
+        }
+        .navbar-top-2 .dropdown-item {
+            color: #fff;
+            font-size: 0.95rem;
+            font-weight: 400;
+            padding: 0.45rem 1rem;
+        }
+        .navbar-top-2 .dropdown-item:hover,
+        .navbar-top-2 .dropdown-item:focus {
+            background-color: #336b87;
+            color: #fff;
+        }
+        .navbar-top-2 .dropdown-item.active {
+            background-color: #336b87;
+            color: #D4AF37;
         }
         @@media (min-width: 576px) {
             .navbar-top-2 .navbar-modules-nav .nav-link {
@@ -93,8 +111,8 @@
         }
         .sidebar .nav-link {
             color: white !important;
-            padding: 0.5rem 0.5rem;
-            margin-bottom: 0;
+            padding: 0.55rem 0.5rem;
+            margin-bottom: 0.45rem;
             border-radius: 4px;
             font-size: 0.875rem;
             border-bottom: 1px solid #D4AF37;
@@ -129,50 +147,42 @@
         .main-content h4 {
             font-size: 1.1rem;
         }
-        .footer {
+        .site-footer {
             background-color: #f8f9fa;
             border-top: 2px solid #336B87;
-            padding: 15px 0;
-            margin-top: 0;
-        }
-        .footer h6 {
-            color: #336B87;
-            font-weight: 600;
-            margin-bottom: 8px;
-            font-size: 0.9rem;
-        }
-        .footer a {
+            padding: 0.65rem 1rem;
             color: #6c757d;
-            text-decoration: none;
-            transition: color 0.3s;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
         }
-        .footer a:hover {
-            color: #336B87;
-            text-decoration: underline;
+        .site-footer .footer-inner {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem 1rem;
         }
-        .footer .footer-links {
-            list-style: none;
-            padding: 0;
+        .site-footer .footer-left,
+        .site-footer .footer-center,
+        .site-footer .footer-right {
             margin: 0;
+            line-height: 1.35;
         }
-        .footer .footer-links li {
-            margin-bottom: 4px;
-        }
-        .footer .copyright {
-            color: #6c757d;
-            font-size: 0.85rem;
-            margin-bottom: 0;
-        }
-        .footer .divider {
-            color: #dee2e6;
-            margin: 0 10px;
-        }
-        .footer .row {
+        .site-footer .footer-center {
             text-align: center;
+            color: #00203f;
+            font-weight: 600;
         }
-        .footer .col-md-4 {
-            margin-bottom: 10px;
+        .site-footer .footer-right {
+            text-align: right;
+        }
+        @@media (max-width: 767.98px) {
+            .site-footer .footer-inner {
+                flex-direction: column;
+                text-align: center;
+            }
+            .site-footer .footer-right {
+                text-align: center;
+            }
         }
     </style>
     @await RenderSectionAsync("Styles", required: false)
@@ -186,9 +196,7 @@
                 <span class="navbar-toggler-icon" style="filter: invert(1);"></span>
             </button>
             <div class="collapse navbar-collapse" id="moduleNavbar">
-                <div class="d-flex flex-column flex-sm-row align-items-start align-items-sm-center flex-grow-1 me-sm-3 mb-2 mb-sm-0 gap-sm-2">
-                    <span class="navbar-text modules-heading">Modules</span>
-                    <ul class="navbar-nav navbar-modules-nav flex-grow-1 flex-wrap">
+                <ul class="navbar-nav navbar-modules-nav flex-grow-1 flex-wrap me-sm-3">
                     <li class="nav-item">
                         <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
                     </li>
@@ -199,25 +207,43 @@
                         <a class="nav-link" asp-area="" asp-controller="Payroll" asp-action="Index">Payroll</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" asp-area="" asp-controller="Allowances" asp-action="Index">Allowances</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" asp-area="" asp-controller="Deductions" asp-action="Index">Deductions</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" asp-area="" asp-controller="Attendance" asp-action="Index">Attendance</a>
-                    </li>
-                    <li class="nav-item">
                         <a class="nav-link" asp-area="" asp-controller="LMS" asp-action="Index">LMS</a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" asp-area="" asp-controller="Tax" asp-action="Index">Tax</a>
+                    @{
+                        var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+                        var modulesActive = new[] { "Allowances", "Deductions", "Attendance", "Tax", "Setup" }
+                            .Contains(currentController, StringComparer.OrdinalIgnoreCase);
+                    }
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle @(modulesActive ? "active" : null)"
+                           href="#" id="modulesDropdown" role="button"
+                           data-bs-toggle="dropdown" aria-expanded="false">
+                            Modules
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="modulesDropdown">
+                            <li>
+                                <a class="dropdown-item @(string.Equals(currentController, "Allowances", StringComparison.OrdinalIgnoreCase) ? "active" : null)"
+                                   asp-area="" asp-controller="Allowances" asp-action="Index">Allowances</a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item @(string.Equals(currentController, "Deductions", StringComparison.OrdinalIgnoreCase) ? "active" : null)"
+                                   asp-area="" asp-controller="Deductions" asp-action="Index">Deductions</a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item @(string.Equals(currentController, "Attendance", StringComparison.OrdinalIgnoreCase) ? "active" : null)"
+                                   asp-area="" asp-controller="Attendance" asp-action="Index">Attendance</a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item @(string.Equals(currentController, "Tax", StringComparison.OrdinalIgnoreCase) ? "active" : null)"
+                                   asp-area="" asp-controller="Tax" asp-action="Index">Tax</a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item @(string.Equals(currentController, "Setup", StringComparison.OrdinalIgnoreCase) ? "active" : null)"
+                                   asp-area="" asp-controller="Setup" asp-action="Index">Setup</a>
+                            </li>
+                        </ul>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" asp-area="" asp-controller="Setup" asp-action="Index">Setup</a>
-                    </li>
-                    </ul>
-                </div>
+                </ul>
                 <ul class="navbar-nav ms-auto">
                     @if (string.IsNullOrEmpty(authName))
                     {
@@ -239,7 +265,7 @@
     <!-- Top Navigation Bar 1 (White) -->
     <nav class="navbar navbar-expand-sm navbar-top-1">
         <div class="container-fluid">
-            <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">HR Management Bahria Town</a>
+            <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">HR Management System</a>
             <div class="navbar-nav ms-auto">
                 @if (!string.IsNullOrEmpty(authName) && !string.IsNullOrEmpty(loginAt))
                 {
@@ -270,61 +296,14 @@
         </div>
     </div>
 
-    <footer class="footer">
-        <div class="container-fluid">
-            <div class="row">
-                <div class="col-md-4 mb-2 mb-md-0">
-                    <h6>HR Management System</h6>
-                    <p class="copyright mb-0">
-                        &copy; 2026 HRMBT.Web - Bahria Town<br>
-                        <small>All rights reserved</small>
-                    </p>
-                </div>
-                <div class="col-md-4 mb-2 mb-md-0">
-                    <h6>Quick Links</h6>
-                    <ul class="footer-links">
-                        <li>
-                            <a href="mailto:support@hrmbt.com?subject=Technical Support">
-                                <span style="margin-right: 5px;">🔧</span>Technical Support
-                            </a>
-                        </li>
-                        <li>
-                            <a href="mailto:suggestions@hrmbt.com?subject=Suggestion">
-                                <span style="margin-right: 5px;">💡</span>Suggestion
-                            </a>
-                        </li>
-                        <li>
-                            <a href="mailto:discussion@hrmbt.com?subject=Discussion">
-                                <span style="margin-right: 5px;">💬</span>Discussion
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-                <div class="col-md-4">
-                    <h6>Legal</h6>
-                    <ul class="footer-links">
-                        <li>
-                            <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy Policy</a>
-                        </li>
-                        <li>
-                            <a href="#">Terms of Service</a>
-                        </li>
-                        <li>
-                            <a href="#">Contact Us</a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-            <hr style="border-color: #dee2e6; margin: 10px 0;">
-            <div class="row">
-                <div class="col-12 text-center">
-                    <p class="copyright mb-0">
-                        <small>Powered by HRMBT.Web | Bahria Town HR Management System</small>
-                    </p>
-                </div>
-            </div>
+    <footer class="site-footer">
+        <div class="footer-inner">
+            <p class="footer-left">&copy; 2026. All Rights Reserved.</p>
+            <p class="footer-center">HR Management System | Internal Use Only</p>
+            <p class="footer-right">Developed &amp; Maintained by IT Department</p>
         </div>
     </footer>
+
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>

@@ -6,6 +6,7 @@ using HRMBT.Web.Services.Payroll;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -34,7 +35,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: Payroll
-        public async Task<IActionResult> Index(string? month, int? year, string employeeId, string employeeName, int page = 1, int pageSize = 20)
+        public async Task<IActionResult> Index(string? month, int? year, string? search, string? department, string? employeeId, string? employeeName, int page = 1, int pageSize = 20)
         {
             ViewData["Module"] = "Payroll";
             
@@ -43,52 +44,58 @@ namespace HRMBT.Web.Controllers
             if (pageSize < 1) pageSize = 20;
             if (pageSize > 100) pageSize = 100; // Max page size limit
 
+            var searchTerm = (search ?? employeeId ?? employeeName)?.Trim();
+            var departmentFilter = department?.Trim();
+
             string? monthFilter = null;
             if (!string.IsNullOrWhiteSpace(month))
             {
                 monthFilter = PayrollMonthHelper.Normalize(month);
             }
 
-            var query = _context.Payslips.Include(p => p.Employee).AsQueryable();
+            var hasPeriodFilter = monthFilter != null && year.HasValue && year.Value > 0;
+            ViewBag.RequiresPeriodFilter = !hasPeriodFilter;
 
-            if (monthFilter != null)
-            {
-                query = query.Where(p => p.Month == monthFilter);
-            }
-
-            // Filter by year if provided
-            if (year.HasValue && year.Value > 0)
-            {
-                query = query.Where(p => p.Year == year.Value);
-            }
-
-            // Filter by EmployeeID if provided (partial match on Employee.EmployeeID)
-            if (!string.IsNullOrWhiteSpace(employeeId))
-            {
-                query = query.Where(p => p.Employee != null && 
-                    p.Employee.EmployeeID != null && 
-                    p.Employee.EmployeeID.Contains(employeeId));
-            }
-
-            // Filter by Employee Name if provided (partial match, case-insensitive)
-            if (!string.IsNullOrWhiteSpace(employeeName))
-            {
-                query = query.Where(p => p.Employee != null && 
-                    p.Employee.EmployeeName != null && 
-                    p.Employee.EmployeeName.Contains(employeeName));
-            }
-
-            query = query.OrderByPeriodDescending();
-
-            // Get paginated results
-            var paginatedPayslips = await PaginatedList<Payslip>.CreateAsync(query, page, pageSize);
+            var departments = await _context.Employees
+                .Where(e => e.Department != null && e.Department != "")
+                .Select(e => e.Department)
+                .Distinct()
+                .OrderBy(d => d)
+                .ToListAsync();
 
             // Pass filter values to view
             ViewBag.Month = monthFilter ?? month;
             ViewBag.Year = year;
-            ViewBag.EmployeeId = employeeId;
-            ViewBag.EmployeeName = employeeName;
+            ViewBag.CurrentSearch = searchTerm;
+            ViewBag.SelectedDepartment = departmentFilter;
+            ViewBag.Departments = departments;
             ViewBag.CurrentPageSize = pageSize;
+
+            // Month and Year are required — show empty grid until both are selected
+            if (!hasPeriodFilter)
+            {
+                return View(new PaginatedList<Payslip>(new List<Payslip>(), 0, page, pageSize));
+            }
+
+            var query = _context.Payslips.Include(p => p.Employee).AsQueryable();
+
+            query = query.Where(p => p.Month == monthFilter && p.Year == year!.Value);
+
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                query = query.Where(p => p.Employee != null &&
+                    ((p.Employee.EmployeeID != null && p.Employee.EmployeeID.Contains(searchTerm)) ||
+                     (p.Employee.EmployeeName != null && p.Employee.EmployeeName.Contains(searchTerm))));
+            }
+
+            if (!string.IsNullOrWhiteSpace(departmentFilter))
+            {
+                query = query.Where(p => p.Employee != null && p.Employee.Department == departmentFilter);
+            }
+
+            query = query.OrderByPeriodDescending();
+
+            var paginatedPayslips = await PaginatedList<Payslip>.CreateAsync(query, page, pageSize);
 
             return View(paginatedPayslips);
         }

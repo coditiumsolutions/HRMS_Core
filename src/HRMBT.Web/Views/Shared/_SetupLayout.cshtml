@@ -29,6 +29,7 @@
         .navbar-top-1 .navbar-text {
             padding-top: 0.25rem;
             padding-bottom: 0.25rem;
+            color: #0d6efd;
         }
         .navbar-top-2 {
             background-color: #00203F;
@@ -36,23 +37,40 @@
         .navbar-top-2 .nav-link {
             color: white !important;
         }
-        .navbar-top-2 .nav-link:hover {
-            color: #f0f0f0 !important;
-        }
-        .navbar-top-2 .modules-heading {
-            color: #D4AF37 !important;
-            font-weight: 700;
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            letter-spacing: 0.07em;
-            padding-top: 0.5rem;
-            padding-bottom: 0.5rem;
-            margin-bottom: 0;
-            white-space: nowrap;
+        .navbar-top-2 .navbar-nav.ms-auto .nav-link {
+            font-size: 0.95rem;
         }
         .navbar-top-2 .navbar-modules-nav .nav-link {
-            font-weight: 700 !important;
-            font-size: 0.875rem;
+            font-weight: 400 !important;
+            font-size: 0.95rem;
+        }
+        .navbar-top-2 .dropdown-toggle::after {
+            margin-left: 0.4em;
+            vertical-align: 0.15em;
+            border-top-color: #D4AF37;
+        }
+        .navbar-top-2 .dropdown-menu {
+            background-color: #0b2d52;
+            border: 1px solid rgba(212, 175, 55, 0.4);
+            border-radius: 0.4rem;
+            padding: 0.35rem 0;
+            min-width: 11rem;
+            box-shadow: 0 0.5rem 1.25rem rgba(0, 32, 63, 0.35);
+        }
+        .navbar-top-2 .dropdown-item {
+            color: #fff;
+            font-size: 0.95rem;
+            font-weight: 400;
+            padding: 0.45rem 1rem;
+        }
+        .navbar-top-2 .dropdown-item:hover,
+        .navbar-top-2 .dropdown-item:focus {
+            background-color: #336b87;
+            color: #fff;
+        }
+        .navbar-top-2 .dropdown-item.active {
+            background-color: #336b87;
+            color: #D4AF37;
         }
         @@media (min-width: 576px) {
             .navbar-top-2 .navbar-modules-nav .nav-link {
@@ -126,9 +144,7 @@
                 <span class="navbar-toggler-icon" style="filter: invert(1);"></span>
             </button>
             <div class="collapse navbar-collapse" id="setupModuleNavbar">
-                <div class="d-flex flex-column flex-sm-row align-items-start align-items-sm-center flex-grow-1 me-sm-3 mb-2 mb-sm-0 gap-sm-2">
-                    <span class="navbar-text modules-heading">Modules</span>
-                    <ul class="navbar-nav navbar-modules-nav flex-grow-1 flex-wrap">
+                <ul class="navbar-nav navbar-modules-nav flex-grow-1 flex-wrap me-sm-3">
                     <li class="nav-item">
                         <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
                     </li>
@@ -139,25 +155,43 @@
                         <a class="nav-link" asp-area="" asp-controller="Payroll" asp-action="Index">Payroll</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" asp-area="" asp-controller="Allowances" asp-action="Index">Allowances</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" asp-area="" asp-controller="Deductions" asp-action="Index">Deductions</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" asp-area="" asp-controller="Attendance" asp-action="Index">Attendance</a>
-                    </li>
-                    <li class="nav-item">
                         <a class="nav-link" asp-area="" asp-controller="LMS" asp-action="Index">LMS</a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" asp-area="" asp-controller="Tax" asp-action="Index">Tax</a>
+                    @{
+                        var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+                        var modulesActive = new[] { "Allowances", "Deductions", "Attendance", "Tax", "Setup" }
+                            .Contains(currentController, StringComparer.OrdinalIgnoreCase);
+                    }
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle @(modulesActive ? "active" : null)"
+                           href="#" id="modulesDropdownSetup" role="button"
+                           data-bs-toggle="dropdown" aria-expanded="false">
+                            Modules
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="modulesDropdownSetup">
+                            <li>
+                                <a class="dropdown-item @(string.Equals(currentController, "Allowances", StringComparison.OrdinalIgnoreCase) ? "active" : null)"
+                                   asp-area="" asp-controller="Allowances" asp-action="Index">Allowances</a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item @(string.Equals(currentController, "Deductions", StringComparison.OrdinalIgnoreCase) ? "active" : null)"
+                                   asp-area="" asp-controller="Deductions" asp-action="Index">Deductions</a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item @(string.Equals(currentController, "Attendance", StringComparison.OrdinalIgnoreCase) ? "active" : null)"
+                                   asp-area="" asp-controller="Attendance" asp-action="Index">Attendance</a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item @(string.Equals(currentController, "Tax", StringComparison.OrdinalIgnoreCase) ? "active" : null)"
+                                   asp-area="" asp-controller="Tax" asp-action="Index">Tax</a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item @(string.Equals(currentController, "Setup", StringComparison.OrdinalIgnoreCase) ? "active" : null)"
+                                   asp-area="" asp-controller="Setup" asp-action="Index">Setup</a>
+                            </li>
+                        </ul>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" asp-area="" asp-controller="Setup" asp-action="Index">Setup</a>
-                    </li>
-                    </ul>
-                </div>
+                </ul>
                 <ul class="navbar-nav ms-auto">
                     @if (string.IsNullOrEmpty(authName))
                     {
@@ -179,7 +213,7 @@
     <!-- Top Navigation Bar 1 (White) — same as main app -->
     <nav class="navbar navbar-expand-sm navbar-top-1">
         <div class="container-fluid">
-            <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">HR Management Bahria Town</a>
+            <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">HR Management System</a>
             <div class="navbar-nav ms-auto">
                 @if (!string.IsNullOrEmpty(authName) && !string.IsNullOrEmpty(loginAt))
                 {
@@ -188,10 +222,6 @@
                 else if (!string.IsNullOrEmpty(authName))
                 {
                     <span class="navbar-text"><span class="fw-semibold">@(displayName ?? authName)</span></span>
-                }
-                else
-                {
-                    <span class="navbar-text text-white-50 small">Not signed in · open Setup to add users, then log in from HR Login</span>
                 }
             </div>
         </div>

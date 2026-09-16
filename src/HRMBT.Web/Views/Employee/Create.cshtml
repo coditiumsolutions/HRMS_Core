@@ -20,19 +20,6 @@
             </ol>
         </nav>
 
-        <!-- Page header -->
-        <div class="page-header-card p-4 mb-4">
-            <div class="row align-items-center g-3">
-                <div class="col">
-                    <h1 class="page-title mb-1">
-                        <span class="page-title-icon"><i class="fa-solid fa-user-plus"></i></span>
-                        Add Employee
-                    </h1>
-                    <p class="text-muted mb-0">Complete each section below. All fields use your existing employee profile and payroll bindings.</p>
-                </div>
-            </div>
-        </div>
-
         <form asp-action="Create" method="post" id="employeeCreateForm" data-tab-storage-key="hrms.employeeCreate.activeTab">
             <div asp-validation-summary="All" class="mb-4" role="alert"></div>
 
@@ -44,27 +31,32 @@
                             <ul class="nav nav-tabs emp-nav-tabs flex-nowrap" id="employeeCreateTabs" role="tablist">
                                 <li class="nav-item" role="presentation">
                                     <button class="nav-link active" id="tab-personal-btn" data-bs-toggle="tab" data-bs-target="#tab-personal" type="button" role="tab" aria-controls="tab-personal" aria-selected="true" data-tab-key="personal">
-                                        <i class="fa-solid fa-id-card"></i><span>Personal Information</span>
+                                        <i class="fa-solid fa-id-card"></i><span>Personal Info</span>
                                     </button>
                                 </li>
                                 <li class="nav-item" role="presentation">
                                     <button class="nav-link" id="tab-official-btn" data-bs-toggle="tab" data-bs-target="#tab-official" type="button" role="tab" aria-controls="tab-official" aria-selected="false" data-tab-key="official">
-                                        <i class="fa-solid fa-building"></i><span>Official Information</span>
+                                        <i class="fa-solid fa-building"></i><span>Official Info</span>
                                     </button>
                                 </li>
                                 <li class="nav-item" role="presentation">
                                     <button class="nav-link" id="tab-salary-btn" data-bs-toggle="tab" data-bs-target="#tab-salary" type="button" role="tab" aria-controls="tab-salary" aria-selected="false" data-tab-key="salary">
-                                        <i class="fa-solid fa-money-bill-wave"></i><span>Salary Information</span>
+                                        <i class="fa-solid fa-money-bill-wave"></i><span>Salary Info</span>
                                     </button>
                                 </li>
                                 <li class="nav-item" role="presentation">
                                     <button class="nav-link" id="tab-leave-btn" data-bs-toggle="tab" data-bs-target="#tab-leave" type="button" role="tab" aria-controls="tab-leave" aria-selected="false" data-tab-key="leave">
-                                        <i class="fa-solid fa-calendar-check"></i><span>Leave Balances &amp; Adjustments</span>
+                                        <i class="fa-solid fa-calendar-check"></i><span>Leave Balance</span>
                                     </button>
                                 </li>
                                 <li class="nav-item" role="presentation">
                                     <button class="nav-link" id="tab-additional-btn" data-bs-toggle="tab" data-bs-target="#tab-additional" type="button" role="tab" aria-controls="tab-additional" aria-selected="false" data-tab-key="additional">
-                                        <i class="fa-solid fa-circle-info"></i><span>Additional Information</span>
+                                        <i class="fa-solid fa-circle-info"></i><span>Additional Info</span>
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="tab-history-btn" data-bs-toggle="tab" data-bs-target="#tab-history" type="button" role="tab" aria-controls="tab-history" aria-selected="false" data-tab-key="history">
+                                        <i class="fa-solid fa-clock-rotate-left"></i><span>Employee History</span>
                                     </button>
                                 </li>
                                 <li class="nav-item" role="presentation">
@@ -78,10 +70,10 @@
                         <div class="card-body p-0">
                             <div class="tab-content emp-tab-content" id="employeeCreateTabContent">
 
-                                <!-- Personal Information -->
+                                <!-- Personal Info -->
                                 <div class="tab-pane fade show active" id="tab-personal" role="tabpanel" aria-labelledby="tab-personal-btn" tabindex="0" data-tab-panel="personal">
                                     <div class="emp-tab-pane-inner">
-                                        <h2 class="emp-section-header"><i class="fa-solid fa-user"></i> Personal Information</h2>
+                                        <h2 class="emp-section-header"><i class="fa-solid fa-user"></i> Personal Info</h2>
                                         <p class="emp-section-sub">Identity and primary contact details for the employee record.</p>
                                         <div class="table-responsive emp-table-wrap">
                                             <table class="table emp-form-table mb-0">
@@ -128,10 +120,10 @@
                                     </div>
                                 </div>
 
-                                <!-- Official Information -->
+                                <!-- Official Info -->
                                 <div class="tab-pane fade" id="tab-official" role="tabpanel" aria-labelledby="tab-official-btn" tabindex="0" data-tab-panel="official">
                                     <div class="emp-tab-pane-inner">
-                                        <h2 class="emp-section-header"><i class="fa-solid fa-briefcase"></i> Official Information</h2>
+                                        <h2 class="emp-section-header"><i class="fa-solid fa-briefcase"></i> Official Info</h2>
                                         <p class="emp-section-sub">Department, role, project assignment, and employment status.</p>
                                         <div class="table-responsive emp-table-wrap">
                                             <table class="table emp-form-table mb-0">
@@ -209,10 +201,10 @@
                                     </div>
                                 </div>
 
-                                <!-- Salary Information -->
+                                <!-- Salary Info -->
                                 <div class="tab-pane fade" id="tab-salary" role="tabpanel" aria-labelledby="tab-salary-btn" tabindex="0" data-tab-panel="salary">
                                     <div class="emp-tab-pane-inner">
-                                        <h2 class="emp-section-header"><i class="fa-solid fa-sack-dollar"></i> Salary Information</h2>
+                                        <h2 class="emp-section-header"><i class="fa-solid fa-sack-dollar"></i> Salary Info</h2>
                                         <p class="emp-section-sub">Compensation baseline and tax application for payroll processing.</p>
                                         <div class="table-responsive emp-table-wrap">
                                             <table class="table emp-form-table mb-0">
@@ -239,10 +231,10 @@
                                     </div>
                                 </div>
 
-                                <!-- Leave Balances & Adjustments -->
+                                <!-- Leave Balance -->
                                 <div class="tab-pane fade" id="tab-leave" role="tabpanel" aria-labelledby="tab-leave-btn" tabindex="0" data-tab-panel="leave">
                                     <div class="emp-tab-pane-inner">
-                                        <h2 class="emp-section-header"><i class="fa-solid fa-umbrella-beach"></i> Leave Balances &amp; Adjustments</h2>
+                                        <h2 class="emp-section-header"><i class="fa-solid fa-umbrella-beach"></i> Leave Balance</h2>
                                         <p class="emp-section-sub">Optional carry-forward and historical leave totals.</p>
                                         <div class="table-responsive emp-table-wrap">
                                             <table class="table emp-form-table mb-0">
@@ -296,10 +288,10 @@
                                     </div>
                                 </div>
 
-                                <!-- Additional Information -->
+                                <!-- Additional Info -->
                                 <div class="tab-pane fade" id="tab-additional" role="tabpanel" aria-labelledby="tab-additional-btn" tabindex="0" data-tab-panel="additional">
                                     <div class="emp-tab-pane-inner">
-                                        <h2 class="emp-section-header"><i class="fa-solid fa-file-lines"></i> Additional Information</h2>
+                                        <h2 class="emp-section-header"><i class="fa-solid fa-file-lines"></i> Additional Info</h2>
                                         <p class="emp-section-sub">Notes, remarks, and audit fields for HR onboarding context.</p>
                                         <div class="table-responsive emp-table-wrap">
                                             <table class="table emp-form-table mb-0">
@@ -325,8 +317,39 @@
                                             <i class="fa-solid fa-phone text-primary fs-5 flex-shrink-0 mt-1"></i>
                                             <div class="small text-muted mb-0">
                                                 <strong class="text-dark d-block mb-1">Primary contact</strong>
-                                                Mobile number is recorded under <strong>Personal Information</strong> for SMS, attendance alerts, and HR correspondence.
+                                                Mobile number is recorded under <strong>Personal Info</strong> for SMS, attendance alerts, and HR correspondence.
                                             </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Employee History -->
+                                <div class="tab-pane fade" id="tab-history" role="tabpanel" aria-labelledby="tab-history-btn" tabindex="0" data-tab-panel="history">
+                                    <div class="emp-tab-pane-inner">
+                                        <h2 class="emp-section-header"><i class="fa-solid fa-clock-rotate-left"></i> Employee History</h2>
+                                        <p class="emp-section-sub">Transfers, promotions, status changes, and other employment events.</p>
+                                        <div class="table-responsive emp-table-wrap">
+                                            <table class="table emp-form-table mb-0">
+                                                <thead>
+                                                    <tr class="emp-form-row">
+                                                        <th class="emp-label-cell" style="width:18%;">Date</th>
+                                                        <th class="emp-field-cell" style="width:22%;">Event</th>
+                                                        <th class="emp-field-cell" style="width:35%;">Details</th>
+                                                        <th class="emp-field-cell" style="width:25%;">Recorded By</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr class="emp-form-row">
+                                                        <td class="emp-field-cell text-muted" colspan="4">
+                                                            <div class="text-center py-3">
+                                                                <i class="fa-solid fa-clock-rotate-left text-muted mb-2 d-block fs-4"></i>
+                                                                <div class="fw-semibold text-dark">No history yet</div>
+                                                                <div class="small text-muted">History will appear here after the employee is saved and employment events are recorded.</div>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
                                         </div>
                                     </div>
                                 </div>

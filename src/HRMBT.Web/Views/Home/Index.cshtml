@@ -2,163 +2,150 @@
     ViewData["Title"] = "Dashboard";
 }
 
-<div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-12">
-            <h1>HR Management Dashboard</h1>
-            <p class="text-muted">Welcome to Bahria Town HR Management System</p>
-        </div>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" crossorigin="anonymous" />
+<link rel="stylesheet" href="~/css/home-dashboard.css" asp-append-version="true" />
+
+<div class="home-dashboard">
+    <div class="page-header-card">
+        <h1>HR Management Dashboard</h1>
+        <p class="subtitle">Overview of people, attendance, leave, and payroll at a glance.</p>
     </div>
 
-    <!-- Statistics Cards -->
     <div class="row g-3 mb-4">
-        <!-- Total Employees Card -->
         <div class="col-md-4 col-sm-6">
-            <div class="card border-primary h-100">
+            <div class="stat-card accent-primary">
                 <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex justify-content-between align-items-start">
                         <div>
-                            <h6 class="card-subtitle mb-2 text-muted">Total Employees</h6>
-                            <h2 class="card-title mb-0">@ViewData["TotalEmployees"]</h2>
+                            <div class="stat-label">Total Employees</div>
+                            <p class="stat-value">@ViewData["TotalEmployees"]</p>
                         </div>
-                        <div class="text-primary" style="font-size: 2.5rem; font-weight: bold;">
-                            👥
-                        </div>
+                        <span class="stat-icon" aria-hidden="true"><i class="bi bi-people-fill"></i></span>
                     </div>
-                    <a asp-controller="Employee" asp-action="Index" class="btn btn-sm btn-outline-primary mt-3">View All</a>
+                    <a asp-controller="Employee" asp-action="Index" class="stat-link">
+                        View all <i class="bi bi-arrow-right"></i>
+                    </a>
                 </div>
             </div>
         </div>
 
-        <!-- Active Employees Card -->
         <div class="col-md-4 col-sm-6">
-            <div class="card border-success h-100">
+            <div class="stat-card accent-success">
                 <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex justify-content-between align-items-start">
                         <div>
-                            <h6 class="card-subtitle mb-2 text-muted">Active Employees</h6>
-                            <h2 class="card-title mb-0">@ViewData["ActiveEmployees"]</h2>
+                            <div class="stat-label">Active Employees</div>
+                            <p class="stat-value">@ViewData["ActiveEmployees"]</p>
                         </div>
-                        <div class="text-success" style="font-size: 2.5rem; font-weight: bold;">
-                            ✓
-                        </div>
+                        <span class="stat-icon" aria-hidden="true"><i class="bi bi-person-check-fill"></i></span>
                     </div>
-                    <a asp-controller="Employee" asp-action="Index" class="btn btn-sm btn-outline-success mt-3">View Active</a>
+                    <a asp-controller="Employee" asp-action="Index" class="stat-link">
+                        View active <i class="bi bi-arrow-right"></i>
+                    </a>
                 </div>
             </div>
         </div>
 
-        <!-- Today's Attendance Card -->
         <div class="col-md-4 col-sm-6">
-            <div class="card border-info h-100">
+            <div class="stat-card accent-info">
                 <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex justify-content-between align-items-start">
                         <div>
-                            <h6 class="card-subtitle mb-2 text-muted">Today's Attendance</h6>
-                            <h2 class="card-title mb-0">@ViewData["TodayAttendance"]</h2>
+                            <div class="stat-label">Today's Attendance</div>
+                            <p class="stat-value">@ViewData["TodayAttendance"]</p>
                         </div>
-                        <div class="text-info" style="font-size: 2.5rem; font-weight: bold;">
-                            📅
-                        </div>
+                        <span class="stat-icon" aria-hidden="true"><i class="bi bi-calendar2-check-fill"></i></span>
                     </div>
-                    <a asp-controller="Attendance" asp-action="Index" class="btn btn-sm btn-outline-info mt-3">View Attendance</a>
+                    <a asp-controller="Attendance" asp-action="Index" class="stat-link">
+                        View attendance <i class="bi bi-arrow-right"></i>
+                    </a>
                 </div>
             </div>
         </div>
 
-        <!-- Pending Leaves Card -->
         <div class="col-md-4 col-sm-6">
-            <div class="card border-warning h-100">
+            <div class="stat-card accent-warning">
                 <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex justify-content-between align-items-start">
                         <div>
-                            <h6 class="card-subtitle mb-2 text-muted">Pending Leave Requests</h6>
-                            <h2 class="card-title mb-0">@ViewData["PendingLeaves"]</h2>
+                            <div class="stat-label">Pending Leave Requests</div>
+                            <p class="stat-value">@ViewData["PendingLeaves"]</p>
                         </div>
-                        <div class="text-warning" style="font-size: 2.5rem; font-weight: bold;">
-                            ⏳
-                        </div>
+                        <span class="stat-icon" aria-hidden="true"><i class="bi bi-hourglass-split"></i></span>
                     </div>
-                    <a asp-controller="LMS" asp-action="Index" class="btn btn-sm btn-outline-warning mt-3">View Leaves</a>
+                    <a asp-controller="LMS" asp-action="Index" class="stat-link">
+                        View leaves <i class="bi bi-arrow-right"></i>
+                    </a>
                 </div>
             </div>
         </div>
 
-        <!-- Total Payrolls Card -->
         <div class="col-md-4 col-sm-6">
-            <div class="card border-secondary h-100">
+            <div class="stat-card accent-secondary">
                 <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex justify-content-between align-items-start">
                         <div>
-                            <h6 class="card-subtitle mb-2 text-muted">Total Payroll Records</h6>
-                            <h2 class="card-title mb-0">@ViewData["TotalPayrolls"]</h2>
+                            <div class="stat-label">Total Payroll Records</div>
+                            <p class="stat-value">@ViewData["TotalPayrolls"]</p>
                         </div>
-                        <div class="text-secondary" style="font-size: 2.5rem; font-weight: bold;">
-                            💰
-                        </div>
+                        <span class="stat-icon" aria-hidden="true"><i class="bi bi-cash-stack"></i></span>
                     </div>
-                    <a asp-controller="Payroll" asp-action="Index" class="btn btn-sm btn-outline-secondary mt-3">View Payroll</a>
+                    <a asp-controller="Payroll" asp-action="Index" class="stat-link">
+                        View payroll <i class="bi bi-arrow-right"></i>
+                    </a>
                 </div>
             </div>
         </div>
 
-        <!-- Tax Rules Card -->
         <div class="col-md-4 col-sm-6">
-            <div class="card border-danger h-100">
+            <div class="stat-card accent-danger">
                 <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex justify-content-between align-items-start">
                         <div>
-                            <h6 class="card-subtitle mb-2 text-muted">Tax Rules</h6>
-                            <h2 class="card-title mb-0">@ViewData["TotalTaxRules"]</h2>
+                            <div class="stat-label">Tax Rules</div>
+                            <p class="stat-value">@ViewData["TotalTaxRules"]</p>
                         </div>
-                        <div class="text-danger" style="font-size: 2.5rem; font-weight: bold;">
-                            📋
-                        </div>
+                        <span class="stat-icon" aria-hidden="true"><i class="bi bi-file-earmark-ruled-fill"></i></span>
                     </div>
-                    <a asp-controller="Tax" asp-action="Index" class="btn btn-sm btn-outline-danger mt-3">View Tax Rules</a>
+                    <a asp-controller="Tax" asp-action="Index" class="stat-link">
+                        View tax rules <i class="bi bi-arrow-right"></i>
+                    </a>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Quick Actions -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">Quick Actions</h5>
+    <div class="actions-card">
+        <div class="card-header">
+            <i class="bi bi-lightning-charge-fill"></i>Quick Actions
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3 col-sm-6">
+                    <a asp-controller="Employee" asp-action="Create" class="qa-btn qa-employee">
+                        <span class="qa-icon"><i class="bi bi-person-plus-fill"></i></span>
+                        Add New Employee
+                    </a>
                 </div>
-                <div class="card-body">
-                    <div class="row g-2">
-                        <div class="col-md-3 col-sm-6">
-                            <a asp-controller="Employee" asp-action="Create" class="btn btn-primary w-100">Add New Employee</a>
-                        </div>
-                        <div class="col-md-3 col-sm-6">
-                            <a asp-controller="Payroll" asp-action="Create" class="btn btn-success w-100">Run Payroll</a>
-                        </div>
-                        <div class="col-md-3 col-sm-6">
-                            <a asp-controller="Attendance" asp-action="Create" class="btn btn-info w-100">Mark Attendance</a>
-                        </div>
-                        <div class="col-md-3 col-sm-6">
-                            <a asp-controller="LMS" asp-action="Create" class="btn btn-warning w-100">Request Leave</a>
-                        </div>
-                    </div>
+                <div class="col-md-3 col-sm-6">
+                    <a asp-controller="Payroll" asp-action="Create" class="qa-btn qa-payroll">
+                        <span class="qa-icon"><i class="bi bi-play-circle-fill"></i></span>
+                        Run Payroll
+                    </a>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <a asp-controller="Attendance" asp-action="Create" class="qa-btn qa-attendance">
+                        <span class="qa-icon"><i class="bi bi-clipboard2-check-fill"></i></span>
+                        Mark Attendance
+                    </a>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <a asp-controller="LMS" asp-action="Create" class="qa-btn qa-leave">
+                        <span class="qa-icon"><i class="bi bi-calendar-plus-fill"></i></span>
+                        Request Leave
+                    </a>
                 </div>
             </div>
         </div>
     </div>
 </div>
-
-<style>
-    .card {
-        transition: transform 0.2s;
-    }
-    .card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-    .card-title {
-        font-size: 2.5rem;
-        font-weight: bold;
-    }
-</style>

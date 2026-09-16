@@ -111,10 +111,11 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: LMS — lists dbo.LeaveRequests joined with Employee for display.
-        public async Task<IActionResult> Index(string? employeeId, string? status, string? leaveType)
+        public async Task<IActionResult> Index(string? search, string? employeeId, string? status, string? leaveType)
         {
             ViewData["Module"] = "LMS";
-            employeeId = string.IsNullOrWhiteSpace(employeeId) ? null : employeeId.Trim();
+            var searchTerm = (search ?? employeeId)?.Trim();
+            if (string.IsNullOrWhiteSpace(searchTerm)) searchTerm = null;
             status = string.IsNullOrWhiteSpace(status) ? null : status.Trim();
             leaveType = string.IsNullOrWhiteSpace(leaveType) ? null : leaveType.Trim();
 
@@ -124,12 +125,12 @@ namespace HRMBT.Web.Controllers
                 from e in gj.DefaultIfEmpty()
                 select new { lr, e };
 
-            if (!string.IsNullOrEmpty(employeeId))
+            if (!string.IsNullOrEmpty(searchTerm))
             {
                 query = query.Where(x =>
                     x.e != null &&
-                    x.e.EmployeeID != null &&
-                    x.e.EmployeeID.Contains(employeeId));
+                    ((x.e.EmployeeID != null && x.e.EmployeeID.Contains(searchTerm)) ||
+                     (x.e.EmployeeName != null && x.e.EmployeeName.Contains(searchTerm))));
             }
 
             if (!string.IsNullOrEmpty(status))
@@ -155,7 +156,7 @@ namespace HRMBT.Web.Controllers
                 .ToListAsync();
 
             ViewBag.LeaveTypes = await GetLeaveTypeNamesAsync();
-            ViewBag.CurrentEmployeeId = employeeId;
+            ViewBag.CurrentSearch = searchTerm;
             ViewBag.CurrentStatus = status;
             ViewBag.CurrentLeaveType = leaveType;
 

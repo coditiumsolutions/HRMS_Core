@@ -23,7 +23,7 @@ public class EmployeeController : Controller
     }
 
     // GET: Employee
-    public async Task<IActionResult> Index(string? department, string? designation, string? employeeName, string? employeeID, string? year2024, string? applyTax, string? sortBy = "EmployeeID", string? sortOrder = "asc", int page = 1, int pageSize = 20)
+    public async Task<IActionResult> Index(string? department, string? designation, string? search, string? employeeName, string? employeeID, string? year2024, string? applyTax, string? sortBy = "EmployeeID", string? sortOrder = "asc", int page = 1, int pageSize = 20)
     {
         ViewData["Module"] = "Employees";
         
@@ -33,6 +33,9 @@ public class EmployeeController : Controller
             if (page < 1) page = 1;
             if (pageSize < 1) pageSize = 20;
             if (pageSize > 100) pageSize = 100; // Max page size limit
+
+            // Combined name/ID search (legacy employeeName / employeeID still accepted)
+            var searchTerm = (search ?? employeeName ?? employeeID)?.Trim();
 
             // Start with a query
             var query = _context.Employees.AsQueryable();
@@ -48,16 +51,12 @@ public class EmployeeController : Controller
                 query = query.Where(e => e.Designation == designation);
             }
 
-            // Filter by Employee Name (partial match)
-            if (!string.IsNullOrEmpty(employeeName))
+            // Single search matches Employee Name OR Employee ID (partial)
+            if (!string.IsNullOrEmpty(searchTerm))
             {
-                query = query.Where(e => e.EmployeeName != null && e.EmployeeName.Contains(employeeName));
-            }
-
-            // Filter by Employee ID (partial match)
-            if (!string.IsNullOrEmpty(employeeID))
-            {
-                query = query.Where(e => e.EmployeeID != null && e.EmployeeID.Contains(employeeID));
+                query = query.Where(e =>
+                    (e.EmployeeName != null && e.EmployeeName.Contains(searchTerm)) ||
+                    (e.EmployeeID != null && e.EmployeeID.Contains(searchTerm)));
             }
 
             // Filter by Year2024 (FR-005)
@@ -102,8 +101,7 @@ public class EmployeeController : Controller
             // Preserve filter values
             ViewBag.CurrentDepartment = department;
             ViewBag.CurrentDesignation = designation;
-            ViewBag.CurrentEmployeeName = employeeName;
-            ViewBag.CurrentEmployeeID = employeeID;
+            ViewBag.CurrentSearch = searchTerm;
             ViewBag.CurrentYear2024 = year2024;
             ViewBag.CurrentApplyTax = applyTax;
             ViewBag.CurrentPageSize = pageSize;
@@ -167,18 +165,21 @@ public class EmployeeController : Controller
     }
 
     // GET: Employee/ExportExcel
-    public async Task<IActionResult> ExportExcel(string? department, string? designation, string? employeeName, string? employeeID, string? year2024, string? applyTax, string? sortBy = "EmployeeID", string? sortOrder = "asc")
+    public async Task<IActionResult> ExportExcel(string? department, string? designation, string? search, string? employeeName, string? employeeID, string? year2024, string? applyTax, string? sortBy = "EmployeeID", string? sortOrder = "asc")
     {
         var query = _context.Employees.AsQueryable();
+        var searchTerm = (search ?? employeeName ?? employeeID)?.Trim();
 
         if (!string.IsNullOrEmpty(department))
             query = query.Where(e => e.Department == department);
         if (!string.IsNullOrEmpty(designation))
             query = query.Where(e => e.Designation == designation);
-        if (!string.IsNullOrEmpty(employeeName))
-            query = query.Where(e => e.EmployeeName != null && e.EmployeeName.Contains(employeeName));
-        if (!string.IsNullOrEmpty(employeeID))
-            query = query.Where(e => e.EmployeeID != null && e.EmployeeID.Contains(employeeID));
+        if (!string.IsNullOrEmpty(searchTerm))
+        {
+            query = query.Where(e =>
+                (e.EmployeeName != null && e.EmployeeName.Contains(searchTerm)) ||
+                (e.EmployeeID != null && e.EmployeeID.Contains(searchTerm)));
+        }
         if (!string.IsNullOrEmpty(year2024) && int.TryParse(year2024, out int yearValue))
             query = query.Where(e => e.Year2024 == yearValue);
         if (!string.IsNullOrEmpty(applyTax))

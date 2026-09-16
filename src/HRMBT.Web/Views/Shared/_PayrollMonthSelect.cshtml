@@ -7,18 +7,35 @@
     var cssClass = ViewData["MonthSelectClass"] as string ?? "form-select";
     var label = ViewData["MonthLabel"] as string;
     var required = ViewData["MonthRequired"] as bool? ?? true;
+    var formId = ViewData["MonthFormId"] as string;
 }
 @if (!string.IsNullOrEmpty(label))
 {
     <label for="@fieldId" class="form-label">@label @(required ? Html.Raw("<span class=\"text-danger\">*</span>") : null)</label>
 }
-<select name="@fieldName" id="@fieldId" class="@cssClass" @(required ? "required" : null)>
-    @if (includeEmpty)
-    {
-        <option value="">-- Select Month --</option>
-    }
-    @foreach (var monthName in PayrollMonthHelper.AllMonthNames)
-    {
-        <option value="@monthName" selected="@(string.Equals(selectedMonth, monthName, StringComparison.OrdinalIgnoreCase))">@monthName</option>
-    }
-</select>
+@if (string.IsNullOrEmpty(formId))
+{
+    <select name="@fieldName" id="@fieldId" class="@cssClass" @(required ? "required" : null)>
+        @if (includeEmpty)
+        {
+            <option value="">-- Select Month --</option>
+        }
+        @foreach (var monthName in PayrollMonthHelper.AllMonthNames)
+        {
+            <option value="@monthName" selected="@(string.Equals(selectedMonth, monthName, StringComparison.OrdinalIgnoreCase))">@monthName</option>
+        }
+    </select>
+}
+else
+{
+    <select name="@fieldName" id="@fieldId" class="@cssClass" form="@formId" @(required ? "required" : null)>
+        @if (includeEmpty)
+        {
+            <option value="">-- Select Month --</option>
+        }
+        @foreach (var monthName in PayrollMonthHelper.AllMonthNames)
+        {
+            <option value="@monthName" selected="@(string.Equals(selectedMonth, monthName, StringComparison.OrdinalIgnoreCase))">@monthName</option>
+        }
+    </select>
+}
