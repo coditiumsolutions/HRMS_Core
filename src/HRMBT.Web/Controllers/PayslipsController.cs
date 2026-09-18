@@ -304,7 +304,7 @@ namespace HRMBT.Web.Controllers
                 if (payslip.IsLocked)
                 {
                     TempData["ErrorMessage"] = "This payslip is locked and cannot be deleted.";
-                    return RedirectToAction(nameof(Index));
+                    return RedirectToAction("Index", "Payroll");
                 }
 
                 var details = _context.PayslipDetails.Where(d => d.PayslipId == id);
@@ -314,7 +314,7 @@ namespace HRMBT.Web.Controllers
                 TempData["SuccessMessage"] = "Payslip deleted.";
             }
 
-            return RedirectToAction(nameof(Index));
+            return RedirectToAction("Index", "Payroll");
         }
 
         // ---------- AJAX ----------

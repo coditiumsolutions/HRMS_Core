@@ -135,7 +135,14 @@ namespace HRMBT.Web.Data
                 entity.Property(d => d.ModifiedBy).HasMaxLength(100);
             });
             modelBuilder.Entity<Payslip>().ToTable("Payslips");
-            modelBuilder.Entity<PayslipDetail>().ToTable("PayslipDetails");
+            modelBuilder.Entity<PayslipDetail>(entity =>
+            {
+                entity.ToTable("PayslipDetails");
+                entity.HasOne(d => d.Payslip)
+                    .WithMany(p => p.PayslipDetails)
+                    .HasForeignKey(d => d.PayslipId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
             modelBuilder.Entity<Payslip>(entity =>
             {
                 entity.Property(p => p.Month).HasMaxLength(20).IsRequired();

@@ -81,8 +81,19 @@ namespace HRMBT.Web.Services.Payroll
                     .Where(a => a.EmployeeId == employeeId && a.IsActive)
                     .ToList();
 
+                var monthNum = PayrollMonthHelper.OrderIndex(monthName);
+                if (monthNum < 1 || monthNum > 12)
+                    monthNum = DateTime.Now.Month;
+                var periodStart = new DateTime(year, monthNum, 1);
+                var periodEnd = periodStart.AddMonths(1).AddDays(-1);
+
+                // Every active deduction that applies in this payroll month
                 var deductions = _context.Deductions
-                    .Where(d => d.EmployeeId == employeeId && d.IsActive)
+                    .Where(d => d.EmployeeId == employeeId && d.IsActive
+                        && d.EffectiveDate <= periodEnd
+                        && (d.EndDate == null || d.EndDate >= periodStart))
+                    .OrderBy(d => d.DeductionType)
+                    .ThenBy(d => d.DeductionName)
                     .ToList();
 
                 decimal totalAllowances = SumAllowancesForBasic(basic, allowances);
@@ -90,6 +101,7 @@ namespace HRMBT.Web.Services.Payroll
                 decimal gross = basic + totalAllowances;
 
                 decimal totalPayrollDeductions = deductions.Sum(d => DeductionComputedAmount(d, gross));
+                totalPayrollDeductions = Math.Round(totalPayrollDeductions, 2, MidpointRounding.AwayFromZero);
 
                 // Tax is calculated on BasicSalary as requested.
                 var taxResult = CalculateTax(employee, basic, year);
@@ -143,13 +155,25 @@ namespace HRMBT.Web.Services.Payroll
 
                 foreach (var d in deductions)
                 {
-                    var lineAmount = DeductionComputedAmount(d, gross);
+                    var lineAmount = Math.Round(DeductionComputedAmount(d, gross), 2, MidpointRounding.AwayFromZero);
                     payslip.PayslipDetails.Add(new PayslipDetail
                     {
                         ItemType = "Deduction",
-                        ItemName = d.DeductionName,
+                        ItemName = string.IsNullOrWhiteSpace(d.DeductionName) ? d.DeductionType : d.DeductionName,
                         ItemCategory = d.DeductionType,
                         Amount = lineAmount,
+                        SortOrder = sort++
+                    });
+                }
+
+                if (taxResult.TaxAmount > 0)
+                {
+                    payslip.PayslipDetails.Add(new PayslipDetail
+                    {
+                        ItemType = "Tax",
+                        ItemName = "Income Tax",
+                        ItemCategory = $"{taxResult.TaxPercentage:N2}% of Basic",
+                        Amount = taxResult.TaxAmount,
                         SortOrder = sort++
                     });
                 }

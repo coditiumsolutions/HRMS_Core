@@ -96,7 +96,7 @@
                         {
                             <tr class="table-light">
                                 <td><strong>Total Allowances</strong></td>
-                                <td class="amount"><strong>@(Model.TotalAllowances ?? allowanceLines.Sum(l => l.Amount)).ToString("N2")</strong></td>
+                                <td class="amount"><strong>@((Model.TotalAllowances ?? allowanceLines.Sum(l => l.Amount)).ToString("N2"))</strong></td>
                             </tr>
                         }
                         <tr>
@@ -117,7 +117,20 @@
                                 <td class="amount"><strong>- @payrollDedTotal.ToString("N2")</strong></td>
                             </tr>
                         }
-                        @if (Model.TaxAmount > 0)
+                        @{
+                            var taxLines = (Model.PayslipDetails ?? Enumerable.Empty<HRMBT.Web.Models.PayslipDetail>())
+                                .Where(d => string.Equals(d.ItemType, "Tax", StringComparison.OrdinalIgnoreCase))
+                                .OrderBy(d => d.SortOrder ?? int.MaxValue)
+                                .ToList();
+                        }
+                        @foreach (var line in taxLines)
+                        {
+                            <tr>
+                                <td>@line.ItemName (@line.ItemCategory)</td>
+                                <td class="amount">- @line.Amount.ToString("N2")</td>
+                            </tr>
+                        }
+                        @if (taxLines.Count == 0 && Model.TaxAmount > 0)
                         {
                             <tr>
                                 <td>Income tax (@Model.TaxPercentage.ToString("N2")% of basic)</td>

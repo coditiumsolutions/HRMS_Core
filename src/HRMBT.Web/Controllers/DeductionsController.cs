@@ -426,10 +426,11 @@ public class DeductionsController : Controller
     {
         ViewData["Module"] = "Deductions";
         ViewData["Title"] = "Add deduction";
-        await LoadEmployeeSelectAsync();
         await LoadDeductionTypeSelectAsync();
         LoadCalculationMethodSelect();
         LoadFrequencySelect("Monthly");
+        ViewBag.EmployeeCode = "";
+        ViewBag.EmployeeDisplayName = "";
         return View(new Deduction
         {
             EffectiveDate = DateTime.Today,
@@ -439,32 +440,110 @@ public class DeductionsController : Controller
         });
     }
 
+    /// <summary>Lookup active employee by Employee ID (exact, then contains) for Create form search.</summary>
+    [HttpGet]
+    public async Task<IActionResult> FindEmployee(string? q)
+    {
+        var term = (q ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(term))
+            return Json(new { found = false, message = "Enter an Employee ID." });
+
+        var exact = await _context.Employees.AsNoTracking()
+            .Where(e => e.EmployeeID != null && e.EmployeeID == term)
+            .Select(e => new { e.uid, e.EmployeeID, e.EmployeeName, e.EmployeeStatus, e.Department })
+            .FirstOrDefaultAsync();
+
+        var match = exact;
+        if (match == null)
+        {
+            match = await _context.Employees.AsNoTracking()
+                .Where(e => e.EmployeeID != null && e.EmployeeID.Contains(term))
+                .OrderBy(e => e.EmployeeID)
+                .Select(e => new { e.uid, e.EmployeeID, e.EmployeeName, e.EmployeeStatus, e.Department })
+                .FirstOrDefaultAsync();
+        }
+
+        if (match == null)
+            return Json(new { found = false, message = $"No employee found for ID “{term}”." });
+
+        var isActive = string.Equals(match.EmployeeStatus, "Active", StringComparison.OrdinalIgnoreCase);
+        if (!isActive)
+            return Json(new { found = false, message = $"Employee {match.EmployeeID} ({match.EmployeeName}) is not Active." });
+
+        return Json(new
+        {
+            found = true,
+            uid = match.uid,
+            employeeId = match.EmployeeID,
+            name = match.EmployeeName,
+            department = match.Department,
+            display = $"{match.EmployeeName} ({match.EmployeeID})"
+        });
+    }
+
     // POST: Deductions/Create
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(
         [Bind("EmployeeId,DeductionType,DeductionName,Frequency,CalculationMethod,PercentageValue,IsMandatory,EffectiveDate,EndDate,IsActive")]
-        Deduction deduction)
+        Deduction deduction,
+        string? employeeCode)
     {
         ViewData["Module"] = "Deductions";
         ViewData["Title"] = "Add deduction";
+        ModelState.Remove(nameof(Deduction.Employee));
 
-        if (deduction.EmployeeId <= 0)
-            ModelState.AddModelError(nameof(deduction.EmployeeId), "Select an employee.");
+        Employee? employee = null;
+        if (deduction.EmployeeId > 0)
+        {
+            employee = await _context.Employees.AsNoTracking()
+                .FirstOrDefaultAsync(e => e.uid == deduction.EmployeeId);
+        }
+
+        if (employee == null && !string.IsNullOrWhiteSpace(employeeCode))
+        {
+            var code = employeeCode.Trim();
+            employee = await _context.Employees.AsNoTracking()
+                .FirstOrDefaultAsync(e => e.EmployeeID != null && e.EmployeeID == code);
+            if (employee != null)
+                deduction.EmployeeId = employee.uid;
+        }
+
+        if (employee == null || deduction.EmployeeId <= 0)
+        {
+            ModelState.AddModelError(nameof(deduction.EmployeeId), "Find a valid employee by Employee ID before saving.");
+        }
+        else if (!string.Equals(employee.EmployeeStatus, "Active", StringComparison.OrdinalIgnoreCase))
+        {
+            ModelState.AddModelError(nameof(deduction.EmployeeId), "Selected employee is not Active.");
+        }
 
         ValidateDeduction(deduction, ModelState);
 
+        ViewBag.EmployeeCode = employee?.EmployeeID ?? employeeCode ?? "";
+        ViewBag.EmployeeDisplayName = employee == null
+            ? ""
+            : $"{employee.EmployeeName} ({employee.EmployeeID})";
+
         if (ModelState.IsValid)
         {
-            deduction.CreatedDate = DateTime.Now;
-            deduction.CreatedBy = User.Identity?.Name ?? "System";
-            _context.Add(deduction);
-            await _context.SaveChangesAsync();
-            TempData["SuccessMessage"] = "Deduction created.";
-            return RedirectToAction(nameof(Index));
+            try
+            {
+                deduction.CreatedDate = DateTime.Now;
+                deduction.CreatedBy = User.Identity?.Name ?? "System";
+                _context.Add(deduction);
+                await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = "Deduction saved successfully.";
+                return RedirectToAction(nameof(Index));
+            }
+            catch (Exception ex)
+            {
+                var detail = ex.InnerException?.Message ?? ex.Message;
+                ModelState.AddModelError(string.Empty, "Could not save the deduction. " + detail);
+                TempData["ErrorMessage"] = "Could not save the deduction. " + detail;
+            }
         }
 
-        await LoadEmployeeSelectAsync(deduction.EmployeeId);
         await LoadDeductionTypeSelectAsync(deduction.DeductionType);
         LoadCalculationMethodSelect(deduction.CalculationMethod);
         LoadFrequencySelect(string.IsNullOrWhiteSpace(deduction.Frequency) ? "Monthly" : deduction.Frequency);
@@ -498,6 +577,7 @@ public class DeductionsController : Controller
         ViewData["Module"] = "Deductions";
         ViewData["Title"] = "Edit deduction";
         if (id != deduction.Id) return NotFound();
+        ModelState.Remove(nameof(Deduction.Employee));
 
         if (deduction.EmployeeId <= 0)
             ModelState.AddModelError(nameof(deduction.EmployeeId), "Select an employee.");
@@ -512,16 +592,20 @@ public class DeductionsController : Controller
                 deduction.ModifiedBy = User.Identity?.Name ?? "System";
                 _context.Update(deduction);
                 await _context.SaveChangesAsync();
-                TempData["SuccessMessage"] = "Deduction updated.";
+                TempData["SuccessMessage"] = "Deduction updated successfully.";
+                return RedirectToAction(nameof(Index));
             }
             catch (DbUpdateConcurrencyException)
             {
                 if (!await DeductionExistsAsync(deduction.Id))
                     return NotFound();
-                throw;
+                ModelState.AddModelError(string.Empty, "This deduction was changed by another user. Reload and try again.");
             }
-
-            return RedirectToAction(nameof(Index));
+            catch (Exception ex)
+            {
+                var detail = ex.InnerException?.Message ?? ex.Message;
+                ModelState.AddModelError(string.Empty, "Could not update the deduction. " + detail);
+            }
         }
 
         await LoadEmployeeSelectAsync(deduction.EmployeeId);

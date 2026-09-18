@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
 namespace HRMBT.Web.Models
 {
@@ -62,6 +63,7 @@ namespace HRMBT.Web.Models
         public string? ModifiedBy { get; set; }
 
         [ForeignKey("EmployeeId")]
-        public Employee Employee { get; set; } = null!;
+        [ValidateNever]
+        public Employee? Employee { get; set; }
     }
 }

@@ -5,6 +5,20 @@
     ViewData["Module"] = "Payroll";
     var empName = Model.Employee?.EmployeeName;
     var empCode = Model.Employee?.EmployeeID;
+
+    var allowanceLines = (Model.PayslipDetails ?? Enumerable.Empty<HRMBT.Web.Models.PayslipDetail>())
+        .Where(d => string.Equals(d.ItemType, "Allowance", StringComparison.OrdinalIgnoreCase))
+        .OrderBy(d => d.SortOrder ?? int.MaxValue)
+        .ToList();
+    var deductionLines = (Model.PayslipDetails ?? Enumerable.Empty<HRMBT.Web.Models.PayslipDetail>())
+        .Where(d => string.Equals(d.ItemType, "Deduction", StringComparison.OrdinalIgnoreCase))
+        .OrderBy(d => d.SortOrder ?? int.MaxValue)
+        .ToList();
+    var taxLines = (Model.PayslipDetails ?? Enumerable.Empty<HRMBT.Web.Models.PayslipDetail>())
+        .Where(d => string.Equals(d.ItemType, "Tax", StringComparison.OrdinalIgnoreCase))
+        .OrderBy(d => d.SortOrder ?? int.MaxValue)
+        .ToList();
+    var payrollDedTotal = deductionLines.Count > 0 ? deductionLines.Sum(l => l.Amount) : Model.TotalDeductions;
 }
 
 @section Styles {
@@ -76,7 +90,7 @@
                                 <th scope="row" class="pd-label">Tax Amount</th>
                                 <td class="pd-value">@Model.TaxAmount.ToString("N2")</td>
                                 <th scope="row" class="pd-label">Total Deductions</th>
-                                <td class="pd-value">@Model.TotalDeductions.ToString("N2")</td>
+                                <td class="pd-value">@payrollDedTotal.ToString("N2")</td>
                             </tr>
                             <tr>
                                 <th scope="row" class="pd-label">Net Salary</th>
@@ -96,11 +110,97 @@
                         </tbody>
                     </table>
                 </div>
+
+                @if (allowanceLines.Count > 0)
+                {
+                    <div class="px-3 pt-3">
+                        <div class="fw-semibold text-dark mb-2"><i class="bi bi-plus-circle me-1 text-success"></i>Allowances</div>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered mb-0 align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Type</th>
+                                        <th class="text-end">Amount (PKR)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var line in allowanceLines)
+                                    {
+                                        <tr>
+                                            <td>@line.ItemName</td>
+                                            <td>@(string.IsNullOrWhiteSpace(line.ItemCategory) ? "—" : line.ItemCategory)</td>
+                                            <td class="text-end">@line.Amount.ToString("N2")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                }
+
+                <div class="px-3 py-3">
+                    <div class="fw-semibold text-dark mb-2"><i class="bi bi-dash-circle me-1 text-danger"></i>Deductions</div>
+                    @if (deductionLines.Count > 0)
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered mb-0 align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Type</th>
+                                        <th class="text-end">Amount (PKR)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var line in deductionLines)
+                                    {
+                                        <tr>
+                                            <td>@line.ItemName</td>
+                                            <td>@(string.IsNullOrWhiteSpace(line.ItemCategory) ? "—" : line.ItemCategory)</td>
+                                            <td class="text-end">@line.Amount.ToString("N2")</td>
+                                        </tr>
+                                    }
+                                    <tr class="table-light">
+                                        <td colspan="2" class="fw-semibold">Total deductions</td>
+                                        <td class="text-end fw-semibold">@payrollDedTotal.ToString("N2")</td>
+                                    </tr>
+                                    @foreach (var line in taxLines)
+                                    {
+                                        <tr>
+                                            <td>@line.ItemName</td>
+                                            <td>@(string.IsNullOrWhiteSpace(line.ItemCategory) ? "—" : line.ItemCategory)</td>
+                                            <td class="text-end">@line.Amount.ToString("N2")</td>
+                                        </tr>
+                                    }
+                                    @if (taxLines.Count == 0 && Model.TaxAmount > 0)
+                                    {
+                                        <tr>
+                                            <td>Income Tax</td>
+                                            <td>@Model.TaxPercentage.ToString("N2")% of Basic</td>
+                                            <td class="text-end">@Model.TaxAmount.ToString("N2")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted small mb-0">
+                            No individual deduction lines on this payslip
+                            @(Model.TotalDeductions > 0 ? $"(header total: {Model.TotalDeductions:N2}). Re-generate payroll to store each deduction separately." : ".")
+                        </p>
+                    }
+                </div>
             </div>
         </div>
 
         <div class="d-flex flex-wrap gap-2 justify-content-end mb-4 no-print">
             <a asp-action="Index" class="btn btn-sm btn-action-secondary"><i class="bi bi-arrow-left me-1"></i>Back to list</a>
+            <a asp-controller="Payslips" asp-action="Print" asp-route-id="@Model.Id" class="btn btn-sm btn-action-outline" target="_blank">
+                <i class="bi bi-printer me-1"></i>Print salary slip
+            </a>
             <button type="button" class="btn btn-sm btn-action-primary" id="btnPrintPayrollDetails">
                 <i class="bi bi-printer me-1"></i>Print
             </button>
