@@ -1,9 +1,13 @@
 @model HRMBT.Web.Models.ViewModels.ConfigEditVm
 @{
-    ViewData["Title"] = "Edit configuration";
+    ViewData["Title"] = "Edit Config";
 }
 
-<h1 class="h3 mb-3">Edit configuration</h1>
+@section Styles {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" crossorigin="anonymous" />
+}
+
+<h1 class="h3 mb-3">Edit Config</h1>
 <p class="text-muted small mb-4">UID <strong>@Model.UID</strong> · <code>dbo.Configuration</code></p>
 
 <form asp-action="EditConfig" asp-route-id="@Model.UID" method="post" class="col-lg-8">
@@ -21,8 +25,8 @@
         <span asp-validation-for="ConfigValue" class="text-danger small"></span>
     </div>
     <div class="d-flex gap-2">
-        <button type="submit" class="btn btn-dark">Save</button>
-        <a class="btn btn-outline-secondary" asp-action="Config">Cancel</a>
+        <button type="submit" class="btn btn-sm btn-grid-edit"><i class="bi bi-check2 me-1"></i>Save</button>
+        <a class="btn btn-sm btn-outline-secondary" asp-action="Config" style="border-radius:0.25rem;">Cancel</a>
     </div>
 </form>
 

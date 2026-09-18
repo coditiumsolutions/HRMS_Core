@@ -3,101 +3,193 @@
 @{
     ViewData["Title"] = "Edit allowance";
     ViewData["Module"] = "Allowances";
+    var titleName = string.IsNullOrWhiteSpace(Model.Name) ? "Edit allowance" : $"Edit allowance ({Model.Name.Trim()})";
 }
 
 @section Styles {
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" crossorigin="anonymous" />
-    <link rel="stylesheet" href="~/css/employee-create.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/payslips.css" asp-append-version="true" />
+    <style>
+        .allowance-edit-compact .card-body { padding: 0.5rem 0.65rem !important; }
+        .allowance-edit-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        .allowance-edit-table .pd-label {
+            width: 14%;
+            padding: 0.35rem 0.55rem;
+            vertical-align: middle;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #000;
+            background: #f8fafc;
+            border-right: 1px solid #eef0f2;
+        }
+        .allowance-edit-table .pd-value {
+            width: 36%;
+            padding: 0.35rem 0.55rem;
+            vertical-align: middle;
+            font-size: 0.875rem;
+            color: #0d6efd;
+        }
+        .allowance-edit-table .form-control,
+        .allowance-edit-table .form-select {
+            font-size: 0.8125rem;
+            min-height: 1.75rem;
+            height: 1.75rem;
+            padding: 0.15rem 0.4rem;
+            color: #0d6efd;
+            line-height: 1.25;
+        }
+        .allowance-edit-table .form-control:focus,
+        .allowance-edit-table .form-select:focus {
+            color: #0a58ca;
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 0.15rem rgba(13, 110, 253, 0.2);
+        }
+        .allowance-edit-table .form-check {
+            margin: 0;
+            min-height: auto;
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+        .allowance-edit-table .form-check-label {
+            font-size: 0.8125rem;
+            color: #0d6efd;
+        }
+        .allowance-edit-table tr { border-bottom: 1px solid #eef0f2; }
+        .allowance-edit-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 0.65rem 0.85rem;
+        }
+        .allowance-edit-actions .btn,
+        .allowance-edit-actions .btn-action-primary,
+        .allowance-edit-actions .btn-action-secondary,
+        .allowance-edit-actions .btn-action-outline {
+            border-radius: 0.25rem !important;
+            padding: 0.2rem 0.6rem !important;
+            font-size: 0.8125rem !important;
+            font-weight: 600;
+            min-height: 1.6rem !important;
+            height: 1.6rem;
+            line-height: 1.2 !important;
+            white-space: nowrap;
+        }
+        .allowance-edit-compact .grid-card .card-header {
+            font-size: 0.9rem;
+        }
+    </style>
 }
 
-<div class="employee-create-page py-4">
+<div class="payslip-page allowance-edit-compact py-3">
     <div class="container-fluid px-3 px-lg-4">
-        <nav aria-label="breadcrumb" class="mb-3">
-            <ol class="breadcrumb mb-0 small">
-                <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Home</a></li>
-                <li class="breadcrumb-item"><a asp-action="Index">Allowances</a></li>
-                <li class="breadcrumb-item active" aria-current="page">Edit</li>
-            </ol>
-        </nav>
-
-        <div class="page-header-card p-4 mb-4">
-            <h1 class="h2 mb-1 fw-bold text-dark">Edit allowance</h1>
-            <p class="text-muted mb-0">Id <strong>@Model.Id</strong></p>
-        </div>
-
         <form asp-action="Edit" method="post">
             @Html.AntiForgeryToken()
             <input type="hidden" asp-for="Id" />
             <input type="hidden" asp-for="CreatedDate" />
             <input type="hidden" asp-for="CreatedBy" />
-            <div asp-validation-summary="All" class="alert alert-danger" role="alert"></div>
 
-            <div class="card section-card mb-4">
-                <div class="card-header"><i class="bi bi-cash-stack"></i>Allowance</div>
-                <div class="card-body">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label asp-for="EmployeeId" class="form-label"></label>
-                            <select asp-for="EmployeeId" class="form-select" asp-items="ViewBag.EmployeeOptions"></select>
-                            <span asp-validation-for="EmployeeId" class="field-validation-error"></span>
+            <div class="grid-card mb-3">
+                <div class="card-header">
+                    <span><i class="bi bi-pencil"></i>@titleName</span>
+                </div>
+                <div class="card-body p-0">
+                    @if (!ViewData.ModelState.IsValid)
+                    {
+                        <div class="alert alert-danger m-3 mb-0" role="alert">
+                            <div asp-validation-summary="All" class="mb-0"></div>
                         </div>
-                        <div class="col-md-6">
-                            <label asp-for="AllowanceType" class="form-label"></label>
-                            <input asp-for="AllowanceType" class="form-control" maxlength="50" />
-                            <span asp-validation-for="AllowanceType" class="field-validation-error"></span>
-                        </div>
-                        <div class="col-12">
-                            <label asp-for="Name" class="form-label"></label>
-                            <input asp-for="Name" class="form-control" maxlength="200" />
-                            <span asp-validation-for="Name" class="field-validation-error"></span>
-                        </div>
-                        <div class="col-md-4">
-                            <label asp-for="Amount" class="form-label"></label>
-                            <input asp-for="Amount" class="form-control" type="number" step="0.01" min="0" />
-                            <span asp-validation-for="Amount" class="field-validation-error"></span>
-                        </div>
-                        <div class="col-md-4 d-flex align-items-end">
-                            <div class="form-check mb-2">
-                                <input asp-for="IsPercentage" class="form-check-input" />
-                                <label asp-for="IsPercentage" class="form-check-label"></label>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <label asp-for="PercentageValue" class="form-label"></label>
-                            <input asp-for="PercentageValue" class="form-control" type="number" step="0.01" min="0" max="100" />
-                            <span asp-validation-for="PercentageValue" class="field-validation-error"></span>
-                        </div>
-                        <div class="col-md-4">
-                            <label asp-for="EffectiveDate" class="form-label"></label>
-                            <input asp-for="EffectiveDate" class="form-control" type="date" />
-                            <span asp-validation-for="EffectiveDate" class="field-validation-error"></span>
-                        </div>
-                        <div class="col-md-4">
-                            <label asp-for="EndDate" class="form-label"></label>
-                            <input asp-for="EndDate" class="form-control" type="date" />
-                            <span asp-validation-for="EndDate" class="field-validation-error"></span>
-                        </div>
-                        <div class="col-md-4 d-flex align-items-end">
-                            <div class="form-check mb-2">
-                                <input asp-for="IsActive" class="form-check-input" />
-                                <label asp-for="IsActive" class="form-check-label"></label>
-                            </div>
-                        </div>
-                        <div class="col-12 small text-muted">
-                            Created @Model.CreatedDate.ToString("g") by @Model.CreatedBy
-                            @if (Model.ModifiedDate.HasValue)
-                            {
-                                <span> · Modified @Model.ModifiedDate.Value.ToString("g") @(Model.ModifiedBy ?? "")</span>
-                            }
-                        </div>
+                    }
+
+                    <div class="table-responsive">
+                        <table class="payroll-details-table allowance-edit-table mb-0">
+                            <tbody>
+                                <tr>
+                                    <th scope="row" class="pd-label">Employee</th>
+                                    <td class="pd-value">
+                                        <select asp-for="EmployeeId" class="form-select" asp-items="ViewBag.EmployeeOptions"></select>
+                                        <span asp-validation-for="EmployeeId" class="text-danger"></span>
+                                    </td>
+                                    <th scope="row" class="pd-label">Allowance type</th>
+                                    <td class="pd-value">
+                                        <input asp-for="AllowanceType" class="form-control" maxlength="50" />
+                                        <span asp-validation-for="AllowanceType" class="text-danger"></span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row" class="pd-label">Name</th>
+                                    <td class="pd-value">
+                                        <input asp-for="Name" class="form-control" maxlength="200" />
+                                        <span asp-validation-for="Name" class="text-danger"></span>
+                                    </td>
+                                    <th scope="row" class="pd-label">Amount</th>
+                                    <td class="pd-value">
+                                        <input asp-for="Amount" class="form-control" type="number" step="0.01" min="0" />
+                                        <span asp-validation-for="Amount" class="text-danger"></span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row" class="pd-label">Quantity</th>
+                                    <td class="pd-value">
+                                        <input asp-for="Quantity" class="form-control" type="number" step="1" min="0" />
+                                        <span asp-validation-for="Quantity" class="text-danger"></span>
+                                    </td>
+                                    <th scope="row" class="pd-label">Percentage-based</th>
+                                    <td class="pd-value">
+                                        <div class="form-check">
+                                            <input asp-for="IsPercentage" class="form-check-input" />
+                                            <label asp-for="IsPercentage" class="form-check-label"></label>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row" class="pd-label">Percentage (%)</th>
+                                    <td class="pd-value">
+                                        <input asp-for="PercentageValue" class="form-control" type="number" step="0.01" min="0" max="100" />
+                                        <span asp-validation-for="PercentageValue" class="text-danger"></span>
+                                    </td>
+                                    <th scope="row" class="pd-label">Effective date</th>
+                                    <td class="pd-value">
+                                        <input asp-for="EffectiveDate" class="form-control" type="date" />
+                                        <span asp-validation-for="EffectiveDate" class="text-danger"></span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row" class="pd-label">End date</th>
+                                    <td class="pd-value">
+                                        <input asp-for="EndDate" class="form-control" type="date" />
+                                        <span asp-validation-for="EndDate" class="text-danger"></span>
+                                    </td>
+                                    <th scope="row" class="pd-label">Active</th>
+                                    <td class="pd-value">
+                                        <div class="form-check">
+                                            <input asp-for="IsActive" class="form-check-input" />
+                                            <label asp-for="IsActive" class="form-check-label"></label>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row" class="pd-label">Remarks</th>
+                                    <td class="pd-value" colspan="3">
+                                        <input asp-for="Remarks" class="form-control" maxlength="500" />
+                                        <span asp-validation-for="Remarks" class="text-danger"></span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="allowance-edit-actions">
+                        <button type="submit" class="btn btn-sm btn-action-primary"><i class="bi bi-check2 me-1"></i>Save</button>
+                        <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-sm btn-action-outline">Details</a>
+                        <a asp-action="Index" class="btn btn-sm btn-action-secondary">Cancel</a>
                     </div>
                 </div>
-            </div>
-
-            <div class="d-flex flex-wrap gap-2">
-                <button type="submit" class="btn btn-action-primary"><i class="bi bi-check2 me-1"></i>Save</button>
-                <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-action-outline">Details</a>
-                <a asp-action="Index" class="btn btn-action-secondary">Cancel</a>
             </div>
         </form>
     </div>

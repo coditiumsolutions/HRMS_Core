@@ -100,36 +100,40 @@
         }
         .setup-shell { min-height: calc(100vh - 120px); background: #f4f5f7; }
         .setup-sidebar {
-            background: #1a1d29;
+            background-color: #00203F;
             min-height: calc(100vh - 120px);
-            padding: 1.25rem 0.75rem;
-            border-right: 1px solid #333;
+            padding: 20px 10px;
+            border-right: 1px solid #dee2e6;
+            margin-bottom: 0;
         }
         .setup-sidebar .nav-link {
-            color: #c8cad4 !important;
-            border-radius: 0.35rem;
-            margin-bottom: 0.25rem;
-            padding: 0.5rem 0.75rem;
-            font-size: 0.9rem;
-            border-left: 3px solid transparent;
-            border-bottom: 1px solid #d4af37;
+            color: white !important;
+            padding: 0.55rem 0.5rem;
+            margin-bottom: 0.45rem;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            border-bottom: 1px solid #D4AF37;
+            border-left: none;
         }
         .setup-sidebar .nav-link:hover {
-            background: rgba(255,255,255,.08);
-            color: #fff !important;
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white !important;
         }
         .setup-sidebar .nav-link.active {
-            background: rgba(201, 162, 39, .15);
-            color: #f5e6b3 !important;
-            border-left-color: #c9a227;
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white !important;
             font-weight: 600;
+            border-left: none;
         }
-        .setup-sidebar .heading {
-            color: #8b8fa3;
-            font-size: 0.7rem;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            margin: 1rem 0.75rem 0.5rem;
+        .setup-sidebar .heading,
+        .setup-sidebar .sidebar-title {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #D4AF37 !important;
+            background-color: transparent;
+            text-transform: none;
+            letter-spacing: normal;
+            margin: 0 0 1rem 0;
         }
         .setup-main { padding: 1.5rem 1.75rem; }
     </style>
@@ -230,8 +234,8 @@
     <div class="container-fluid setup-shell g-0">
         <div class="row g-0">
             <nav class="col-12 col-md-3 col-lg-2 setup-sidebar">
-                <div class="heading">Setup menu</div>
-                <ul class="nav flex-column px-1">
+                <strong class="sidebar-title mb-3 d-block">Setup</strong>
+                <ul class="nav flex-column">
                     @{
                         var ctrl = ViewContext.RouteData.Values["controller"]?.ToString();
                         var act = ViewContext.RouteData.Values["action"]?.ToString();
@@ -240,9 +244,6 @@
                     <li class="nav-item"><a class="@A("Index")" asp-controller="Setup" asp-action="Index">Overview</a></li>
                     <li class="nav-item"><a class="@A("Users")" asp-controller="Setup" asp-action="Users">Users</a></li>
                     <li class="nav-item"><a class="@A("Config")" asp-controller="Setup" asp-action="Config">Config</a></li>
-                </ul>
-                <div class="heading mt-3">Application</div>
-                <ul class="nav flex-column px-1">
                     <li class="nav-item">
                         <a class="nav-link" asp-controller="Home" asp-action="Index">← Home dashboard</a>
                     </li>

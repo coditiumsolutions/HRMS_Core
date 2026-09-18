@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
 namespace HRMBT.Web.Models
 {
@@ -26,6 +27,10 @@ namespace HRMBT.Web.Models
         [Display(Name = "Amount")]
         public decimal Amount { get; set; }
 
+        [Display(Name = "Quantity")]
+        [Range(0, int.MaxValue, ErrorMessage = "Quantity must be a whole number 0 or greater.")]
+        public int Quantity { get; set; } = 1;
+
         [Display(Name = "Percentage-based")]
         public bool IsPercentage { get; set; }
 
@@ -44,6 +49,10 @@ namespace HRMBT.Web.Models
         [Display(Name = "Active")]
         public bool IsActive { get; set; }
 
+        [StringLength(500)]
+        [Display(Name = "Remarks")]
+        public string? Remarks { get; set; }
+
         public DateTime CreatedDate { get; set; }
 
         [StringLength(100)]
@@ -54,6 +63,7 @@ namespace HRMBT.Web.Models
         public string? ModifiedBy { get; set; }
 
         [ForeignKey("EmployeeId")]
-        public Employee Employee { get; set; } = null!;
+        [ValidateNever]
+        public Employee? Employee { get; set; }
     }
 }

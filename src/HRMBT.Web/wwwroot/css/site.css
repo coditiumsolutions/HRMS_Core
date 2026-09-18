@@ -62,3 +62,57 @@ body {
   color: #D4AF37 !important;
   background-color: transparent;
 }
+
+/* Grid Edit / Delete — shared across modules (Employee Index look) */
+.btn-grid-edit,
+.btn-grid-delete {
+  border-radius: 0.25rem !important;
+  font-weight: 600;
+  padding: 0.2rem 0.75rem;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  border: 1px solid transparent;
+  text-decoration: none;
+  min-height: 1.6rem;
+  display: inline-flex;
+  align-items: center;
+}
+
+.btn-grid-edit {
+  background: #d4af37 !important;
+  color: #00203f !important;
+  border-color: #c9a227 !important;
+}
+
+.btn-grid-edit:hover:not(.disabled):not(:disabled) {
+  background: #e0c04a !important;
+  color: #00152a !important;
+  border-color: #b8941f !important;
+}
+
+.btn-grid-delete {
+  background: #dc3545 !important;
+  color: #fff !important;
+  border-color: #b02a37 !important;
+}
+
+.btn-grid-delete:hover:not(.disabled):not(:disabled) {
+  background: #bb2d3b !important;
+  color: #fff !important;
+  border-color: #a02834 !important;
+}
+
+.btn-grid-edit.disabled,
+.btn-grid-delete.disabled,
+.btn-grid-edit:disabled,
+.btn-grid-delete:disabled {
+  opacity: 0.7;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+.grid-selection-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}

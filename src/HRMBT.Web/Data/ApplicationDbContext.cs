@@ -120,6 +120,7 @@ namespace HRMBT.Web.Data
                 entity.ToTable("Allowances");
                 entity.Property(a => a.Amount).HasColumnType("decimal(18,2)");
                 entity.Property(a => a.PercentageValue).HasColumnType("decimal(5,2)");
+                entity.Property(a => a.Remarks).HasMaxLength(500);
             });
             modelBuilder.Entity<Deduction>(entity =>
             {

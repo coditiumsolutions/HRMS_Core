@@ -1,3 +1,4 @@
+# Version: 1.2 | UpdatedAt: 18/09/2026
 Database: HRMS
 Connection: DefaultConnection (src/HRMBT.Web/appsettings.json)
 Generated: 2026-05-20 14:47:48
@@ -12,11 +13,13 @@ Generated: 2026-05-20 14:47:48
   - AllowanceType (nvarchar(50), Nullable: NO)
   - Name (nvarchar(200), Nullable: NO)
   - Amount (decimal(18,2), Nullable: NO)
+  - Quantity (int, Nullable: NO)
   - IsPercentage (bit, Nullable: NO)
   - PercentageValue (decimal(5,2), Nullable: YES)
   - EffectiveDate (datetime2(7), Nullable: NO)
   - EndDate (datetime2(7), Nullable: YES)
   - IsActive (bit, Nullable: NO)
+  - Remarks (nvarchar(500), Nullable: YES)
   - CreatedDate (datetime2(7), Nullable: NO)
   - CreatedBy (nvarchar(100), Nullable: NO)
   - ModifiedDate (datetime2(7), Nullable: YES)

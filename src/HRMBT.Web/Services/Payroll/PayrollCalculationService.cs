@@ -19,11 +19,35 @@ namespace HRMBT.Web.Services.Payroll
             _context = context;
         }
 
-        /// <summary>Computed monetary amount for one allowance row (percentage of basic vs fixed).</summary>
-        public static decimal AllowanceComputedAmount(Allowance a, decimal basicSalary) =>
-            a.IsPercentage
-                ? basicSalary * (a.PercentageValue ?? 0m) / 100m
-                : a.Amount;
+        /// <summary>
+        /// True when allowance type is Fuel Allowance (also accepts legacy "Fuel").
+        /// </summary>
+        public static bool IsFuelAllowanceType(string? allowanceType) =>
+            string.Equals((allowanceType ?? "").Trim(), "Fuel Allowance", StringComparison.OrdinalIgnoreCase)
+            || string.Equals((allowanceType ?? "").Trim(), "Fuel", StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// Computed monetary amount for one allowance row.
+        /// Fuel Allowance: if Amount &gt; 0 use Amount; otherwise FuelPrice (config) × Quantity.
+        /// Other fixed rows: Amount × Quantity. Percentage: % of basic.
+        /// </summary>
+        public static decimal AllowanceComputedAmount(Allowance a, decimal basicSalary, decimal fuelPrice = 0m)
+        {
+            var qty = a.Quantity < 0 ? 0 : a.Quantity;
+
+            if (a.IsPercentage)
+                return basicSalary * (a.PercentageValue ?? 0m) / 100m;
+
+            if (IsFuelAllowanceType(a.AllowanceType))
+            {
+                if (a.Amount > 0m)
+                    return a.Amount;
+
+                return fuelPrice * qty;
+            }
+
+            return a.Amount * qty;
+        }
 
         /// <summary>Percentage of gross when <see cref="Deduction.CalculationMethod"/> is Percentage; otherwise fixed PKR from <see cref="Deduction.PercentageValue"/> (dbo has no Amount column — see db.txt).</summary>
         public static bool IsPercentageDeduction(Deduction d) =>
@@ -34,9 +58,32 @@ namespace HRMBT.Web.Services.Payroll
                 ? grossSalary * (d.PercentageValue ?? 0m) / 100m
                 : (d.PercentageValue ?? 0m);
 
-        /// <summary>Active allowance total using the same rules as payslip gross (percentage of basic vs fixed amount).</summary>
-        public static decimal SumAllowancesForBasic(decimal basic, IEnumerable<Allowance> allowances) =>
-            allowances.Sum(a => AllowanceComputedAmount(a, basic));
+        /// <summary>Active allowance total using the same rules as payslip gross.</summary>
+        public static decimal SumAllowancesForBasic(decimal basic, IEnumerable<Allowance> allowances, decimal fuelPrice = 0m) =>
+            allowances.Sum(a => AllowanceComputedAmount(a, basic, fuelPrice));
+
+        /// <summary>Unit price from dbo.Configuration where ConfigKey = FuelPrice (0 if missing).</summary>
+        public decimal GetFuelPriceFromConfiguration()
+        {
+            var rows = _context.HrConfigurations
+                .AsNoTracking()
+                .Where(c => c.ConfigKey != null && c.ConfigValue != null)
+                .ToList();
+
+            var raw = rows
+                .FirstOrDefault(c => string.Equals((c.ConfigKey ?? "").Trim(), "FuelPrice", StringComparison.OrdinalIgnoreCase))
+                ?.ConfigValue;
+
+            if (string.IsNullOrWhiteSpace(raw))
+                return 0m;
+
+            var token = raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .FirstOrDefault() ?? raw.Trim();
+
+            return decimal.TryParse(token, NumberStyles.Number, CultureInfo.InvariantCulture, out var price)
+                ? price
+                : 0m;
+        }
 
         /// <summary>Preview gross (basic + active allowances) per employee — matches <see cref="GeneratePayslip"/> gross before deductions.</summary>
         public Dictionary<int, decimal> ComputeGrossPreviewForEmployees(IEnumerable<Employee> employees)
@@ -45,6 +92,7 @@ namespace HRMBT.Web.Services.Payroll
             var result = new Dictionary<int, decimal>();
             if (list.Count == 0) return result;
 
+            var fuelPrice = GetFuelPriceFromConfiguration();
             var ids = list.Select(e => e.uid).ToList();
             var byEmpId = _context.Allowances.AsNoTracking()
                 .Where(a => ids.Contains(a.EmployeeId) && a.IsActive)
@@ -57,7 +105,7 @@ namespace HRMBT.Web.Services.Payroll
                 var basic = emp.BasicSalary ?? 0m;
                 byEmpId.TryGetValue(emp.uid, out var allowances);
                 allowances ??= new List<Allowance>();
-                result[emp.uid] = basic + SumAllowancesForBasic(basic, allowances);
+                result[emp.uid] = basic + SumAllowancesForBasic(basic, allowances, fuelPrice);
             }
 
             return result;
@@ -76,6 +124,7 @@ namespace HRMBT.Web.Services.Payroll
                     throw new InvalidOperationException("Employee not found.");
 
                 decimal basic = employee.BasicSalary ?? 0m;
+                decimal fuelPrice = GetFuelPriceFromConfiguration();
 
                 var allowances = _context.Allowances
                     .Where(a => a.EmployeeId == employeeId && a.IsActive)
@@ -96,7 +145,7 @@ namespace HRMBT.Web.Services.Payroll
                     .ThenBy(d => d.DeductionName)
                     .ToList();
 
-                decimal totalAllowances = SumAllowancesForBasic(basic, allowances);
+                decimal totalAllowances = SumAllowancesForBasic(basic, allowances, fuelPrice);
 
                 decimal gross = basic + totalAllowances;
 
@@ -136,13 +185,14 @@ namespace HRMBT.Web.Services.Payroll
                         taxResult.TaxPercentage,
                         taxResult.TaxAmount,
                         totalWithheld,
-                        netSalary)
+                        netSalary,
+                        fuelPrice)
                 };
 
                 int sort = 1;
                 foreach (var a in allowances)
                 {
-                    var lineAmount = AllowanceComputedAmount(a, basic);
+                    var lineAmount = AllowanceComputedAmount(a, basic, fuelPrice);
                     payslip.PayslipDetails.Add(new PayslipDetail
                     {
                         ItemType = "Allowance",
@@ -274,7 +324,8 @@ namespace HRMBT.Web.Services.Payroll
             decimal taxPercentage,
             decimal taxAmount,
             decimal totalWithheld,
-            decimal netSalary)
+            decimal netSalary,
+            decimal fuelPrice = 0m)
         {
             var sb = new StringBuilder();
 
@@ -283,9 +334,17 @@ namespace HRMBT.Web.Services.Payroll
             sb.AppendLine("Allowances:");
             foreach (var a in allowances)
             {
-                var amt = AllowanceComputedAmount(a, basicSalary);
-                var pctNote = a.IsPercentage ? $" ({a.PercentageValue:N2}% of basic)" : string.Empty;
-                sb.AppendLine($"{a.Name}: {amt:N2}{pctNote}");
+                var amt = AllowanceComputedAmount(a, basicSalary, fuelPrice);
+                string note;
+                if (a.IsPercentage)
+                    note = $" ({a.PercentageValue:N2}% of basic)";
+                else if (IsFuelAllowanceType(a.AllowanceType) && a.Amount <= 0m)
+                    note = $" (FuelPrice {fuelPrice:N2} × Qty {a.Quantity})";
+                else if (IsFuelAllowanceType(a.AllowanceType))
+                    note = " (fixed Fuel Allowance amount)";
+                else
+                    note = string.Empty;
+                sb.AppendLine($"{a.Name}: {amt:N2}{note}");
             }
 
             sb.AppendLine($"Total Allowances: {totalAllowancesSum:N2}");

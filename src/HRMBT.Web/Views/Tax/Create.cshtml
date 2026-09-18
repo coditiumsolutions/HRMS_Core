@@ -1,46 +1,129 @@
 @model HRMBT.Web.Models.TaxRule
 
 @{
-    ViewData["Title"] = "Create Tax Rule";
+    ViewData["Title"] = "New slab";
+    ViewData["Module"] = "Tax";
 }
 
-<h1>Create Tax Rule</h1>
+@section Styles {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" crossorigin="anonymous" />
+    <link rel="stylesheet" href="~/css/payslips.css" asp-append-version="true" />
+    <style>
+        .tax-form-compact .card-body { padding: 0.5rem 0.65rem !important; }
+        .tax-form-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        .tax-form-table .pd-label {
+            width: 14%;
+            padding: 0.35rem 0.55rem;
+            vertical-align: middle;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #000;
+            background: #f8fafc;
+            border-right: 1px solid #eef0f2;
+        }
+        .tax-form-table .pd-value {
+            width: 36%;
+            padding: 0.35rem 0.55rem;
+            vertical-align: middle;
+            font-size: 0.875rem;
+            color: #0d6efd;
+        }
+        .tax-form-table .form-control,
+        .tax-form-table .form-select {
+            font-size: 0.8125rem;
+            min-height: 1.75rem;
+            height: 1.75rem;
+            padding: 0.15rem 0.4rem;
+            color: #0d6efd;
+            line-height: 1.25;
+        }
+        .tax-form-table .form-control:focus,
+        .tax-form-table .form-select:focus {
+            color: #0a58ca;
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 0.15rem rgba(13, 110, 253, 0.2);
+        }
+        .tax-form-table .form-text {
+            font-size: 0.7rem;
+            margin-top: 0.2rem;
+            margin-bottom: 0;
+        }
+        .tax-form-table tr { border-bottom: 1px solid #eef0f2; }
+        .tax-form-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 0.65rem 0.85rem;
+        }
+        .tax-form-compact .grid-card .card-header {
+            font-size: 0.9rem;
+        }
+    </style>
+}
 
-<hr />
-<div class="row">
-    <div class="col-md-6">
-        <form asp-action="Create">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <div class="form-group mb-3">
-                <label asp-for="TaxYear" class="control-label"></label>
-                <select asp-for="TaxYear" class="form-select" asp-items="ViewBag.TaxYears"></select>
-                <span asp-validation-for="TaxYear" class="text-danger"></span>
-            </div>
-            <div class="form-group mb-3">
-                <label asp-for="MinSalary" class="control-label"></label>
-                <input asp-for="MinSalary" class="form-control" type="number" step="0.01" min="0" />
-                <span asp-validation-for="MinSalary" class="text-danger"></span>
-            </div>
-            <div class="form-group mb-3">
-                <label asp-for="MaxSalary" class="control-label"></label>
-                <input asp-for="MaxSalary" class="form-control" type="number" step="0.01" min="0" />
-                <small class="form-text text-muted">Leave empty for unlimited maximum salary</small>
-                <span asp-validation-for="MaxSalary" class="text-danger"></span>
-            </div>
-            <div class="form-group mb-3">
-                <label asp-for="TaxPercentage" class="control-label"></label>
-                <input asp-for="TaxPercentage" class="form-control" type="number" step="0.01" min="0" max="100" />
-                <span asp-validation-for="TaxPercentage" class="text-danger"></span>
-            </div>
-            <div class="form-group mb-3">
-                <input type="submit" value="Create" class="btn btn-primary" />
-                <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+<div class="payslip-page tax-form-compact py-3">
+    <div class="container-fluid px-3 px-lg-4">
+        <form asp-action="Create" method="post">
+            <div class="grid-card mb-3">
+                <div class="card-header">
+                    <span><i class="bi bi-plus-lg"></i>New slab</span>
+                </div>
+                <div class="card-body p-0">
+                    @if (!ViewData.ModelState.IsValid)
+                    {
+                        <div class="alert alert-danger m-3 mb-0" role="alert">
+                            <div asp-validation-summary="ModelOnly" class="mb-0"></div>
+                        </div>
+                    }
+
+                    <div class="table-responsive">
+                        <table class="payroll-details-table tax-form-table mb-0">
+                            <tbody>
+                                <tr>
+                                    <th scope="row" class="pd-label">Tax year</th>
+                                    <td class="pd-value">
+                                        <select asp-for="TaxYear" class="form-select" asp-items="ViewBag.TaxYears"></select>
+                                        <span asp-validation-for="TaxYear" class="text-danger small"></span>
+                                    </td>
+                                    <th scope="row" class="pd-label">Tax percentage</th>
+                                    <td class="pd-value">
+                                        <input asp-for="TaxPercentage" class="form-control" type="number" step="0.01" min="0" max="100" />
+                                        <span asp-validation-for="TaxPercentage" class="text-danger small"></span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row" class="pd-label">Minimum salary</th>
+                                    <td class="pd-value">
+                                        <input asp-for="MinSalary" class="form-control" type="number" step="0.01" min="0" />
+                                        <span asp-validation-for="MinSalary" class="text-danger small"></span>
+                                    </td>
+                                    <th scope="row" class="pd-label">Maximum salary</th>
+                                    <td class="pd-value">
+                                        <input asp-for="MaxSalary" class="form-control" type="number" step="0.01" min="0" />
+                                        <div class="form-text">Leave empty for unlimited</div>
+                                        <span asp-validation-for="MaxSalary" class="text-danger small"></span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="tax-form-actions">
+                        <button type="submit" class="btn btn-sm btn-grid-edit"><i class="bi bi-check2 me-1"></i>Save</button>
+                        <a asp-action="Index" class="btn btn-sm btn-grid-delete">Cancel</a>
+                    </div>
+                </div>
             </div>
         </form>
     </div>
 </div>
 
 @section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <partial name="_ValidationScriptsPartial" />
 }
-

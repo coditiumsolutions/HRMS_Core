@@ -80,7 +80,7 @@
 }
 
 .employee-list-page .filter-card-compact .btn-filter-apply {
-  border-radius: 0 !important;
+  border-radius: 0.25rem !important;
   padding: 0.18rem 0.55rem;
   font-size: 0.75rem;
   font-weight: 600;
@@ -91,6 +91,28 @@
 .employee-list-page .filter-card-compact .btn-filter-apply .bi {
   font-size: 0.75rem;
   vertical-align: -0.08em;
+}
+
+/* Filter Apply — matches Edit grid button (gold, rectangular) */
+.employee-list-page .btn-filter-apply {
+  border-radius: 0.25rem !important;
+  padding: 0.45rem 1.1rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  min-height: 2.5rem;
+  background: #d4af37 !important;
+  color: #00203f !important;
+  border: 1px solid #c9a227 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.employee-list-page .btn-filter-apply:hover {
+  background: #e0c04a !important;
+  color: #00152a !important;
+  border-color: #b8941f !important;
 }
 
 /* Action / toolbar buttons */
@@ -307,40 +329,45 @@
 
 .employee-list-page .btn-grid-edit,
 .employee-list-page .btn-grid-delete {
-  border-radius: 1.25rem;
+  border-radius: 0.25rem;
   font-weight: 600;
   padding: 0.2rem 0.75rem;
   font-size: 0.78rem;
   line-height: 1.4;
   border: 1px solid transparent;
   text-decoration: none;
+  min-height: 1.6rem;
+  display: inline-flex;
+  align-items: center;
 }
 
 .employee-list-page .btn-grid-edit {
-  background: rgba(255, 255, 255, 0.95);
-  color: #856404;
-  border-color: #d4af37;
+  background: #d4af37;
+  color: #00203f;
+  border-color: #c9a227;
 }
 
 .employee-list-page .btn-grid-edit:hover:not(.disabled) {
-  background: #fff8e1;
-  color: #664d03;
+  background: #e0c04a;
+  color: #00152a;
+  border-color: #b8941f;
 }
 
 .employee-list-page .btn-grid-delete {
-  background: rgba(255, 255, 255, 0.95);
-  color: #b91c1c;
-  border-color: #f5c2c7;
+  background: #dc3545;
+  color: #fff;
+  border-color: #b02a37;
 }
 
 .employee-list-page .btn-grid-delete:hover:not(.disabled) {
-  background: #fdecec;
-  color: #921515;
+  background: #bb2d3b;
+  color: #fff;
+  border-color: #a02834;
 }
 
 .employee-list-page .btn-grid-edit.disabled,
 .employee-list-page .btn-grid-delete.disabled {
-  opacity: 0.45;
+  opacity: 0.7;
   pointer-events: none;
   cursor: not-allowed;
 }
