@@ -163,7 +163,7 @@
                     </li>
                     @{
                         var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
-                        var modulesActive = new[] { "Allowances", "Deductions", "Attendance", "Tax", "Setup" }
+                        var modulesActive = new[] { "Allowances", "Deductions", "Attendance", "Tax", "Reports", "Setup" }
                             .Contains(currentController, StringComparer.OrdinalIgnoreCase);
                     }
                     <li class="nav-item dropdown">
@@ -188,6 +188,10 @@
                             <li>
                                 <a class="dropdown-item @(string.Equals(currentController, "Tax", StringComparison.OrdinalIgnoreCase) ? "active" : null)"
                                    asp-area="" asp-controller="Tax" asp-action="Index">Tax</a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item @(string.Equals(currentController, "Reports", StringComparison.OrdinalIgnoreCase) ? "active" : null)"
+                                   asp-area="" asp-controller="Reports" asp-action="SalariesSummary">Reports</a>
                             </li>
                             <li>
                                 <a class="dropdown-item @(string.Equals(currentController, "Setup", StringComparison.OrdinalIgnoreCase) ? "active" : null)"

@@ -57,13 +57,14 @@
             <input type="hidden" name="department" value="@ViewBag.SelectedDepartment" />
         </form>
 
-        <div class="section-card mb-3">
-            <div class="card-header"><i class="bi bi-cash-coin"></i>Run payroll for selected</div>
-            <div class="card-body p-2 p-lg-3">
-                <div class="row g-2 align-items-end">
-                    <div class="col-12 col-md-5">
-                        <label for="department" class="form-label mb-1">Department</label>
+        <div class="section-card mb-3 generate-payroll-compact">
+            <div class="card-header py-2"><i class="bi bi-cash-coin"></i>Run payroll for selected</div>
+            <div class="card-body p-2">
+                <div class="row g-2 align-items-center">
+                    <div class="col-12 col-md">
                         <select name="department" id="department" class="form-select form-select-sm" form="deptFilterForm"
+                                title="Department"
+                                aria-label="Department"
                                 onchange="document.getElementById('deptPageInput').value = '1'; document.getElementById('deptFilterForm').submit();">
                             <option value="">All Departments</option>
                             @if (ViewBag.Departments != null)
@@ -76,8 +77,7 @@
                             }
                         </select>
                     </div>
-                    <div class="col-6 col-md-4">
-                        <label for="month" class="form-label mb-1">Month</label>
+                    <div class="col-6 col-md-auto" style="min-width: 9rem;">
                         @{
                             ViewData["MonthFieldName"] = "month";
                             ViewData["MonthFieldId"] = "month";
@@ -88,42 +88,31 @@
                         }
                         <partial name="_PayrollMonthSelect" />
                     </div>
-                    <div class="col-6 col-md-3">
-                        <label for="year" class="form-label mb-1">Year</label>
+                    <div class="col-6 col-md-auto" style="min-width: 6rem;">
                         <input type="number" name="year" id="year" class="form-control form-control-sm"
                                form="generatePayrollForm"
+                               title="Year" aria-label="Year"
                                value="@DateTime.Now.Year" min="2000" max="2100" required />
                     </div>
-                </div>
-                <div class="payroll-run-actions mt-2">
-                    <div class="payroll-run-actions-left d-flex flex-wrap gap-2">
-                        <button type="button" class="btn btn-payroll-corner btn-action-secondary" onclick="selectAll()">
-                            <i class="bi bi-check2-all me-1"></i>Select all
-                        </button>
-                        <button type="button" class="btn btn-payroll-corner btn-action-outline" onclick="deselectAll()">
-                            <i class="bi bi-x-lg me-1"></i>Deselect all
-                        </button>
-                        <button type="submit" class="btn btn-payroll-corner btn-action-primary" form="deptFilterForm">
-                            <i class="bi bi-funnel-fill me-1"></i>Apply
-                        </button>
+                    <div class="col-12 col-md-auto ms-md-auto">
+                        <div class="payroll-run-actions mb-0">
+                            <div class="payroll-run-actions-left d-flex flex-wrap gap-2">
+                                <button type="submit" class="btn btn-payroll-corner btn-action-primary" form="deptFilterForm">
+                                    <i class="bi bi-funnel-fill me-1"></i>Apply
+                                </button>
+                            </div>
+                            <button type="submit" class="btn btn-payroll-corner btn-action-primary" form="generatePayrollForm" onclick="return confirmGenerate()">
+                                <span class="spinner-border spinner-border-sm me-1 d-none" id="genSpinner" role="status"></span>
+                                <i class="bi bi-play-fill me-1" id="genIcon"></i>Generate payroll
+                            </button>
+                        </div>
                     </div>
-                    <button type="submit" class="btn btn-payroll-corner btn-action-primary" form="generatePayrollForm" onclick="return confirmGenerate()">
-                        <span class="spinner-border spinner-border-sm me-1 d-none" id="genSpinner" role="status"></span>
-                        <i class="bi bi-play-fill me-1" id="genIcon"></i>Generate payroll
-                    </button>
                 </div>
             </div>
         </div>
 
         <!-- Employee Grid -->
-        <div class="grid-card mb-3">
-            <div class="card-header d-flex align-items-center justify-content-between py-2">
-                <span><i class="bi bi-table"></i>Employees</span>
-                @if (Model != null && Model.Any())
-                {
-                    <span class="small">@Model.StartRecord–@Model.EndRecord of @Model.TotalCount</span>
-                }
-            </div>
+        <div class="grid-card mb-3 generate-payroll-grid">
             <div class="card-body">
                 @if (Model == null || !Model.Any())
                 {
@@ -142,7 +131,7 @@
                                     <th style="width: 56px;">
                                         <input type="checkbox" id="selectAllCheckbox" class="form-check-input" onclick="toggleAll(this)" title="Select all on this page" />
                                     </th>
-                                    <th class="col-payroll-id">Id</th>
+                                    <th class="col-payroll-id">Emp ID</th>
                                     <th>Employee</th>
                                     <th>Department</th>
                                     <th class="text-end">Basic Salary</th>
@@ -165,10 +154,9 @@
                                                 <span class="text-muted" title="Employee is not active">—</span>
                                             }
                                         </td>
-                                        <td class="col-payroll-id text-muted small font-monospace">@item.uid</td>
+                                        <td class="col-payroll-id font-monospace">@(item.EmployeeID ?? "—")</td>
                                         <td>
                                             <div class="fw-semibold">@item.EmployeeName</div>
-                                            <div class="text-muted small">@item.EmployeeID</div>
                                         </td>
                                         <td>@item.Department</td>
                                         <td class="text-end salary">
@@ -257,11 +245,6 @@
         function selectAll() {
             document.querySelectorAll('.employee-checkbox').forEach(cb => cb.checked = true);
             var sa = document.getElementById('selectAllCheckbox'); if (sa) sa.checked = true;
-            updateSelectedCount();
-        }
-        function deselectAll() {
-            document.querySelectorAll('.employee-checkbox').forEach(cb => cb.checked = false);
-            var sa = document.getElementById('selectAllCheckbox'); if (sa) sa.checked = false;
             updateSelectedCount();
         }
         function updateSelectedCount() {
