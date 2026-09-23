@@ -85,11 +85,101 @@ public class ReportsController : Controller
         return View(vm);
     }
 
-    public IActionResult EmployeeSummary()
+    [HttpGet]
+    public async Task<IActionResult> EmployeeSummary(string? month, int? year, string? department)
     {
         SetModule();
         ViewData["Title"] = "Employee Summary";
-        return View();
+
+        var monthFilter = string.IsNullOrWhiteSpace(month) ? null : PayrollMonthHelper.Normalize(month);
+        var departmentFilter = string.IsNullOrWhiteSpace(department) ? null : department.Trim();
+
+        var departments = await _context.Employees
+            .AsNoTracking()
+            .Where(e => e.Department != null && e.Department != "")
+            .Select(e => e.Department!)
+            .Distinct()
+            .OrderBy(d => d)
+            .ToListAsync();
+
+        ViewBag.Departments = departments;
+        ViewBag.SelectedDepartment = departmentFilter;
+        ViewBag.Month = monthFilter;
+        ViewBag.Year = year;
+
+        var vm = new EmployeeSummaryVm
+        {
+            Month = monthFilter,
+            Year = year,
+            Department = departmentFilter,
+            HasFilters = !string.IsNullOrWhiteSpace(monthFilter) && year.HasValue
+        };
+
+        if (!vm.HasFilters)
+            return View(vm);
+
+        var employeeQuery = _context.Employees
+            .AsNoTracking()
+            .Where(e => e.Department != null && e.Department != "");
+
+        if (!string.IsNullOrWhiteSpace(departmentFilter))
+            employeeQuery = employeeQuery.Where(e => e.Department == departmentFilter);
+
+        var employeeCounts = await employeeQuery
+            .GroupBy(e => e.Department!)
+            .Select(g => new { Department = g.Key, EmployeeCount = g.Count() })
+            .ToListAsync();
+
+        var salaryAmountsQuery =
+            from p in _context.Payslips.AsNoTracking()
+            join e in _context.Employees.AsNoTracking() on p.EmployeeId equals e.uid
+            where p.Month == monthFilter
+                  && p.Year == year!.Value
+                  && e.Department != null
+                  && e.Department != ""
+            select new { p, e };
+
+        if (!string.IsNullOrWhiteSpace(departmentFilter))
+            salaryAmountsQuery = salaryAmountsQuery.Where(x => x.e.Department == departmentFilter);
+
+        var salaryAmounts = await salaryAmountsQuery
+            .GroupBy(x => x.e.Department!)
+            .Select(g => new { Department = g.Key, SalariesGeneratedAmount = g.Sum(x => x.p.GrossSalary) })
+            .ToListAsync();
+
+        var salaryLookup = salaryAmounts.ToDictionary(
+            x => x.Department,
+            x => x.SalariesGeneratedAmount,
+            StringComparer.OrdinalIgnoreCase);
+
+        vm.Rows = employeeCounts
+            .OrderBy(x => x.Department, StringComparer.OrdinalIgnoreCase)
+            .Select(x => new EmployeeSummaryRowVm
+            {
+                Department = x.Department,
+                EmployeeCount = x.EmployeeCount,
+                SalariesGeneratedAmount = salaryLookup.TryGetValue(x.Department, out var amount) ? amount : 0m
+            })
+            .ToList();
+
+        // Include departments that have payslips but no current employees matched (edge case)
+        foreach (var salary in salaryAmounts)
+        {
+            if (vm.Rows.Any(r => string.Equals(r.Department, salary.Department, StringComparison.OrdinalIgnoreCase)))
+                continue;
+            vm.Rows.Add(new EmployeeSummaryRowVm
+            {
+                Department = salary.Department,
+                EmployeeCount = 0,
+                SalariesGeneratedAmount = salary.SalariesGeneratedAmount
+            });
+        }
+
+        vm.Rows = vm.Rows
+            .OrderBy(r => r.Department, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return View(vm);
     }
 
     public IActionResult AllowancesSummary()

@@ -180,9 +180,17 @@
 
                             <div class="tab-pane fade" id="tab-salary" role="tabpanel" aria-labelledby="tab-salary-btn" tabindex="0">
                                 <div class="emp-tab-pane-inner">
-                                    <h2 class="emp-section-header"><i class="fa-solid fa-sack-dollar"></i> Salary Info</h2>
-                                    <p class="emp-section-sub">Compensation baseline and tax application.</p>
-                                    <div class="table-responsive emp-table-wrap">
+                                    @{
+                                        var salaryAllowances = ViewBag.EmployeeAllowances as IList<HRMBT.Web.Models.Allowance> ?? new List<HRMBT.Web.Models.Allowance>();
+                                        var salaryDeductions = ViewBag.EmployeeDeductions as IList<HRMBT.Web.Models.Deduction> ?? new List<HRMBT.Web.Models.Deduction>();
+                                        var tax = (Model.ApplyTax ?? "").Trim();
+                                        var taxYes = tax.Equals("Yes", StringComparison.OrdinalIgnoreCase) || tax == "1";
+                                        var taxNo = tax.Equals("No", StringComparison.OrdinalIgnoreCase) || tax == "0";
+                                    }
+
+                                    <h2 class="emp-section-header"><i class="fa-solid fa-sack-dollar"></i> Salary Detail</h2>
+                                    <p class="emp-section-sub">Base salary and tax settings from the employee record.</p>
+                                    <div class="table-responsive emp-table-wrap mb-4">
                                         <table class="table emp-form-table emp-details-table mb-0">
                                             <tbody>
                                                 <tr class="emp-form-row">
@@ -201,11 +209,6 @@
                                                     </td>
                                                     <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.ApplyTax)</span></th>
                                                     <td class="emp-field-cell">
-                                                        @{
-                                                            var tax = (Model.ApplyTax ?? "").Trim();
-                                                            var taxYes = tax.Equals("Yes", StringComparison.OrdinalIgnoreCase) || tax == "1";
-                                                            var taxNo = tax.Equals("No", StringComparison.OrdinalIgnoreCase) || tax == "0";
-                                                        }
                                                         @if (taxYes)
                                                         {
                                                             <span class="status-pill status-active">Yes</span>
@@ -222,6 +225,121 @@
                                                 </tr>
                                             </tbody>
                                         </table>
+                                    </div>
+
+                                    <h2 class="emp-section-header"><i class="fa-solid fa-plus-circle"></i> Allowances</h2>
+                                    <p class="emp-section-sub">Allowances linked to this employee.</p>
+                                    <div class="table-responsive emp-table-wrap mb-4">
+                                        @if (salaryAllowances.Count == 0)
+                                        {
+                                            <p class="text-muted mb-0 px-1">No allowances found for this employee.</p>
+                                        }
+                                        else
+                                        {
+                                            <table class="table emp-form-table emp-details-table emp-salary-list mb-0">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Type</th>
+                                                        <th>Name</th>
+                                                        <th class="text-end">Amount</th>
+                                                        <th class="text-end">Qty</th>
+                                                        <th>%</th>
+                                                        <th class="text-end">% Value</th>
+                                                        <th>Effective</th>
+                                                        <th>End</th>
+                                                        <th>Active</th>
+                                                        <th>Remarks</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (var a in salaryAllowances)
+                                                    {
+                                                        <tr>
+                                                            <td>@a.AllowanceType</td>
+                                                            <td>@a.Name</td>
+                                                            <td class="text-end">@a.Amount.ToString("N2")</td>
+                                                            <td class="text-end">@a.Quantity</td>
+                                                            <td>@(a.IsPercentage ? "Yes" : "No")</td>
+                                                            <td class="text-end">@(a.PercentageValue?.ToString("N2") ?? "—")</td>
+                                                            <td class="text-nowrap">@a.EffectiveDate.ToString("yyyy-MM-dd")</td>
+                                                            <td class="text-nowrap">@(a.EndDate?.ToString("yyyy-MM-dd") ?? "—")</td>
+                                                            <td>
+                                                                @if (a.IsActive)
+                                                                {
+                                                                    <span class="status-pill status-active">Yes</span>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <span class="status-pill status-inactive">No</span>
+                                                                }
+                                                            </td>
+                                                            <td>@(string.IsNullOrWhiteSpace(a.Remarks) ? "—" : a.Remarks)</td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        }
+                                    </div>
+
+                                    <h2 class="emp-section-header"><i class="fa-solid fa-minus-circle"></i> Deductions</h2>
+                                    <p class="emp-section-sub">Deductions linked to this employee.</p>
+                                    <div class="table-responsive emp-table-wrap">
+                                        @if (salaryDeductions.Count == 0)
+                                        {
+                                            <p class="text-muted mb-0 px-1">No deductions found for this employee.</p>
+                                        }
+                                        else
+                                        {
+                                            <table class="table emp-form-table emp-details-table emp-salary-list mb-0">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Type</th>
+                                                        <th>Name</th>
+                                                        <th>Frequency</th>
+                                                        <th>Method</th>
+                                                        <th class="text-end">Value</th>
+                                                        <th>Mandatory</th>
+                                                        <th>Effective</th>
+                                                        <th>End</th>
+                                                        <th>Active</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (var d in salaryDeductions)
+                                                    {
+                                                        <tr>
+                                                            <td>@d.DeductionType</td>
+                                                            <td>@d.DeductionName</td>
+                                                            <td>@d.Frequency</td>
+                                                            <td>@d.CalculationMethod</td>
+                                                            <td class="text-end">
+                                                                @if (string.Equals(d.CalculationMethod, "Percentage", StringComparison.OrdinalIgnoreCase))
+                                                                {
+                                                                    @($"{d.PercentageValue:N2} %")
+                                                                }
+                                                                else
+                                                                {
+                                                                    @($"PKR {d.PercentageValue:N2}")
+                                                                }
+                                                            </td>
+                                                            <td>@(d.IsMandatory ? "Yes" : "No")</td>
+                                                            <td class="text-nowrap">@d.EffectiveDate.ToString("yyyy-MM-dd")</td>
+                                                            <td class="text-nowrap">@(d.EndDate?.ToString("yyyy-MM-dd") ?? "—")</td>
+                                                            <td>
+                                                                @if (d.IsActive)
+                                                                {
+                                                                    <span class="status-pill status-active">Yes</span>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <span class="status-pill status-inactive">No</span>
+                                                                }
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        }
                                     </div>
                                 </div>
                             </div>

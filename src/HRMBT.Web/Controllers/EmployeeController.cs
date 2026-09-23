@@ -260,6 +260,20 @@ public class EmployeeController : Controller
         }
 
         ViewBag.EmployeeDocuments = await _documentService.BuildViewModelAsync(employee.uid, canUpload: false);
+        ViewBag.EmployeeAllowances = await _context.Allowances
+            .AsNoTracking()
+            .Where(a => a.EmployeeId == employee.uid)
+            .OrderByDescending(a => a.IsActive)
+            .ThenBy(a => a.AllowanceType)
+            .ThenBy(a => a.Name)
+            .ToListAsync();
+        ViewBag.EmployeeDeductions = await _context.Deductions
+            .AsNoTracking()
+            .Where(d => d.EmployeeId == employee.uid)
+            .OrderByDescending(d => d.IsActive)
+            .ThenBy(d => d.DeductionType)
+            .ThenBy(d => d.DeductionName)
+            .ToListAsync();
         return View(employee);
     }
 

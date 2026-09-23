@@ -196,6 +196,13 @@ $RECYCLE.BIN/
 appsettings.Development.json
 appsettings.Local.json
 
+# Publish / deploy output
+publish/
+**/publish/
+
+# User-uploaded files
+src/HRMBT.Web/wwwroot/uploads/
+
 # Full DB export (schema + data; may contain passwords and PII — regenerate locally)
 database-production.sql
 
