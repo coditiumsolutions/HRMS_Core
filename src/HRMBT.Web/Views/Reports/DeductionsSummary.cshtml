@@ -1,21 +1,195 @@
-﻿@{
+﻿@model HRMBT.Web.Models.ViewModels.DeductionsSummaryVm
+
+@{
     ViewData["Title"] = "Deductions Summary";
     ViewData["Module"] = "Reports";
+    var selectedDeductionType = ViewBag.SelectedDeductionType as string ?? Model.DeductionType;
+    var selectedDeductionName = ViewBag.SelectedDeductionName as string ?? Model.DeductionName;
+    var selectedDept = ViewBag.SelectedDepartment as string ?? Model.Department;
 }
 
 @section Styles {
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" crossorigin="anonymous" />
     <link rel="stylesheet" href="~/css/employee-list.css" asp-append-version="true" />
+    <style>
+        .emp-summary-meta { font-size: 0.8rem; color: #6c757d; }
+        .report-filter-label {
+            display: block;
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 0.15rem;
+        }
+        .employee-list-page .emp-summary-grid tbody td { color: #000; }
+        .employee-list-page .emp-summary-grid tbody td.num {
+            color: #0d6efd;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            text-align: end;
+        }
+        .employee-list-page .emp-summary-grid tfoot td {
+            font-weight: 700;
+            border-top: 2px solid #00203f;
+            background: #f4f8fb;
+        }
+        .employee-list-page .emp-summary-grid tfoot td.num { color: #0a58ca; }
+    </style>
 }
 
 <div class="employee-list-page py-3">
     <div class="container-fluid px-3 px-lg-4">
+        <div class="filter-card filter-card-compact mb-3">
+            <div class="card-header">
+                <span><i class="bi bi-funnel"></i>Deductions Summary filters</span>
+            </div>
+            <div class="card-body p-2 p-lg-3">
+                <form asp-action="DeductionsSummary" method="get">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-12 col-md-3">
+                            <label class="report-filter-label" for="deductionName">Name</label>
+                            <select name="deductionName" id="deductionName" class="form-select form-select-sm" aria-label="Deduction name">
+                                <option value="">All deduction names</option>
+                                @if (ViewBag.DeductionNames != null)
+                                {
+                                    foreach (var dn in ViewBag.DeductionNames)
+                                    {
+                                        var dnSelected = selectedDeductionName != null
+                                            && string.Equals(selectedDeductionName.ToString(), dn.ToString(), StringComparison.OrdinalIgnoreCase);
+                                        <option value="@dn" selected="@dnSelected">@dn</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-3">
+                            <label class="report-filter-label" for="deductionType">Type</label>
+                            <select name="deductionType" id="deductionType" class="form-select form-select-sm" aria-label="Deduction type">
+                                <option value="">All deduction types</option>
+                                @if (ViewBag.DeductionTypes != null)
+                                {
+                                    foreach (var dt in ViewBag.DeductionTypes)
+                                    {
+                                        var dtSelected = selectedDeductionType != null
+                                            && string.Equals(selectedDeductionType.ToString(), dt.ToString(), StringComparison.OrdinalIgnoreCase);
+                                        <option value="@dt" selected="@dtSelected">@dt</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <label class="report-filter-label" for="department">Department</label>
+                            <select name="department" id="department" class="form-select form-select-sm" aria-label="Department">
+                                <option value="">All Departments</option>
+                                @if (ViewBag.Departments != null)
+                                {
+                                    foreach (var dept in ViewBag.Departments)
+                                    {
+                                        var deptSelected = selectedDept != null
+                                            && string.Equals(selectedDept.ToString(), dept.ToString(), StringComparison.OrdinalIgnoreCase);
+                                        <option value="@dept" selected="@deptSelected">@dept</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-auto">
+                            <button type="submit" class="btn btn-sm btn-filter-apply">
+                                <i class="bi bi-funnel-fill me-1"></i>Apply
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <div class="grid-card mb-3">
             <div class="card-header">
                 <span><i class="bi bi-dash-circle"></i>Deductions Summary</span>
             </div>
-            <div class="card-body p-4">
-                <p class="text-muted mb-0">This report screen is ready. Summary content can be added next.</p>
+            <div class="card-body">
+                @if (Model.Rows.Count == 0)
+                {
+                    <div class="empty-state py-4">
+                        <i class="bi bi-inboxes"></i>
+                        <h5 class="mb-1">No records found</h5>
+                        <p class="mb-0">No deductions match the selected filters.</p>
+                    </div>
+                }
+                else
+                {
+                    <p class="emp-summary-meta px-3 pt-3 mb-2">
+                        @if (!string.IsNullOrWhiteSpace(Model.DeductionName))
+                        {
+                            <text>Name: <strong>@Model.DeductionName</strong></text>
+                        }
+                        else
+                        {
+                            <text>All names</text>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(Model.DeductionType))
+                        {
+                            <text> · Type: <strong>@Model.DeductionType</strong></text>
+                        }
+                        else
+                        {
+                            <text> · All types</text>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(Model.Department))
+                        {
+                            <text> · Department: <strong>@Model.Department</strong></text>
+                        }
+                        else
+                        {
+                            <text> · All departments</text>
+                        }
+                        · <strong>@Model.TotalCount</strong> record(s)
+                    </p>
+                    <div class="table-wrap table-responsive">
+                        <table class="employee-grid emp-summary-grid mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Frequency</th>
+                                    <th class="text-end">Value</th>
+                                    <th>Employee</th>
+                                    <th>Department</th>
+                                    <th>Effective</th>
+                                    <th>End</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var row in Model.Rows)
+                                {
+                                    <tr>
+                                        <td>@row.DeductionName</td>
+                                        <td>@row.DeductionType</td>
+                                        <td>@(row.Frequency ?? "—")</td>
+                                        <td class="num">
+                                            @if (row.IsPercentage)
+                                            {
+                                                @($"{row.PercentageValue:N2} %")
+                                            }
+                                            else
+                                            {
+                                                @($"PKR {(row.PercentageValue ?? 0m):N2}")
+                                            }
+                                        </td>
+                                        <td>@row.EmployeeName</td>
+                                        <td>@row.Department</td>
+                                        <td class="text-nowrap">@row.EffectiveDate.ToString("yyyy-MM-dd")</td>
+                                        <td class="text-nowrap">@(row.EndDate?.ToString("yyyy-MM-dd") ?? "—")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="3">Total records</td>
+                                    <td class="num">@Model.TotalCount</td>
+                                    <td colspan="4"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                }
             </div>
         </div>
     </div>

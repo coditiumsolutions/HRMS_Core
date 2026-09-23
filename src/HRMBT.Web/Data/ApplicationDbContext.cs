@@ -33,6 +33,7 @@ namespace HRMBT.Web.Data
         public DbSet<AppUser> AppUsers { get; set; }
         public DbSet<HrConfiguration> HrConfigurations { get; set; }
         public DbSet<EmployeeDocument> EmployeeDocuments { get; set; }
+        public DbSet<AuditLog> AuditLogs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -120,6 +121,7 @@ namespace HRMBT.Web.Data
                 entity.ToTable("Allowances");
                 entity.Property(a => a.Amount).HasColumnType("decimal(18,2)");
                 entity.Property(a => a.PercentageValue).HasColumnType("decimal(5,2)");
+                entity.Property(a => a.Frequency).HasMaxLength(30).IsRequired();
                 entity.Property(a => a.Remarks).HasMaxLength(500);
             });
             modelBuilder.Entity<Deduction>(entity =>
@@ -197,6 +199,21 @@ namespace HRMBT.Web.Data
                     .HasForeignKey(e => e.EmployeeId)
                     .HasPrincipalKey(e => e.uid)
                     .OnDelete(DeleteBehavior.NoAction);
+            });
+
+            modelBuilder.Entity<AuditLog>(entity =>
+            {
+                entity.ToTable("AuditLogs", "dbo");
+                entity.HasKey(e => e.LogId);
+                entity.Property(e => e.LogId).ValueGeneratedOnAdd();
+                entity.Property(e => e.TableName).HasMaxLength(128).IsRequired();
+                entity.Property(e => e.Operation).HasMaxLength(20).IsRequired();
+                entity.Property(e => e.RecordId).HasMaxLength(100);
+                entity.Property(e => e.OldData).HasColumnType("nvarchar(max)");
+                entity.Property(e => e.NewData).HasColumnType("nvarchar(max)");
+                entity.Property(e => e.ChangedBy).HasMaxLength(128);
+                entity.Property(e => e.ModuleName).HasMaxLength(100);
+                entity.Property(e => e.IPAddress).HasMaxLength(50);
             });
         }
     }

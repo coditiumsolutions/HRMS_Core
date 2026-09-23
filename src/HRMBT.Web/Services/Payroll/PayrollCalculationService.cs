@@ -19,8 +19,21 @@ namespace HRMBT.Web.Services.Payroll
             _context = context;
         }
 
+        /// <summary>True when allowance name is Fuel Allowance (also accepts legacy "Fuel").</summary>
+        public static bool IsFuelAllowanceName(string? allowanceName) =>
+            string.Equals((allowanceName ?? "").Trim(), "Fuel Allowance", StringComparison.OrdinalIgnoreCase)
+            || string.Equals((allowanceName ?? "").Trim(), "Fuel", StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>True when type is Fixed Amount.</summary>
+        public static bool IsFuelFixedAmountType(string? allowanceType) =>
+            string.Equals((allowanceType ?? "").Trim(), "Fixed Amount", StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>True when type is Quantity.</summary>
+        public static bool IsFuelQuantityType(string? allowanceType) =>
+            string.Equals((allowanceType ?? "").Trim(), "Quantity", StringComparison.OrdinalIgnoreCase);
+
         /// <summary>
-        /// True when allowance type is Fuel Allowance (also accepts legacy "Fuel").
+        /// Legacy: AllowanceType itself was Fuel Allowance / Fuel.
         /// </summary>
         public static bool IsFuelAllowanceType(string? allowanceType) =>
             string.Equals((allowanceType ?? "").Trim(), "Fuel Allowance", StringComparison.OrdinalIgnoreCase)
@@ -28,7 +41,9 @@ namespace HRMBT.Web.Services.Payroll
 
         /// <summary>
         /// Computed monetary amount for one allowance row.
-        /// Fuel Allowance: if Amount &gt; 0 use Amount; otherwise FuelPrice (config) × Quantity.
+        /// Fuel Allowance + Fixed Amount → Amount.
+        /// Fuel Allowance + Quantity → FuelPrice (config) × Quantity.
+        /// Legacy Fuel type: Amount if &gt; 0, else FuelPrice × Quantity.
         /// Other fixed rows: Amount × Quantity. Percentage: % of basic.
         /// </summary>
         public static decimal AllowanceComputedAmount(Allowance a, decimal basicSalary, decimal fuelPrice = 0m)
@@ -38,8 +53,16 @@ namespace HRMBT.Web.Services.Payroll
             if (a.IsPercentage)
                 return basicSalary * (a.PercentageValue ?? 0m) / 100m;
 
-            if (IsFuelAllowanceType(a.AllowanceType))
+            var isFuel = IsFuelAllowanceName(a.Name) || IsFuelAllowanceType(a.AllowanceType);
+            if (isFuel)
             {
+                if (IsFuelFixedAmountType(a.AllowanceType))
+                    return a.Amount;
+
+                if (IsFuelQuantityType(a.AllowanceType))
+                    return fuelPrice * qty;
+
+                // Legacy Fuel Allowance type: prefer Amount when set
                 if (a.Amount > 0m)
                     return a.Amount;
 
@@ -338,6 +361,10 @@ namespace HRMBT.Web.Services.Payroll
                 string note;
                 if (a.IsPercentage)
                     note = $" ({a.PercentageValue:N2}% of basic)";
+                else if (IsFuelAllowanceName(a.Name) && IsFuelQuantityType(a.AllowanceType))
+                    note = $" (FuelPrice {fuelPrice:N2} × Qty {a.Quantity})";
+                else if (IsFuelAllowanceName(a.Name) && IsFuelFixedAmountType(a.AllowanceType))
+                    note = " (fixed Fuel Allowance amount)";
                 else if (IsFuelAllowanceType(a.AllowanceType) && a.Amount <= 0m)
                     note = $" (FuelPrice {fuelPrice:N2} × Qty {a.Quantity})";
                 else if (IsFuelAllowanceType(a.AllowanceType))

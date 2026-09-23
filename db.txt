@@ -1,7 +1,7 @@
-# Version: 1.2 | UpdatedAt: 18/09/2026
-Database: HRMS
+# Version: 1.4 | UpdatedAt: 23/09/2026
+Database: HRBTK
 Connection: DefaultConnection (src/HRMBT.Web/appsettings.json)
-Generated: 2026-05-20 14:47:48
+Generated: 2026-09-23 14:32:06
 
 [dbo].[__EFMigrationsHistory]
   - MigrationId (nvarchar(150), Nullable: NO)
@@ -13,17 +13,18 @@ Generated: 2026-05-20 14:47:48
   - AllowanceType (nvarchar(50), Nullable: NO)
   - Name (nvarchar(200), Nullable: NO)
   - Amount (decimal(18,2), Nullable: NO)
-  - Quantity (int, Nullable: NO)
   - IsPercentage (bit, Nullable: NO)
   - PercentageValue (decimal(5,2), Nullable: YES)
   - EffectiveDate (datetime2(7), Nullable: NO)
   - EndDate (datetime2(7), Nullable: YES)
   - IsActive (bit, Nullable: NO)
-  - Remarks (nvarchar(500), Nullable: YES)
   - CreatedDate (datetime2(7), Nullable: NO)
   - CreatedBy (nvarchar(100), Nullable: NO)
   - ModifiedDate (datetime2(7), Nullable: YES)
   - ModifiedBy (nvarchar(MAX), Nullable: YES)
+  - Quantity (int, Nullable: NO)
+  - Remarks (nvarchar(500), Nullable: YES)
+  - Frequency (nvarchar(30), Nullable: NO)
 
 [dbo].[Attendance]
   - AttendanceID (int, Nullable: NO)
@@ -201,3 +202,16 @@ Generated: 2026-05-20 14:47:48
   - CreatedBy (varchar(MAX), Nullable: YES)
   - CreatedOn (varchar(MAX), Nullable: YES)
   - History (varchar(MAX), Nullable: YES)
+
+[dbo].[AuditLogs]
+  - LogId (int, Nullable: NO)
+  - TableName (nvarchar(128), Nullable: NO)
+  - Operation (nvarchar(20), Nullable: NO)
+  - RecordId (nvarchar(100), Nullable: YES)
+  - EmployeeId (int, Nullable: YES)
+  - OldData (nvarchar(MAX), Nullable: YES)
+  - NewData (nvarchar(MAX), Nullable: YES)
+  - ChangedBy (nvarchar(128), Nullable: YES)
+  - ChangedAt (datetime2(7), Nullable: NO)
+  - ModuleName (nvarchar(100), Nullable: YES)
+  - IPAddress (nvarchar(50), Nullable: YES)

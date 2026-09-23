@@ -169,22 +169,26 @@
                                         </td>
                                     </tr>
                                     <tr>
-                                        <th scope="row" class="pd-label">Deduction type</th>
+                                        <th scope="row" class="pd-label">Deduction Name</th>
                                         <td class="pd-value">
-                                            <select asp-for="DeductionType" class="form-select" asp-items="ViewBag.DeductionType"></select>
+                                            <select asp-for="DeductionName" class="form-select" asp-items="ViewBag.DeductionName">
+                                                <option value="">— Select name —</option>
+                                            </select>
+                                            <span asp-validation-for="DeductionName" class="text-danger"></span>
+                                        </td>
+                                        <th scope="row" class="pd-label">Deduction Type</th>
+                                        <td class="pd-value">
+                                            <select asp-for="DeductionType" class="form-select" asp-items="ViewBag.DeductionType">
+                                                <option value="">— Select type —</option>
+                                            </select>
                                             <span asp-validation-for="DeductionType" class="text-danger"></span>
                                         </td>
+                                    </tr>
+                                    <tr>
                                         <th scope="row" class="pd-label">Frequency</th>
                                         <td class="pd-value">
                                             <select asp-for="Frequency" class="form-select" asp-items="ViewBag.Frequency"></select>
                                             <span asp-validation-for="Frequency" class="text-danger"></span>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <th scope="row" class="pd-label">Deduction name</th>
-                                        <td class="pd-value">
-                                            <input asp-for="DeductionName" class="form-control" maxlength="100" />
-                                            <span asp-validation-for="DeductionName" class="text-danger"></span>
                                         </td>
                                         <th scope="row" class="pd-label">Calculation</th>
                                         <td class="pd-value">

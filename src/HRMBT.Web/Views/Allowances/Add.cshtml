@@ -160,27 +160,31 @@
                         <table class="allowance-bulk-table mb-0">
                             <tbody>
                                 <tr>
+                                    <th scope="row" class="pd-label">Allowance Name</th>
+                                    <td class="pd-value">
+                                        <select name="name" id="name" class="form-select" asp-items="ViewBag.AllowanceNameOptions" required></select>
+                                    </td>
                                     <th scope="row" class="pd-label">Allowance type</th>
                                     <td class="pd-value">
-                                        <select name="allowanceName" id="allowanceName" class="form-select" asp-items="ViewBag.AllowanceNameOptions" required></select>
-                                    </td>
-                                    <th scope="row" class="pd-label">Name</th>
-                                    <td class="pd-value">
-                                        <input type="text" name="name" id="name" class="form-control" maxlength="200" required />
+                                        <select name="allowanceType" id="allowanceType" class="form-select" asp-items="ViewBag.AllowanceTypeOptions" required></select>
                                     </td>
                                 </tr>
                                 <tr>
+                                    <th scope="row" class="pd-label">Frequency</th>
+                                    <td class="pd-value">
+                                        <select name="frequency" id="frequency" class="form-select" asp-items="ViewBag.BulkFrequencyOptions" required></select>
+                                    </td>
                                     <th scope="row" class="pd-label">Amount</th>
                                     <td class="pd-value">
                                         <input type="number" name="amount" id="amount" class="form-control" step="0.01" min="0" value="0" required />
                                         <div id="fuelCalcHint" class="form-text text-primary d-none mb-0" style="font-size:0.7rem;"></div>
                                     </td>
+                                </tr>
+                                <tr>
                                     <th scope="row" class="pd-label">Quantity</th>
                                     <td class="pd-value">
                                         <input type="number" name="quantity" id="quantity" class="form-control" step="1" min="0" value="1" required />
                                     </td>
-                                </tr>
-                                <tr>
                                     <th scope="row" class="pd-label">Percentage-based</th>
                                     <td class="pd-value">
                                         <div class="form-check">
@@ -188,24 +192,24 @@
                                             <label class="form-check-label" for="isPercentage">Yes</label>
                                         </div>
                                     </td>
+                                </tr>
+                                <tr>
                                     <th scope="row" class="pd-label">Percentage (%)</th>
                                     <td class="pd-value">
                                         <input type="number" name="percentageValue" id="percentageValue" class="form-control" step="0.01" min="0" max="100" />
                                     </td>
-                                </tr>
-                                <tr>
                                     <th scope="row" class="pd-label">Effective date</th>
                                     <td class="pd-value">
                                         <input type="date" name="effectiveDate" id="effectiveDate" class="form-control" value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
                                     </td>
+                                </tr>
+                                <tr>
                                     <th scope="row" class="pd-label">End date</th>
                                     <td class="pd-value">
                                         <input type="date" name="endDate" id="endDate" class="form-control" />
                                     </td>
-                                </tr>
-                                <tr>
                                     <th scope="row" class="pd-label">Remarks</th>
-                                    <td class="pd-value" colspan="3">
+                                    <td class="pd-value">
                                         <input type="text" name="remarks" id="remarks" class="form-control" maxlength="500" placeholder="Optional remarks" />
                                     </td>
                                 </tr>
@@ -325,18 +329,14 @@
 </div>
 
 @section Scripts {
+    @{
+        ViewData["FuelNameFieldId"] = "name";
+        ViewData["FuelTypeFieldId"] = "allowanceType";
+        ViewData["FuelAmountFieldId"] = "amount";
+        ViewData["FuelQuantityFieldId"] = "quantity";
+    }
+    <partial name="_FuelAllowanceFormScript" />
     <script>
-        var fuelPriceUrl = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Url.Action("FuelPrice", "Allowances") ?? "/Allowances/FuelPrice"));
-        var cachedFuelUnit = null;
-
-        function isFuelSelection() {
-            var typeSel = document.getElementById('allowanceName');
-            var nameEl = document.getElementById('name');
-            var type = (typeSel && typeSel.value || '').trim().toLowerCase();
-            var name = (nameEl && nameEl.value || '').trim().toLowerCase();
-            return type === 'fuel allowance' || type === 'fuel' || name === 'fuel allowance' || name === 'fuel';
-        }
-
         function toggleAllEmp(checkbox) {
             document.querySelectorAll('.employee-checkbox').forEach(cb => cb.checked = checkbox.checked);
             updateSelectedCount();
@@ -347,81 +347,35 @@
             if (el) el.textContent = n;
         }
 
-        function updateFuelHint(unitPrice) {
-            var amountEl = document.getElementById('amount');
-            var qtyEl = document.getElementById('quantity');
-            var hint = document.getElementById('fuelCalcHint');
-            var amount = parseFloat(amountEl && amountEl.value);
-            var qty = parseInt(qtyEl && qtyEl.value, 10);
-            if (!isFuelSelection()) {
-                if (hint) { hint.classList.add('d-none'); hint.textContent = ''; }
-                return;
-            }
-            if (!isNaN(amount) && amount > 0) {
-                if (hint) {
-                    hint.classList.remove('d-none');
-                    hint.textContent = 'Fuel Allowance: payroll will use Amount ' + amount.toFixed(2) + '.';
-                }
-                return;
-            }
-            var unit = (typeof unitPrice === 'number' && !isNaN(unitPrice)) ? unitPrice : 0;
-            var q = isNaN(qty) ? 0 : qty;
-            var total = unit * q;
-            if (hint) {
-                hint.classList.remove('d-none');
-                hint.textContent = 'Fuel Allowance: Amount empty → payroll uses FuelPrice × Qty = '
-                    + unit.toFixed(2) + ' × ' + q + ' = ' + total.toFixed(2);
-            }
-        }
-
-        function refreshFuelHint() {
-            if (!isFuelSelection()) {
-                updateFuelHint(null);
-                return;
-            }
-            if (cachedFuelUnit !== null) {
-                updateFuelHint(cachedFuelUnit);
-                return;
-            }
-            fetch(fuelPriceUrl, { headers: { 'Accept': 'application/json' } })
-                .then(function (r) { return r.json(); })
-                .then(function (data) {
-                    cachedFuelUnit = (data && typeof data.unitPrice === 'number') ? data.unitPrice : 0;
-                    updateFuelHint(cachedFuelUnit);
-                })
-                .catch(function () {
-                    cachedFuelUnit = 0;
-                    updateFuelHint(0);
-                });
-        }
-
         function confirmBulkAdd() {
             var selected = document.querySelectorAll('.employee-checkbox:checked').length;
             if (selected === 0) {
                 alert('Please select at least one employee.');
                 return false;
             }
-            var typeSel = document.getElementById('allowanceName');
+            var typeSel = document.getElementById('allowanceType');
             if (!typeSel || !typeSel.value) {
                 alert('Please select an allowance type.');
                 return false;
             }
             var displayName = (document.getElementById('name') && document.getElementById('name').value || '').trim();
             if (!displayName) {
-                alert('Please enter a name.');
+                alert('Please select an allowance name.');
                 return false;
             }
             var isPct = document.getElementById('isPercentage') && document.getElementById('isPercentage').checked;
             var amount = parseFloat(document.getElementById('amount').value);
             var qty = parseInt(document.getElementById('quantity') && document.getElementById('quantity').value, 10);
             var pct = NaN;
-            var fuelMode = isFuelSelection();
-            if (!isPct && !fuelMode && (isNaN(amount) || amount < 0)) {
-                alert('Enter a valid amount (0 or greater).');
+
+            if (window.hrmsFuelAllowance && !window.hrmsFuelAllowance.validateFuelRules())
                 return false;
-            }
-            if (fuelMode && (isNaN(amount) || amount <= 0) && (isNaN(qty) || qty <= 0)) {
-                alert('For Fuel Allowance enter Amount, or set Quantity so payroll can use FuelPrice × Quantity.');
+
+            var fuelFixed = window.hrmsFuelAllowance && window.hrmsFuelAllowance.isFuelName() && window.hrmsFuelAllowance.isFixedAmountType();
+            var fuelQty = window.hrmsFuelAllowance && window.hrmsFuelAllowance.isFuelName() && window.hrmsFuelAllowance.isQuantityType();
+
+            if (!isPct && !fuelFixed && !fuelQty && (isNaN(amount) || amount < 0)) {
+                alert('Enter a valid amount (0 or greater).');
                 return false;
             }
             if (isNaN(qty) || qty < 0 || !Number.isInteger(qty)) {
@@ -442,11 +396,10 @@
             }
             var summary = isPct
                 ? (pct.toFixed(2) + '%')
-                : (fuelMode && (isNaN(amount) || amount <= 0)
-                    ? ('FuelPrice × Qty ' + qty)
-                    : amount.toFixed(2));
+                : (fuelQty ? ('FuelPrice × Qty ' + qty) : amount.toFixed(2));
             return confirm('Add allowance “' + displayName + '” (' + summary + ') for ' + selected + ' employee(s)?');
         }
+
         document.addEventListener('DOMContentLoaded', function () {
             document.querySelectorAll('.employee-checkbox').forEach(cb => {
                 cb.addEventListener('change', function () {
@@ -458,16 +411,6 @@
                 });
             });
             updateSelectedCount();
-
-            var typeSel = document.getElementById('allowanceName');
-            var nameEl = document.getElementById('name');
-            var qtyEl = document.getElementById('quantity');
-            var amountEl = document.getElementById('amount');
-            if (typeSel) typeSel.addEventListener('change', refreshFuelHint);
-            if (nameEl) nameEl.addEventListener('input', refreshFuelHint);
-            if (qtyEl) qtyEl.addEventListener('input', refreshFuelHint);
-            if (amountEl) amountEl.addEventListener('input', refreshFuelHint);
-            refreshFuelHint();
         });
     </script>
 }

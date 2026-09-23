@@ -31,6 +31,9 @@ builder.Services.AddScoped<PayrollCalculationService>();
 // ✅ Attendance module services (REQUIRED)
 builder.Services.AddScoped<AttendanceService>();
 
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IAuditLogService, AuditLogService>();
+
 builder.Services.Configure<EmployeeDocumentOptions>(
     builder.Configuration.GetSection(EmployeeDocumentOptions.SectionName));
 builder.Services.AddScoped<IEmployeeDocumentService, EmployeeDocumentService>();

@@ -11,6 +11,7 @@ namespace HRMBT.Web.Controllers;
 public class DeductionsController : Controller
 {
     private const string DeductionTypesConfigKey = "DeductionTypes";
+    private const string DeductionNamesConfigKey = "DeductionNames";
 
     private static readonly string[] FallbackDeductionTypes =
     {
@@ -47,8 +48,7 @@ public class DeductionsController : Controller
         return string.Equals(key.Trim(), match, StringComparison.OrdinalIgnoreCase);
     }
 
-    /// <summary>Types from <c>dbo.Configuration</c> where <c>ConfigKey</c> is DeductionTypes (CSV in ConfigValue).</summary>
-    private async Task<List<string>> GetDeductionTypesFromConfigurationAsync()
+    private async Task<List<string>> GetConfigValuesAsync(params string[] configKeys)
     {
         var rows = await _context.HrConfigurations
             .AsNoTracking()
@@ -56,18 +56,34 @@ public class DeductionsController : Controller
             .ToListAsync();
 
         return rows
-            .Where(c => ConfigKeyMatches(c.ConfigKey, DeductionTypesConfigKey))
+            .Where(c => configKeys.Any(k => ConfigKeyMatches(c.ConfigKey, k)))
             .SelectMany(c => SplitConfigCsv(c.ConfigValue))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(v => v)
             .ToList();
     }
 
+    /// <summary>Types from <c>dbo.Configuration</c> where <c>ConfigKey</c> is DeductionTypes (CSV in ConfigValue).</summary>
+    private Task<List<string>> GetDeductionTypesFromConfigurationAsync() =>
+        GetConfigValuesAsync(DeductionTypesConfigKey);
+
+    /// <summary>Names from <c>dbo.Configuration</c> where <c>ConfigKey</c> is DeductionNames (CSV in ConfigValue).</summary>
+    private Task<List<string>> GetDeductionNamesFromConfigurationAsync() =>
+        GetConfigValuesAsync(DeductionNamesConfigKey);
+
+    private static List<string> WithSelectedOption(List<string> options, string? selected)
+    {
+        if (string.IsNullOrWhiteSpace(selected))
+            return options;
+        if (options.Any(o => string.Equals(o, selected, StringComparison.OrdinalIgnoreCase)))
+            return options;
+        options = options.ToList();
+        options.Add(selected.Trim());
+        return options.OrderBy(v => v, StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
     private static void ValidateDeduction(Deduction model, ModelStateDictionary modelState)
     {
-        if (string.IsNullOrWhiteSpace(model.DeductionName))
-            modelState.AddModelError(nameof(model.DeductionName), "Deduction name is required.");
-
         if (string.IsNullOrWhiteSpace(model.Frequency))
             modelState.AddModelError(nameof(model.Frequency), "Frequency is required.");
 
@@ -83,6 +99,53 @@ public class DeductionsController : Controller
         {
             if (!model.PercentageValue.HasValue || model.PercentageValue.Value < 0)
                 modelState.AddModelError(nameof(model.PercentageValue), "Enter a fixed amount (PKR) for fixed deductions.");
+        }
+    }
+
+    private async Task ValidateConfiguredTypeAndNameAsync(Deduction model, ModelStateDictionary modelState)
+    {
+        var allowedTypes = await GetDeductionTypesFromConfigurationAsync();
+        var trimmedType = (model.DeductionType ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(trimmedType))
+        {
+            modelState.AddModelError(nameof(model.DeductionType), "Select a deduction type.");
+        }
+        else if (allowedTypes.Count == 0)
+        {
+            modelState.AddModelError(nameof(model.DeductionType),
+                $"No deduction types are configured. Add ConfigKey = '{DeductionTypesConfigKey}' in dbo.Configuration.");
+        }
+        else if (!allowedTypes.Any(t => string.Equals(t, trimmedType, StringComparison.OrdinalIgnoreCase)))
+        {
+            modelState.AddModelError(nameof(model.DeductionType),
+                $"The selected deduction type is not defined for ConfigKey {DeductionTypesConfigKey}.");
+        }
+        else
+        {
+            model.DeductionType = allowedTypes.First(t =>
+                string.Equals(t, trimmedType, StringComparison.OrdinalIgnoreCase));
+        }
+
+        var allowedNames = await GetDeductionNamesFromConfigurationAsync();
+        var trimmedName = (model.DeductionName ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(trimmedName))
+        {
+            modelState.AddModelError(nameof(model.DeductionName), "Select a deduction name.");
+        }
+        else if (allowedNames.Count == 0)
+        {
+            modelState.AddModelError(nameof(model.DeductionName),
+                $"No deduction names are configured. Add ConfigKey = '{DeductionNamesConfigKey}' in dbo.Configuration.");
+        }
+        else if (!allowedNames.Any(n => string.Equals(n, trimmedName, StringComparison.OrdinalIgnoreCase)))
+        {
+            modelState.AddModelError(nameof(model.DeductionName),
+                $"The selected deduction name is not defined for ConfigKey {DeductionNamesConfigKey}.");
+        }
+        else
+        {
+            model.DeductionName = allowedNames.First(n =>
+                string.Equals(n, trimmedName, StringComparison.OrdinalIgnoreCase));
         }
     }
 
@@ -133,8 +196,32 @@ public class DeductionsController : Controller
         var types = await GetDeductionTypesFromConfigurationAsync();
         if (types.Count == 0)
             types = FallbackDeductionTypes.ToList();
-
+        types = WithSelectedOption(types, selected);
         ViewBag.DeductionType = new SelectList(types, selected ?? string.Empty);
+    }
+
+    private async Task LoadDeductionNameSelectAsync(string? selected = null)
+    {
+        var names = WithSelectedOption(await GetDeductionNamesFromConfigurationAsync(), selected);
+        ViewBag.DeductionName = new SelectList(names, selected ?? string.Empty);
+    }
+
+    private async Task LoadDeductionFormSelectsAsync(Deduction model)
+    {
+        await LoadDeductionTypeSelectAsync(model.DeductionType);
+        await LoadDeductionNameSelectAsync(model.DeductionName);
+        LoadCalculationMethodSelect(model.CalculationMethod);
+        LoadFrequencySelect(string.IsNullOrWhiteSpace(model.Frequency) ? "Monthly" : model.Frequency);
+    }
+
+    private async Task SetEmployeeDisplayAsync(int employeeId)
+    {
+        var employee = await _context.Employees.AsNoTracking()
+            .FirstOrDefaultAsync(e => e.uid == employeeId);
+        ViewBag.EmployeeCode = employee?.EmployeeID ?? "";
+        ViewBag.EmployeeDisplayName = employee == null
+            ? ""
+            : $"{employee.EmployeeName} ({employee.EmployeeID})";
     }
 
     private void LoadCalculationMethodSelect(string? selected = null) =>
@@ -270,6 +357,14 @@ public class DeductionsController : Controller
         typeItems.AddRange(types.Select(t => new SelectListItem { Value = t, Text = t }));
         ViewBag.DeductionTypeOptions = typeItems;
 
+        var names = await GetDeductionNamesFromConfigurationAsync();
+        var nameItems = new List<SelectListItem>
+        {
+            new() { Value = "", Text = "— Select deduction name —", Selected = true }
+        };
+        nameItems.AddRange(names.Select(n => new SelectListItem { Value = n, Text = n }));
+        ViewBag.DeductionNameOptions = nameItems;
+
         ViewBag.BulkFrequencyOptions = new List<SelectListItem>
         {
             new() { Value = "Monthly", Text = "Monthly", Selected = true },
@@ -357,7 +452,28 @@ public class DeductionsController : Controller
             return RedirectToAction(nameof(Add), routeValues);
         }
 
-        var name = string.IsNullOrWhiteSpace(deductionName) ? trimmedType : deductionName.Trim();
+        var allowedNames = await GetDeductionNamesFromConfigurationAsync();
+        if (allowedNames.Count == 0)
+        {
+            TempData["ErrorMessage"] =
+                $"No deduction names are configured. Add a row in dbo.Configuration with ConfigKey = '{DeductionNamesConfigKey}' and a comma-separated ConfigValue.";
+            return RedirectToAction(nameof(Add), routeValues);
+        }
+
+        if (string.IsNullOrWhiteSpace(deductionName))
+        {
+            TempData["ErrorMessage"] = "Select a deduction name.";
+            return RedirectToAction(nameof(Add), routeValues);
+        }
+
+        var name = deductionName.Trim();
+        if (!allowedNames.Any(n => string.Equals(n, name, StringComparison.OrdinalIgnoreCase)))
+        {
+            TempData["ErrorMessage"] = $"The selected deduction name is not listed under Configuration.{DeductionNamesConfigKey}.";
+            return RedirectToAction(nameof(Add), routeValues);
+        }
+
+        name = allowedNames.First(n => string.Equals(n, name, StringComparison.OrdinalIgnoreCase));
         if (name.Length > 100)
             name = name[..100];
 
@@ -426,18 +542,17 @@ public class DeductionsController : Controller
     {
         ViewData["Module"] = "Deductions";
         ViewData["Title"] = "Add deduction";
-        await LoadDeductionTypeSelectAsync();
-        LoadCalculationMethodSelect();
-        LoadFrequencySelect("Monthly");
-        ViewBag.EmployeeCode = "";
-        ViewBag.EmployeeDisplayName = "";
-        return View(new Deduction
+        var model = new Deduction
         {
             EffectiveDate = DateTime.Today,
             IsActive = true,
             Frequency = "Monthly",
             CalculationMethod = "Fixed"
-        });
+        };
+        await LoadDeductionFormSelectsAsync(model);
+        ViewBag.EmployeeCode = "";
+        ViewBag.EmployeeDisplayName = "";
+        return View(model);
     }
 
     /// <summary>Lookup active employee by Employee ID (exact, then contains) for Create form search.</summary>
@@ -519,6 +634,7 @@ public class DeductionsController : Controller
         }
 
         ValidateDeduction(deduction, ModelState);
+        await ValidateConfiguredTypeAndNameAsync(deduction, ModelState);
 
         ViewBag.EmployeeCode = employee?.EmployeeID ?? employeeCode ?? "";
         ViewBag.EmployeeDisplayName = employee == null
@@ -544,9 +660,7 @@ public class DeductionsController : Controller
             }
         }
 
-        await LoadDeductionTypeSelectAsync(deduction.DeductionType);
-        LoadCalculationMethodSelect(deduction.CalculationMethod);
-        LoadFrequencySelect(string.IsNullOrWhiteSpace(deduction.Frequency) ? "Monthly" : deduction.Frequency);
+        await LoadDeductionFormSelectsAsync(deduction);
         return View(deduction);
     }
 
@@ -560,10 +674,8 @@ public class DeductionsController : Controller
         var deduction = await _context.Deductions.FindAsync(id);
         if (deduction == null) return NotFound();
 
-        await LoadEmployeeSelectAsync(deduction.EmployeeId);
-        await LoadDeductionTypeSelectAsync(deduction.DeductionType);
-        LoadCalculationMethodSelect(deduction.CalculationMethod);
-        LoadFrequencySelect(deduction.Frequency);
+        await SetEmployeeDisplayAsync(deduction.EmployeeId);
+        await LoadDeductionFormSelectsAsync(deduction);
         return View(deduction);
     }
 
@@ -580,9 +692,10 @@ public class DeductionsController : Controller
         ModelState.Remove(nameof(Deduction.Employee));
 
         if (deduction.EmployeeId <= 0)
-            ModelState.AddModelError(nameof(deduction.EmployeeId), "Select an employee.");
+            ModelState.AddModelError(nameof(deduction.EmployeeId), "Employee is required.");
 
         ValidateDeduction(deduction, ModelState);
+        await ValidateConfiguredTypeAndNameAsync(deduction, ModelState);
 
         if (ModelState.IsValid)
         {
@@ -608,10 +721,8 @@ public class DeductionsController : Controller
             }
         }
 
-        await LoadEmployeeSelectAsync(deduction.EmployeeId);
-        await LoadDeductionTypeSelectAsync(deduction.DeductionType);
-        LoadCalculationMethodSelect(deduction.CalculationMethod);
-        LoadFrequencySelect(deduction.Frequency);
+        await SetEmployeeDisplayAsync(deduction.EmployeeId);
+        await LoadDeductionFormSelectsAsync(deduction);
         return View(deduction);
     }
 

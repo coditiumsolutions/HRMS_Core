@@ -19,6 +19,59 @@ public class ReportsController : Controller
 
     private void SetModule() => ViewData["Module"] = "Reports";
 
+    private static IEnumerable<string> SplitConfigCsv(string? csv)
+    {
+        if (string.IsNullOrWhiteSpace(csv)) yield break;
+        foreach (var item in csv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (!string.IsNullOrWhiteSpace(item))
+                yield return item;
+        }
+    }
+
+    private async Task<List<string>> GetConfigValuesAsync(params string[] configKeys)
+    {
+        var rows = await _context.HrConfigurations
+            .AsNoTracking()
+            .Where(c => c.ConfigKey != null && c.ConfigValue != null)
+            .ToListAsync();
+
+        return rows
+            .Where(c => configKeys.Any(k => string.Equals(c.ConfigKey!.Trim(), k, StringComparison.OrdinalIgnoreCase)))
+            .SelectMany(c => SplitConfigCsv(c.ConfigValue))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(v => v)
+            .ToList();
+    }
+
+    private Task<List<string>> GetAllowanceTypesFromConfigurationAsync() =>
+        GetConfigValuesAsync("AllowanceTypes");
+
+    private Task<List<string>> GetAllowanceNamesFromConfigurationAsync() =>
+        GetConfigValuesAsync("AllowanceName", "AllowanceNames");
+
+    private Task<List<string>> GetDepartmentsFromConfigurationAsync() =>
+        GetConfigValuesAsync("Department");
+
+    private Task<List<string>> GetDeductionTypesFromConfigurationAsync() =>
+        GetConfigValuesAsync("DeductionTypes");
+
+    private async Task<List<string>> GetDeductionNamesForFilterAsync()
+    {
+        var fromConfig = await GetConfigValuesAsync("DeductionNames");
+        if (fromConfig.Count > 0)
+            return fromConfig;
+
+        // Fall back to distinct values in use when DeductionNames is not configured yet.
+        return await _context.Deductions
+            .AsNoTracking()
+            .Where(d => d.DeductionName != null && d.DeductionName != "")
+            .Select(d => d.DeductionName)
+            .Distinct()
+            .OrderBy(n => n)
+            .ToListAsync();
+    }
+
     public IActionResult Index()
     {
         SetModule();
@@ -86,37 +139,16 @@ public class ReportsController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> EmployeeSummary(string? month, int? year, string? department)
+    public async Task<IActionResult> EmployeeSummary(string? department)
     {
         SetModule();
         ViewData["Title"] = "Employee Summary";
 
-        var monthFilter = string.IsNullOrWhiteSpace(month) ? null : PayrollMonthHelper.Normalize(month);
         var departmentFilter = string.IsNullOrWhiteSpace(department) ? null : department.Trim();
-
-        var departments = await _context.Employees
-            .AsNoTracking()
-            .Where(e => e.Department != null && e.Department != "")
-            .Select(e => e.Department!)
-            .Distinct()
-            .OrderBy(d => d)
-            .ToListAsync();
+        var departments = await GetDepartmentsFromConfigurationAsync();
 
         ViewBag.Departments = departments;
         ViewBag.SelectedDepartment = departmentFilter;
-        ViewBag.Month = monthFilter;
-        ViewBag.Year = year;
-
-        var vm = new EmployeeSummaryVm
-        {
-            Month = monthFilter,
-            Year = year,
-            Department = departmentFilter,
-            HasFilters = !string.IsNullOrWhiteSpace(monthFilter) && year.HasValue
-        };
-
-        if (!vm.HasFilters)
-            return View(vm);
 
         var employeeQuery = _context.Employees
             .AsNoTracking()
@@ -130,70 +162,155 @@ public class ReportsController : Controller
             .Select(g => new { Department = g.Key, EmployeeCount = g.Count() })
             .ToListAsync();
 
-        var salaryAmountsQuery =
-            from p in _context.Payslips.AsNoTracking()
-            join e in _context.Employees.AsNoTracking() on p.EmployeeId equals e.uid
-            where p.Month == monthFilter
-                  && p.Year == year!.Value
-                  && e.Department != null
-                  && e.Department != ""
-            select new { p, e };
-
-        if (!string.IsNullOrWhiteSpace(departmentFilter))
-            salaryAmountsQuery = salaryAmountsQuery.Where(x => x.e.Department == departmentFilter);
-
-        var salaryAmounts = await salaryAmountsQuery
-            .GroupBy(x => x.e.Department!)
-            .Select(g => new { Department = g.Key, SalariesGeneratedAmount = g.Sum(x => x.p.GrossSalary) })
-            .ToListAsync();
-
-        var salaryLookup = salaryAmounts.ToDictionary(
-            x => x.Department,
-            x => x.SalariesGeneratedAmount,
-            StringComparer.OrdinalIgnoreCase);
-
-        vm.Rows = employeeCounts
-            .OrderBy(x => x.Department, StringComparer.OrdinalIgnoreCase)
-            .Select(x => new EmployeeSummaryRowVm
-            {
-                Department = x.Department,
-                EmployeeCount = x.EmployeeCount,
-                SalariesGeneratedAmount = salaryLookup.TryGetValue(x.Department, out var amount) ? amount : 0m
-            })
-            .ToList();
-
-        // Include departments that have payslips but no current employees matched (edge case)
-        foreach (var salary in salaryAmounts)
+        var vm = new EmployeeSummaryVm
         {
-            if (vm.Rows.Any(r => string.Equals(r.Department, salary.Department, StringComparison.OrdinalIgnoreCase)))
-                continue;
-            vm.Rows.Add(new EmployeeSummaryRowVm
-            {
-                Department = salary.Department,
-                EmployeeCount = 0,
-                SalariesGeneratedAmount = salary.SalariesGeneratedAmount
-            });
-        }
-
-        vm.Rows = vm.Rows
-            .OrderBy(r => r.Department, StringComparer.OrdinalIgnoreCase)
-            .ToList();
+            Department = departmentFilter,
+            Rows = employeeCounts
+                .OrderBy(x => x.Department, StringComparer.OrdinalIgnoreCase)
+                .Select(x => new EmployeeSummaryRowVm
+                {
+                    Department = x.Department,
+                    EmployeeCount = x.EmployeeCount
+                })
+                .ToList()
+        };
 
         return View(vm);
     }
 
-    public IActionResult AllowancesSummary()
+    [HttpGet]
+    public async Task<IActionResult> AllowancesSummary(
+        string? allowanceType,
+        string? allowanceName,
+        string? department)
     {
         SetModule();
         ViewData["Title"] = "Allowances Summary";
-        return View();
+
+        var allowanceTypeFilter = string.IsNullOrWhiteSpace(allowanceType) ? null : allowanceType.Trim();
+        var allowanceNameFilter = string.IsNullOrWhiteSpace(allowanceName) ? null : allowanceName.Trim();
+        var departmentFilter = string.IsNullOrWhiteSpace(department) ? null : department.Trim();
+
+        ViewBag.Departments = await GetDepartmentsFromConfigurationAsync();
+        ViewBag.AllowanceTypes = await GetAllowanceTypesFromConfigurationAsync();
+        ViewBag.AllowanceNames = await GetAllowanceNamesFromConfigurationAsync();
+        ViewBag.SelectedDepartment = departmentFilter;
+        ViewBag.SelectedAllowanceType = allowanceTypeFilter;
+        ViewBag.SelectedAllowanceName = allowanceNameFilter;
+
+        var query = _context.Allowances
+            .AsNoTracking()
+            .Include(a => a.Employee)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(departmentFilter))
+            query = query.Where(a => a.Employee != null && a.Employee.Department == departmentFilter);
+
+        if (!string.IsNullOrWhiteSpace(allowanceTypeFilter))
+            query = query.Where(a => a.AllowanceType == allowanceTypeFilter);
+
+        if (!string.IsNullOrWhiteSpace(allowanceNameFilter))
+            query = query.Where(a => a.Name == allowanceNameFilter);
+
+        var allowances = await query.ToListAsync();
+        var vm = new AllowancesSummaryVm
+        {
+            AllowanceType = allowanceTypeFilter,
+            AllowanceName = allowanceNameFilter,
+            Department = departmentFilter,
+            Rows = allowances
+                .OrderBy(a => a.Employee?.Department ?? "", StringComparer.OrdinalIgnoreCase)
+                .ThenBy(a => a.Employee?.EmployeeName ?? "", StringComparer.OrdinalIgnoreCase)
+                .ThenBy(a => a.Name, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(a => a.AllowanceType, StringComparer.OrdinalIgnoreCase)
+                .Select(a => new AllowancesSummaryRowVm
+                {
+                    EmployeeCode = a.Employee?.EmployeeID ?? "",
+                    EmployeeName = a.Employee?.EmployeeName ?? "",
+                    Department = a.Employee?.Department ?? "",
+                    ItemType = a.AllowanceType,
+                    Name = a.Name,
+                    Frequency = a.Frequency,
+                    Amount = a.Amount,
+                    Quantity = a.Quantity,
+                    IsPercentage = a.IsPercentage,
+                    PercentageValue = a.PercentageValue,
+                    EffectiveDate = a.EffectiveDate,
+                    EndDate = a.EndDate,
+                    IsActive = a.IsActive,
+                    Remarks = a.Remarks
+                })
+                .ToList()
+        };
+
+        return View(vm);
     }
 
-    public IActionResult DeductionsSummary()
+    [HttpGet]
+    public async Task<IActionResult> DeductionsSummary(
+        string? deductionType,
+        string? deductionName,
+        string? department)
     {
         SetModule();
         ViewData["Title"] = "Deductions Summary";
-        return View();
+
+        var deductionTypeFilter = string.IsNullOrWhiteSpace(deductionType) ? null : deductionType.Trim();
+        var deductionNameFilter = string.IsNullOrWhiteSpace(deductionName) ? null : deductionName.Trim();
+        var departmentFilter = string.IsNullOrWhiteSpace(department) ? null : department.Trim();
+
+        ViewBag.Departments = await GetDepartmentsFromConfigurationAsync();
+        ViewBag.DeductionTypes = await GetDeductionTypesFromConfigurationAsync();
+        ViewBag.DeductionNames = await GetDeductionNamesForFilterAsync();
+        ViewBag.SelectedDepartment = departmentFilter;
+        ViewBag.SelectedDeductionType = deductionTypeFilter;
+        ViewBag.SelectedDeductionName = deductionNameFilter;
+
+        var query = _context.Deductions
+            .AsNoTracking()
+            .Include(d => d.Employee)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(departmentFilter))
+            query = query.Where(d => d.Employee != null && d.Employee.Department == departmentFilter);
+
+        if (!string.IsNullOrWhiteSpace(deductionTypeFilter))
+            query = query.Where(d => d.DeductionType == deductionTypeFilter);
+
+        if (!string.IsNullOrWhiteSpace(deductionNameFilter))
+            query = query.Where(d => d.DeductionName == deductionNameFilter);
+
+        var deductions = await query.ToListAsync();
+        var vm = new DeductionsSummaryVm
+        {
+            DeductionType = deductionTypeFilter,
+            DeductionName = deductionNameFilter,
+            Department = departmentFilter,
+            Rows = deductions
+                .OrderBy(d => d.Employee?.Department ?? "", StringComparer.OrdinalIgnoreCase)
+                .ThenBy(d => d.Employee?.EmployeeName ?? "", StringComparer.OrdinalIgnoreCase)
+                .ThenBy(d => d.DeductionName, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(d => d.DeductionType, StringComparer.OrdinalIgnoreCase)
+                .Select(d => new DeductionsSummaryRowVm
+                {
+                    EmployeeCode = d.Employee?.EmployeeID ?? "",
+                    EmployeeName = d.Employee?.EmployeeName ?? "",
+                    Department = d.Employee?.Department ?? "",
+                    DeductionType = d.DeductionType,
+                    DeductionName = d.DeductionName,
+                    Frequency = d.Frequency,
+                    CalculationMethod = d.CalculationMethod,
+                    Amount = d.PercentageValue ?? 0m,
+                    IsPercentage = string.Equals(d.CalculationMethod, "Percentage", StringComparison.OrdinalIgnoreCase),
+                    PercentageValue = d.PercentageValue,
+                    EffectiveDate = d.EffectiveDate,
+                    EndDate = d.EndDate,
+                    IsActive = d.IsActive
+                })
+                .ToList()
+        };
+
+        return View(vm);
     }
 
     public IActionResult TaxesSummary()

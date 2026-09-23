@@ -110,26 +110,42 @@
                         <table class="payroll-details-table allowance-edit-table mb-0">
                             <tbody>
                                 <tr>
+                                    <th scope="row" class="pd-label">Employee ID</th>
+                                    <td class="pd-value">
+                                        <input type="text" class="form-control" value="@ViewBag.EmployeeCode" readonly tabindex="-1" />
+                                    </td>
                                     <th scope="row" class="pd-label">Employee</th>
                                     <td class="pd-value">
-                                        <select asp-for="EmployeeId" class="form-select" asp-items="ViewBag.EmployeeOptions"></select>
-                                        <span asp-validation-for="EmployeeId" class="text-danger"></span>
+                                        <input type="hidden" asp-for="EmployeeId" />
+                                        <input type="text" class="form-control" value="@ViewBag.EmployeeDisplayName" readonly tabindex="-1" />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row" class="pd-label">Allowance Name</th>
+                                    <td class="pd-value">
+                                        <select asp-for="Name" class="form-select" asp-items="ViewBag.AllowanceName">
+                                            <option value="">— Select name —</option>
+                                        </select>
+                                        <span asp-validation-for="Name" class="text-danger"></span>
                                     </td>
                                     <th scope="row" class="pd-label">Allowance type</th>
                                     <td class="pd-value">
-                                        <input asp-for="AllowanceType" class="form-control" maxlength="50" />
+                                        <select asp-for="AllowanceType" class="form-select" asp-items="ViewBag.AllowanceType">
+                                            <option value="">— Select type —</option>
+                                        </select>
                                         <span asp-validation-for="AllowanceType" class="text-danger"></span>
                                     </td>
                                 </tr>
                                 <tr>
-                                    <th scope="row" class="pd-label">Name</th>
+                                    <th scope="row" class="pd-label">Frequency</th>
                                     <td class="pd-value">
-                                        <input asp-for="Name" class="form-control" maxlength="200" />
-                                        <span asp-validation-for="Name" class="text-danger"></span>
+                                        <select asp-for="Frequency" class="form-select" asp-items="ViewBag.Frequency"></select>
+                                        <span asp-validation-for="Frequency" class="text-danger"></span>
                                     </td>
                                     <th scope="row" class="pd-label">Amount</th>
                                     <td class="pd-value">
-                                        <input asp-for="Amount" class="form-control" type="number" step="0.01" min="0" />
+                                        <input asp-for="Amount" class="form-control" type="number" step="0.01" min="0" id="Amount" />
+                                        <div id="fuelCalcHint" class="form-text text-primary d-none mb-0" style="font-size:0.7rem;"></div>
                                         <span asp-validation-for="Amount" class="text-danger"></span>
                                     </td>
                                 </tr>
@@ -197,4 +213,5 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <partial name="_FuelAllowanceFormScript" />
 }

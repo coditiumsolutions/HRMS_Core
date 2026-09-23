@@ -21,8 +21,13 @@ namespace HRMBT.Web.Models
 
         [Required]
         [StringLength(200)]
-        [Display(Name = "Name")]
+        [Display(Name = "Allowance Name")]
         public string Name { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(30)]
+        [Display(Name = "Frequency")]
+        public string Frequency { get; set; } = "Monthly";
 
         [Display(Name = "Amount")]
         public decimal Amount { get; set; }

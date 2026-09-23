@@ -3,98 +3,217 @@
 @{
     ViewData["Title"] = "Edit deduction";
     ViewData["Module"] = "Deductions";
+    var titleName = string.IsNullOrWhiteSpace(Model.DeductionName)
+        ? "Edit deduction"
+        : $"Edit deduction ({Model.DeductionName.Trim()})";
 }
 
 @section Styles {
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" crossorigin="anonymous" />
     <link rel="stylesheet" href="~/css/payslips.css" asp-append-version="true" />
+    <style>
+        .deduction-edit-compact .card-body { padding: 0.5rem 0.65rem !important; }
+        .deduction-edit-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        .deduction-edit-table .pd-label {
+            width: 14%;
+            padding: 0.35rem 0.55rem;
+            vertical-align: middle;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #000;
+            background: #f8fafc;
+            border-right: 1px solid #eef0f2;
+        }
+        .deduction-edit-table .pd-value {
+            width: 36%;
+            padding: 0.35rem 0.55rem;
+            vertical-align: middle;
+            font-size: 0.875rem;
+            color: #0d6efd;
+        }
+        .deduction-edit-table .form-control,
+        .deduction-edit-table .form-select {
+            font-size: 0.8125rem;
+            min-height: 1.75rem;
+            height: 1.75rem;
+            padding: 0.15rem 0.4rem;
+            color: #0d6efd;
+            line-height: 1.25;
+        }
+        .deduction-edit-table .form-control:focus,
+        .deduction-edit-table .form-select:focus {
+            color: #0a58ca;
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 0.15rem rgba(13, 110, 253, 0.2);
+        }
+        .deduction-edit-table .form-control[readonly] {
+            background-color: #f8fafc;
+            color: #0d6efd;
+        }
+        .deduction-edit-table .form-check {
+            margin: 0;
+            min-height: auto;
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+        .deduction-edit-table .form-check-label {
+            font-size: 0.8125rem;
+            color: #0d6efd;
+        }
+        .deduction-edit-table .form-text {
+            font-size: 0.7rem;
+            margin-top: 0.1rem;
+            color: #6c757d;
+        }
+        .deduction-edit-table tr { border-bottom: 1px solid #eef0f2; }
+        .deduction-edit-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 0.65rem 0.85rem;
+        }
+        .deduction-edit-actions .btn,
+        .deduction-edit-actions .btn-action-primary,
+        .deduction-edit-actions .btn-action-secondary,
+        .deduction-edit-actions .btn-action-outline {
+            border-radius: 0.25rem !important;
+            padding: 0.2rem 0.6rem !important;
+            font-size: 0.8125rem !important;
+            font-weight: 600;
+            min-height: 1.6rem !important;
+            height: 1.6rem;
+            line-height: 1.2 !important;
+            white-space: nowrap;
+        }
+        .deduction-edit-compact .grid-card .card-header {
+            font-size: 0.9rem;
+        }
+    </style>
 }
 
-<div class="payslip-page py-4">
+<div class="payslip-page deduction-edit-compact py-3">
     <div class="container-fluid px-3 px-lg-4">
-        <nav aria-label="breadcrumb" class="mb-3">
-            <ol class="breadcrumb mb-0 small">
-                <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Home</a></li>
-                <li class="breadcrumb-item"><a asp-action="Index">Deductions</a></li>
-                <li class="breadcrumb-item active" aria-current="page">Edit</li>
-            </ol>
-        </nav>
+        <form asp-action="Edit" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="Id" />
+            <input type="hidden" asp-for="EmployeeId" />
+            <input type="hidden" asp-for="CreatedDate" />
+            <input type="hidden" asp-for="CreatedBy" />
 
-        <div class="section-card mb-4">
-            <div class="card-header"><i class="bi bi-pencil"></i>Edit deduction</div>
-            <div class="card-body p-3 p-lg-4">
-                <form asp-action="Edit" method="post" class="row g-3" style="max-width: 720px;">
-                    @Html.AntiForgeryToken()
-                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-                    <input type="hidden" asp-for="Id" />
-                    <input type="hidden" asp-for="CreatedDate" />
-                    <input type="hidden" asp-for="CreatedBy" />
+            <div class="grid-card mb-3">
+                <div class="card-header">
+                    <span><i class="bi bi-pencil"></i>@titleName</span>
+                </div>
+                <div class="card-body p-0">
+                    @if (!ViewData.ModelState.IsValid)
+                    {
+                        <div class="alert alert-danger m-3 mb-0" role="alert">
+                            <div asp-validation-summary="All" class="mb-0"></div>
+                        </div>
+                    }
 
-                    <div class="col-12">
-                        <label asp-for="EmployeeId" class="form-label">Employee</label>
-                        <select asp-for="EmployeeId" class="form-select" asp-items="ViewBag.EmployeeOptions"></select>
-                        <span asp-validation-for="EmployeeId" class="text-danger"></span>
+                    <div class="table-responsive">
+                        <table class="payroll-details-table deduction-edit-table mb-0">
+                            <tbody>
+                                <tr>
+                                    <th scope="row" class="pd-label">Employee ID</th>
+                                    <td class="pd-value">
+                                        <input type="text" class="form-control" value="@ViewBag.EmployeeCode" readonly tabindex="-1" />
+                                    </td>
+                                    <th scope="row" class="pd-label">Employee</th>
+                                    <td class="pd-value">
+                                        <input type="text" class="form-control" value="@ViewBag.EmployeeDisplayName" readonly tabindex="-1" />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row" class="pd-label">Deduction Name</th>
+                                    <td class="pd-value">
+                                        <select asp-for="DeductionName" class="form-select" asp-items="ViewBag.DeductionName">
+                                            <option value="">— Select name —</option>
+                                        </select>
+                                        <span asp-validation-for="DeductionName" class="text-danger"></span>
+                                    </td>
+                                    <th scope="row" class="pd-label">Deduction Type</th>
+                                    <td class="pd-value">
+                                        <select asp-for="DeductionType" class="form-select" asp-items="ViewBag.DeductionType">
+                                            <option value="">— Select type —</option>
+                                        </select>
+                                        <span asp-validation-for="DeductionType" class="text-danger"></span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row" class="pd-label">Frequency</th>
+                                    <td class="pd-value">
+                                        <select asp-for="Frequency" class="form-select" asp-items="ViewBag.Frequency"></select>
+                                        <span asp-validation-for="Frequency" class="text-danger"></span>
+                                    </td>
+                                    <th scope="row" class="pd-label">Calculation</th>
+                                    <td class="pd-value">
+                                        <select asp-for="CalculationMethod" class="form-select" asp-items="ViewBag.CalculationMethod" id="calcMethod"></select>
+                                        <span asp-validation-for="CalculationMethod" class="text-danger"></span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row" class="pd-label"><span id="valueLabel">Value</span></th>
+                                    <td class="pd-value">
+                                        <input asp-for="PercentageValue" class="form-control" type="number" step="0.01" min="0" id="valueInput" />
+                                        <div class="form-text mb-0" id="valueHint"></div>
+                                        <span asp-validation-for="PercentageValue" class="text-danger"></span>
+                                    </td>
+                                    <th scope="row" class="pd-label">Effective date</th>
+                                    <td class="pd-value">
+                                        <input asp-for="EffectiveDate" class="form-control" type="date" />
+                                        <span asp-validation-for="EffectiveDate" class="text-danger"></span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row" class="pd-label">End date</th>
+                                    <td class="pd-value">
+                                        <input asp-for="EndDate" class="form-control" type="date" />
+                                        <span asp-validation-for="EndDate" class="text-danger"></span>
+                                    </td>
+                                    <th scope="row" class="pd-label">Mandatory</th>
+                                    <td class="pd-value">
+                                        <div class="form-check">
+                                            <input asp-for="IsMandatory" class="form-check-input" />
+                                            <label asp-for="IsMandatory" class="form-check-label"></label>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row" class="pd-label">Active</th>
+                                    <td class="pd-value">
+                                        <div class="form-check">
+                                            <input asp-for="IsActive" class="form-check-input" />
+                                            <label asp-for="IsActive" class="form-check-label"></label>
+                                        </div>
+                                    </td>
+                                    <th scope="row" class="pd-label"></th>
+                                    <td class="pd-value"></td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
-                    <div class="col-md-6">
-                        <label asp-for="DeductionType" class="form-label"></label>
-                        <select asp-for="DeductionType" class="form-select" asp-items="ViewBag.DeductionType"></select>
-                        <span asp-validation-for="DeductionType" class="text-danger"></span>
+
+                    <div class="deduction-edit-actions">
+                        <button type="submit" class="btn btn-sm btn-action-primary"><i class="bi bi-check2 me-1"></i>Save</button>
+                        <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-sm btn-action-outline">Details</a>
+                        <a asp-action="Index" class="btn btn-sm btn-action-secondary">Cancel</a>
                     </div>
-                    <div class="col-md-6">
-                        <label asp-for="Frequency" class="form-label"></label>
-                        <select asp-for="Frequency" class="form-select" asp-items="ViewBag.Frequency"></select>
-                        <span asp-validation-for="Frequency" class="text-danger"></span>
-                    </div>
-                    <div class="col-12">
-                        <label asp-for="DeductionName" class="form-label"></label>
-                        <input asp-for="DeductionName" class="form-control" maxlength="100" />
-                        <span asp-validation-for="DeductionName" class="text-danger"></span>
-                    </div>
-                    <div class="col-md-6">
-                        <label asp-for="CalculationMethod" class="form-label"></label>
-                        <select asp-for="CalculationMethod" class="form-select" asp-items="ViewBag.CalculationMethod" id="calcMethod"></select>
-                        <span asp-validation-for="CalculationMethod" class="text-danger"></span>
-                    </div>
-                    <div class="col-md-6">
-                        <label for="valueInput" class="form-label" id="valueLabel">Value</label>
-                        <input asp-for="PercentageValue" class="form-control" type="number" step="0.01" min="0" id="valueInput" />
-                        <div class="form-text" id="valueHint"></div>
-                        <span asp-validation-for="PercentageValue" class="text-danger"></span>
-                    </div>
-                    <div class="col-12">
-                        <div class="form-check">
-                            <input asp-for="IsMandatory" class="form-check-input" />
-                            <label asp-for="IsMandatory" class="form-check-label"></label>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <label asp-for="EffectiveDate" class="form-label"></label>
-                        <input asp-for="EffectiveDate" class="form-control" type="date" />
-                        <span asp-validation-for="EffectiveDate" class="text-danger"></span>
-                    </div>
-                    <div class="col-md-6">
-                        <label asp-for="EndDate" class="form-label"></label>
-                        <input asp-for="EndDate" class="form-control" type="date" />
-                        <span asp-validation-for="EndDate" class="text-danger"></span>
-                    </div>
-                    <div class="col-12">
-                        <div class="form-check">
-                            <input asp-for="IsActive" class="form-check-input" />
-                            <label asp-for="IsActive" class="form-check-label"></label>
-                        </div>
-                    </div>
-                    <div class="col-12 d-flex gap-2">
-                        <button type="submit" class="btn btn-action-primary"><i class="bi bi-check2 me-1"></i>Save</button>
-                        <a asp-action="Index" class="btn btn-action-secondary">Cancel</a>
-                    </div>
-                </form>
+                </div>
             </div>
-        </div>
+        </form>
     </div>
 </div>
 
 @section Scripts {
-    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+    <partial name="_ValidationScriptsPartial" />
     <script>
         (function () {
             var calc = document.getElementById('calcMethod');
@@ -104,7 +223,7 @@
             function sync() {
                 var m = (calc.value || '').toLowerCase();
                 if (m === 'percentage') {
-                    label.textContent = 'Percentage (% of gross salary)';
+                    label.textContent = 'Percentage (% of gross)';
                     hint.textContent = 'Enter 0–100. Applied to gross in payroll.';
                     input.max = '100';
                 } else {

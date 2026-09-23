@@ -1,0 +1,142 @@
+@{
+    var fuelPriceUrl = Url.Action("FuelPrice", "Allowances") ?? "/Allowances/FuelPrice";
+    var nameFieldId = ViewData["FuelNameFieldId"] as string ?? "Name";
+    var typeFieldId = ViewData["FuelTypeFieldId"] as string ?? "AllowanceType";
+    var amountFieldId = ViewData["FuelAmountFieldId"] as string ?? "Amount";
+    var quantityFieldId = ViewData["FuelQuantityFieldId"] as string ?? "Quantity";
+    var formId = ViewData["FuelFormId"] as string;
+}
+<script>
+(function () {
+    var fuelPriceUrl = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(fuelPriceUrl));
+    var nameId = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(nameFieldId));
+    var typeId = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(typeFieldId));
+    var amountId = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(amountFieldId));
+    var quantityId = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(quantityFieldId));
+    var formId = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(formId));
+    var cachedFuelUnit = null;
+
+    function val(id) {
+        var el = document.getElementById(id);
+        return (el && el.value || '').trim();
+    }
+
+    function isFuelName() {
+        var n = val(nameId).toLowerCase();
+        return n === 'fuel allowance' || n === 'fuel';
+    }
+
+    function isFixedAmountType() {
+        return val(typeId).toLowerCase() === 'fixed amount';
+    }
+
+    function isQuantityType() {
+        return val(typeId).toLowerCase() === 'quantity';
+    }
+
+    function updateFuelHint(unitPrice) {
+        var hint = document.getElementById('fuelCalcHint');
+        var amount = parseFloat(val(amountId));
+        var qty = parseInt(val(quantityId), 10);
+        if (!hint) return;
+
+        if (!isFuelName()) {
+            hint.classList.add('d-none');
+            hint.textContent = '';
+            return;
+        }
+
+        hint.classList.remove('d-none');
+        if (isFixedAmountType()) {
+            hint.textContent = (!isNaN(amount) && amount > 0)
+                ? ('Fuel Allowance (Fixed Amount): payroll uses Amount ' + amount.toFixed(2) + '.')
+                : 'Fuel Allowance (Fixed Amount): Amount is required.';
+            return;
+        }
+        if (isQuantityType()) {
+            var unit = (typeof unitPrice === 'number' && !isNaN(unitPrice)) ? unitPrice : 0;
+            var q = isNaN(qty) ? 0 : qty;
+            hint.textContent = 'Fuel Allowance (Quantity): payroll uses FuelPrice × Qty = '
+                + unit.toFixed(2) + ' × ' + q + ' = ' + (unit * q).toFixed(2)
+                + (q > 0 ? '.' : ' — Quantity is required.');
+            return;
+        }
+        hint.textContent = 'Fuel Allowance: choose type Fixed Amount (enter Amount) or Quantity (enter Quantity; uses FuelPrice).';
+    }
+
+    function refreshFuelHint() {
+        if (!isFuelName() || !isQuantityType()) {
+            updateFuelHint(null);
+            if (!isFuelName() || !isFixedAmountType()) return;
+            updateFuelHint(null);
+            return;
+        }
+        if (cachedFuelUnit !== null) {
+            updateFuelHint(cachedFuelUnit);
+            return;
+        }
+        fetch(fuelPriceUrl, { headers: { 'Accept': 'application/json' } })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                cachedFuelUnit = (data && typeof data.unitPrice === 'number') ? data.unitPrice : 0;
+                updateFuelHint(cachedFuelUnit);
+            })
+            .catch(function () {
+                cachedFuelUnit = 0;
+                updateFuelHint(0);
+            });
+    }
+
+    function validateFuelRules() {
+        if (!isFuelName()) return true;
+        var amount = parseFloat(val(amountId));
+        var qty = parseInt(val(quantityId), 10);
+        if (isFixedAmountType()) {
+            if (isNaN(amount) || amount <= 0) {
+                alert('Amount is required for Fuel Allowance with type Fixed Amount.');
+                return false;
+            }
+        } else if (isQuantityType()) {
+            if (isNaN(qty) || qty <= 0) {
+                alert('Quantity is required for Fuel Allowance with type Quantity.');
+                return false;
+            }
+        }
+        return true;
+    }
+
+    function bind() {
+        [nameId, typeId, amountId, quantityId].forEach(function (id) {
+            var el = document.getElementById(id);
+            if (!el) return;
+            el.addEventListener('change', refreshFuelHint);
+            el.addEventListener('input', refreshFuelHint);
+        });
+        var form = formId ? document.getElementById(formId) : null;
+        if (!form) form = document.querySelector('form[asp-action], form');
+        // Prefer nearest form containing amount field
+        var amountEl = document.getElementById(amountId);
+        if (amountEl && amountEl.form) form = amountEl.form;
+        if (form) {
+            form.addEventListener('submit', function (e) {
+                if (!validateFuelRules()) e.preventDefault();
+            });
+        }
+        refreshFuelHint();
+    }
+
+    if (document.readyState === 'loading')
+        document.addEventListener('DOMContentLoaded', bind);
+    else
+        bind();
+
+    // Expose for bulk Add confirmBulkAdd
+    window.hrmsFuelAllowance = {
+        isFuelName: isFuelName,
+        isFixedAmountType: isFixedAmountType,
+        isQuantityType: isQuantityType,
+        validateFuelRules: validateFuelRules,
+        refreshFuelHint: refreshFuelHint
+    };
+})();
+</script>

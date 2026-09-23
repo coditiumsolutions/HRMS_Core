@@ -1,15 +1,9 @@
 ﻿@model HRMBT.Web.Models.ViewModels.EmployeeSummaryVm
-@using HRMBT.Web.Infrastructure
 
 @{
     ViewData["Title"] = "Employee Summary";
     ViewData["Module"] = "Reports";
-    var selectedMonth = Model.Month;
-    var selectedYear = Model.Year;
-    var yearNow = DateTime.Now.Year;
-    var yearMin = yearNow - 10;
-    if (selectedYear.HasValue && selectedYear.Value < yearMin)
-        yearMin = selectedYear.Value;
+    var selectedDept = ViewBag.SelectedDepartment as string ?? Model.Department;
 }
 
 @section Styles {
@@ -49,32 +43,15 @@
             <div class="card-body p-2 p-lg-3">
                 <form asp-action="EmployeeSummary" method="get">
                     <div class="row g-2 align-items-center">
-                        <div class="col-6 col-md-3">
-                            <select name="month" id="month" class="form-select form-select-sm" aria-label="Month" required>
-                                <option value="">— Month —</option>
-                                @foreach (var monthName in PayrollMonthHelper.AllMonthNames)
-                                {
-                                    <option value="@monthName" selected="@(string.Equals(selectedMonth, monthName, StringComparison.OrdinalIgnoreCase))">@monthName</option>
-                                }
-                            </select>
-                        </div>
-                        <div class="col-6 col-md-2">
-                            <select name="year" id="year" class="form-select form-select-sm" aria-label="Year" required>
-                                <option value="">— Year —</option>
-                                @for (int y = yearNow + 1; y >= yearMin; y--)
-                                {
-                                    <option value="@y" selected="@(selectedYear == y)">@y</option>
-                                }
-                            </select>
-                        </div>
-                        <div class="col-12 col-md-4">
+                        <div class="col-12 col-md-5">
                             <select name="department" id="department" class="form-select form-select-sm" aria-label="Department">
                                 <option value="">All Departments</option>
                                 @if (ViewBag.Departments != null)
                                 {
                                     foreach (var dept in ViewBag.Departments)
                                     {
-                                        var deptSelected = ViewBag.SelectedDepartment != null && ViewBag.SelectedDepartment.ToString() == dept.ToString();
+                                        var deptSelected = selectedDept != null
+                                            && string.Equals(selectedDept.ToString(), dept.ToString(), StringComparison.OrdinalIgnoreCase);
                                         <option value="@dept" selected="@deptSelected">@dept</option>
                                     }
                                 }
@@ -95,34 +72,26 @@
                 <span><i class="bi bi-people"></i>Employee Summary</span>
             </div>
             <div class="card-body">
-                @if (!Model.HasFilters)
-                {
-                    <div class="empty-state py-4">
-                        <i class="bi bi-funnel"></i>
-                        <h5 class="mb-1">Select Month and Year</h5>
-                        <p class="mb-0">Choose Month and Year (optional Department), then click Apply to load employee counts and salary amounts by department.</p>
-                    </div>
-                }
-                else if (Model.Rows.Count == 0)
+                @if (Model.Rows.Count == 0)
                 {
                     <div class="empty-state py-4">
                         <i class="bi bi-inboxes"></i>
-                        <h5 class="mb-1">No departments found</h5>
-                        <p class="mb-0">No employee departments match the selected filters.</p>
+                        <h5 class="mb-1">No employees found</h5>
+                        <p class="mb-0">No employee departments match the selected filter.</p>
                     </div>
                 }
                 else
                 {
                     <p class="emp-summary-meta px-3 pt-3 mb-2">
-                        Summary for <strong>@Model.Month @Model.Year</strong>
                         @if (!string.IsNullOrWhiteSpace(Model.Department))
                         {
-                            <text> · Department: <strong>@Model.Department</strong></text>
+                            <text>Department: <strong>@Model.Department</strong></text>
                         }
                         else
                         {
-                            <text> · All departments</text>
+                            <text>All departments</text>
                         }
+                        · <strong>@Model.TotalEmployees</strong> employee(s)
                     </p>
                     <div class="table-wrap table-responsive">
                         <table class="employee-grid emp-summary-grid mb-0">
@@ -130,7 +99,6 @@
                                 <tr>
                                     <th>Department</th>
                                     <th class="text-end">Total Employees</th>
-                                    <th class="text-end">Salaries Generated</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -139,7 +107,6 @@
                                     <tr>
                                         <td>@row.Department</td>
                                         <td class="num">@row.EmployeeCount</td>
-                                        <td class="num">@row.SalariesGeneratedAmount.ToString("N2")</td>
                                     </tr>
                                 }
                             </tbody>
@@ -147,7 +114,6 @@
                                 <tr>
                                     <td>Total</td>
                                     <td class="num">@Model.TotalEmployees</td>
-                                    <td class="num">@Model.TotalSalariesGenerated.ToString("N2")</td>
                                 </tr>
                             </tfoot>
                         </table>

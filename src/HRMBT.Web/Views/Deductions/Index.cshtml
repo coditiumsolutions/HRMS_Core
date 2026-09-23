@@ -107,35 +107,30 @@
                             <thead>
                                 <tr>
                                     <th class="col-select" scope="col"><span class="visually-hidden">Select</span></th>
-                                    <th>Employee</th>
-                                    <th>Type</th>
                                     <th>Name</th>
+                                    <th>Type</th>
                                     <th>Frequency</th>
-                                    <th>Method</th>
                                     <th class="text-end col-salary">Value</th>
-                                    <th>Mandatory</th>
+                                    <th>Employee</th>
+                                    <th>Department</th>
                                     <th>Effective</th>
                                     <th>End</th>
-                                    <th>Active</th>
+                                    <th class="text-end" style="width:7.5rem;">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach (var item in Model)
                                 {
+                                    var isPct = string.Equals(item.CalculationMethod, "Percentage", StringComparison.OrdinalIgnoreCase);
                                     <tr data-record-id="@item.Id" title="Double-click to open">
                                         <td class="col-select">
                                             <input type="radio" class="form-check-input hrms-row-select" name="selectedDeduction" value="@item.Id" aria-label="Select deduction @item.Id" />
                                         </td>
-                                        <td>
-                                            <div class="emp-name">@(item.Employee?.EmployeeName ?? "—")</div>
-                                            <div class="emp-meta">@(item.Employee?.EmployeeID ?? item.EmployeeId.ToString())</div>
-                                        </td>
-                                        <td>@item.DeductionType</td>
                                         <td>@item.DeductionName</td>
-                                        <td>@item.Frequency</td>
-                                        <td>@item.CalculationMethod</td>
+                                        <td>@item.DeductionType</td>
+                                        <td>@(string.IsNullOrWhiteSpace(item.Frequency) ? "—" : item.Frequency)</td>
                                         <td class="text-end salary col-salary">
-                                            @if (string.Equals(item.CalculationMethod, "Percentage", StringComparison.OrdinalIgnoreCase))
+                                            @if (isPct)
                                             {
                                                 @($"{item.PercentageValue:N2} %")
                                             }
@@ -144,18 +139,17 @@
                                                 @($"PKR {item.PercentageValue:N2}")
                                             }
                                         </td>
-                                        <td>@(item.IsMandatory ? "Yes" : "No")</td>
+                                        <td>@(item.Employee?.EmployeeName ?? "—")</td>
+                                        <td>@(item.Employee?.Department ?? "—")</td>
                                         <td class="text-nowrap">@item.EffectiveDate.ToString("yyyy-MM-dd")</td>
                                         <td class="text-nowrap">@(item.EndDate.HasValue ? item.EndDate.Value.ToString("yyyy-MM-dd") : "—")</td>
-                                        <td>
-                                            @if (item.IsActive)
-                                            {
-                                                <span class="status-pill status-active">Yes</span>
-                                            }
-                                            else
-                                            {
-                                                <span class="status-pill status-inactive">No</span>
-                                            }
+                                        <td class="text-end text-nowrap">
+                                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-grid-edit" title="Edit">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-grid-delete" title="Delete">
+                                                <i class="bi bi-trash"></i>
+                                            </a>
                                         </td>
                                     </tr>
                                 }

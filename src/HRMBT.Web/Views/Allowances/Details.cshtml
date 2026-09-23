@@ -87,34 +87,38 @@
                                 <td class="pd-value">@(Model.Employee?.EmployeeID ?? Model.EmployeeId.ToString())</td>
                             </tr>
                             <tr>
+                                <th scope="row" class="pd-label">Allowance Name</th>
+                                <td class="pd-value">@Show(Model.Name)</td>
                                 <th scope="row" class="pd-label">Allowance type</th>
                                 <td class="pd-value">@Show(Model.AllowanceType)</td>
-                                <th scope="row" class="pd-label">Name</th>
-                                <td class="pd-value">@Show(Model.Name)</td>
                             </tr>
                             <tr>
+                                <th scope="row" class="pd-label">Frequency</th>
+                                <td class="pd-value">@Show(Model.Frequency)</td>
                                 <th scope="row" class="pd-label">Amount</th>
                                 <td class="pd-value">@Model.Amount.ToString("N2")</td>
+                            </tr>
+                            <tr>
                                 <th scope="row" class="pd-label">Quantity</th>
                                 <td class="pd-value">@Model.Quantity</td>
-                            </tr>
-                            <tr>
                                 <th scope="row" class="pd-label">Percentage-based</th>
                                 <td class="pd-value">@(Model.IsPercentage ? "Yes" : "No")</td>
+                            </tr>
+                            <tr>
                                 <th scope="row" class="pd-label">Percentage (%)</th>
                                 <td class="pd-value">@(Model.PercentageValue?.ToString("N2") ?? "—")</td>
-                            </tr>
-                            <tr>
                                 <th scope="row" class="pd-label">Effective date</th>
                                 <td class="pd-value">@Model.EffectiveDate.ToString("yyyy-MM-dd")</td>
-                                <th scope="row" class="pd-label">End date</th>
-                                <td class="pd-value">@(Model.EndDate.HasValue ? Model.EndDate.Value.ToString("yyyy-MM-dd") : "—")</td>
                             </tr>
                             <tr>
+                                <th scope="row" class="pd-label">End date</th>
+                                <td class="pd-value">@(Model.EndDate.HasValue ? Model.EndDate.Value.ToString("yyyy-MM-dd") : "—")</td>
                                 <th scope="row" class="pd-label">Active</th>
                                 <td class="pd-value">@(Model.IsActive ? "Yes" : "No")</td>
+                            </tr>
+                            <tr>
                                 <th scope="row" class="pd-label">Remarks</th>
-                                <td class="pd-value">@Show(Model.Remarks)</td>
+                                <td class="pd-value" colspan="3">@Show(Model.Remarks)</td>
                             </tr>
                             <tr>
                                 <th scope="row" class="pd-label">Created</th>

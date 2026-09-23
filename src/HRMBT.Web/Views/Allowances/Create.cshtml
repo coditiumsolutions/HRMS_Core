@@ -156,30 +156,40 @@
                                         </td>
                                     </tr>
                                     <tr>
+                                        <th scope="row" class="pd-label">Allowance Name</th>
+                                        <td class="pd-value">
+                                            <select asp-for="Name" class="form-select" asp-items="ViewBag.AllowanceName">
+                                                <option value="">— Select name —</option>
+                                            </select>
+                                            <span asp-validation-for="Name" class="text-danger"></span>
+                                        </td>
                                         <th scope="row" class="pd-label">Allowance type</th>
                                         <td class="pd-value">
-                                            <input asp-for="AllowanceType" class="form-control" maxlength="50" placeholder="e.g. Housing" />
+                                            <select asp-for="AllowanceType" class="form-select" asp-items="ViewBag.AllowanceType">
+                                                <option value="">— Select type —</option>
+                                            </select>
                                             <span asp-validation-for="AllowanceType" class="text-danger"></span>
-                                        </td>
-                                        <th scope="row" class="pd-label">Name</th>
-                                        <td class="pd-value">
-                                            <input asp-for="Name" class="form-control" maxlength="200" />
-                                            <span asp-validation-for="Name" class="text-danger"></span>
                                         </td>
                                     </tr>
                                     <tr>
+                                        <th scope="row" class="pd-label">Frequency</th>
+                                        <td class="pd-value">
+                                            <select asp-for="Frequency" class="form-select" asp-items="ViewBag.Frequency"></select>
+                                            <span asp-validation-for="Frequency" class="text-danger"></span>
+                                        </td>
                                         <th scope="row" class="pd-label">Amount</th>
                                         <td class="pd-value">
-                                            <input asp-for="Amount" class="form-control" type="number" step="0.01" min="0" />
+                                            <input asp-for="Amount" class="form-control" type="number" step="0.01" min="0" id="Amount" />
+                                            <div id="fuelCalcHint" class="form-text text-primary d-none mb-0" style="font-size:0.7rem;"></div>
                                             <span asp-validation-for="Amount" class="text-danger"></span>
                                         </td>
+                                    </tr>
+                                    <tr>
                                         <th scope="row" class="pd-label">Quantity</th>
                                         <td class="pd-value">
                                             <input asp-for="Quantity" class="form-control" type="number" step="1" min="0" />
                                             <span asp-validation-for="Quantity" class="text-danger"></span>
                                         </td>
-                                    </tr>
-                                    <tr>
                                         <th scope="row" class="pd-label">Percentage-based</th>
                                         <td class="pd-value">
                                             <div class="form-check">
@@ -187,25 +197,25 @@
                                                 <label asp-for="IsPercentage" class="form-check-label"></label>
                                             </div>
                                         </td>
+                                    </tr>
+                                    <tr>
                                         <th scope="row" class="pd-label">Percentage (%)</th>
                                         <td class="pd-value">
                                             <input asp-for="PercentageValue" class="form-control" type="number" step="0.01" min="0" max="100" id="percentageValue" />
                                             <span asp-validation-for="PercentageValue" class="text-danger"></span>
                                         </td>
-                                    </tr>
-                                    <tr>
                                         <th scope="row" class="pd-label">Effective date</th>
                                         <td class="pd-value">
                                             <input asp-for="EffectiveDate" class="form-control" type="date" />
                                             <span asp-validation-for="EffectiveDate" class="text-danger"></span>
                                         </td>
+                                    </tr>
+                                    <tr>
                                         <th scope="row" class="pd-label">End date</th>
                                         <td class="pd-value">
                                             <input asp-for="EndDate" class="form-control" type="date" />
                                             <span asp-validation-for="EndDate" class="text-danger"></span>
                                         </td>
-                                    </tr>
-                                    <tr>
                                         <th scope="row" class="pd-label">Active</th>
                                         <td class="pd-value">
                                             <div class="form-check">
@@ -213,8 +223,10 @@
                                                 <label asp-for="IsActive" class="form-check-label"></label>
                                             </div>
                                         </td>
+                                    </tr>
+                                    <tr>
                                         <th scope="row" class="pd-label">Remarks</th>
-                                        <td class="pd-value">
+                                        <td class="pd-value" colspan="3">
                                             <input asp-for="Remarks" class="form-control" maxlength="500" />
                                             <span asp-validation-for="Remarks" class="text-danger"></span>
                                         </td>
@@ -331,4 +343,5 @@
             }
         })();
     </script>
+    <partial name="_FuelAllowanceFormScript" />
 }

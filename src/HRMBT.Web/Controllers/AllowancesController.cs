@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using HRMBT.Web.Data;
 using HRMBT.Web.Models;
+using HRMBT.Web.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -10,11 +11,21 @@ namespace HRMBT.Web.Controllers;
 
 public class AllowancesController : Controller
 {
-    private readonly ApplicationDbContext _context;
+    private const string AllowanceTypesConfigKey = "AllowanceTypes";
+    private const string AllowanceNamesConfigKey = "AllowanceNames";
 
-    public AllowancesController(ApplicationDbContext context)
+    private static readonly string[] Frequencies =
+    {
+        "Monthly", "Once", "Bi-Weekly", "Weekly", "Annual"
+    };
+
+    private readonly ApplicationDbContext _context;
+    private readonly IAuditLogService _auditLog;
+
+    public AllowancesController(ApplicationDbContext context, IAuditLogService auditLog)
     {
         _context = context;
+        _auditLog = auditLog;
     }
 
     private static IEnumerable<string> SplitConfigCsv(string? csv)
@@ -33,7 +44,7 @@ public class AllowancesController : Controller
         return string.Equals(key.Trim(), match, StringComparison.OrdinalIgnoreCase);
     }
 
-    private async Task<List<string>> GetAllowanceNamesFromConfigurationAsync()
+    private async Task<List<string>> GetConfigValuesAsync(string configKey)
     {
         var rows = await _context.HrConfigurations
             .AsNoTracking()
@@ -41,12 +52,18 @@ public class AllowancesController : Controller
             .ToListAsync();
 
         return rows
-            .Where(c => ConfigKeyMatches(c.ConfigKey, "Allowances"))
+            .Where(c => ConfigKeyMatches(c.ConfigKey, configKey))
             .SelectMany(c => SplitConfigCsv(c.ConfigValue))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(v => v)
             .ToList();
     }
+
+    private Task<List<string>> GetAllowanceTypesFromConfigurationAsync() =>
+        GetConfigValuesAsync(AllowanceTypesConfigKey);
+
+    private Task<List<string>> GetAllowanceNamesFromConfigurationAsync() =>
+        GetConfigValuesAsync(AllowanceNamesConfigKey);
 
     private async Task<decimal> GetFuelUnitPriceFromConfigurationAsync()
     {
@@ -71,25 +88,51 @@ public class AllowancesController : Controller
             : 0m;
     }
 
-    private static bool IsFuelAllowance(string? allowanceType, string? allowanceName = null) =>
-        string.Equals((allowanceType ?? "").Trim(), "Fuel Allowance", StringComparison.OrdinalIgnoreCase)
-        || string.Equals((allowanceType ?? "").Trim(), "Fuel", StringComparison.OrdinalIgnoreCase)
-        || string.Equals((allowanceName ?? "").Trim(), "Fuel Allowance", StringComparison.OrdinalIgnoreCase)
+    private static bool IsFuelAllowanceName(string? allowanceName) =>
+        string.Equals((allowanceName ?? "").Trim(), "Fuel Allowance", StringComparison.OrdinalIgnoreCase)
         || string.Equals((allowanceName ?? "").Trim(), "Fuel", StringComparison.OrdinalIgnoreCase);
 
+    private static bool IsFuelFixedAmountType(string? allowanceType) =>
+        string.Equals((allowanceType ?? "").Trim(), "Fixed Amount", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsFuelQuantityType(string? allowanceType) =>
+        string.Equals((allowanceType ?? "").Trim(), "Quantity", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Legacy rows where AllowanceType itself was "Fuel Allowance" / "Fuel".</summary>
+    private static bool IsLegacyFuelType(string? allowanceType) =>
+        string.Equals((allowanceType ?? "").Trim(), "Fuel Allowance", StringComparison.OrdinalIgnoreCase)
+        || string.Equals((allowanceType ?? "").Trim(), "Fuel", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsFuelAllowance(string? allowanceType, string? allowanceName = null) =>
+        IsFuelAllowanceName(allowanceName) || IsLegacyFuelType(allowanceType);
+
     /// <summary>
-    /// Fuel Allowance with Amount &lt;= 0 is stored as 0; payroll uses ConfigKey FuelPrice × Quantity.
-    /// Otherwise keep the posted amount.
+    /// Fuel + Quantity: store Amount 0 (payroll uses FuelPrice × Quantity).
+    /// Otherwise keep the posted amount (percentage → 0).
     /// </summary>
-    private static decimal ResolveBulkAllowanceAmount(
+    private static decimal ResolveStoredAllowanceAmount(
+        string? allowanceType,
+        string? allowanceName,
         decimal amount,
-        bool isPercentage) =>
-        isPercentage ? 0m : amount;
+        bool isPercentage)
+    {
+        if (isPercentage) return 0m;
+        if (IsFuelAllowanceName(allowanceName) && IsFuelQuantityType(allowanceType))
+            return 0m;
+        return amount;
+    }
 
     private static void ValidateAllowance(Allowance model, ModelStateDictionary modelState)
     {
         if (model.Quantity < 0)
             modelState.AddModelError(nameof(model.Quantity), "Quantity must be a whole number 0 or greater.");
+
+        if (string.IsNullOrWhiteSpace(model.Frequency))
+            modelState.AddModelError(nameof(model.Frequency), "Frequency is required.");
+        else if (!Frequencies.Any(f => string.Equals(f, model.Frequency.Trim(), StringComparison.OrdinalIgnoreCase)))
+            modelState.AddModelError(nameof(model.Frequency), "Select a valid frequency.");
+        else
+            model.Frequency = Frequencies.First(f => string.Equals(f, model.Frequency.Trim(), StringComparison.OrdinalIgnoreCase));
 
         if (model.IsPercentage)
         {
@@ -97,9 +140,24 @@ public class AllowancesController : Controller
                 modelState.AddModelError(nameof(model.PercentageValue), "Enter a percentage when using percentage-based allowance.");
             else if (model.PercentageValue.Value < 0 || model.PercentageValue.Value > 100)
                 modelState.AddModelError(nameof(model.PercentageValue), "Percentage must be between 0 and 100.");
+            return;
+        }
+
+        var isFuel = IsFuelAllowanceName(model.Name) || IsLegacyFuelType(model.AllowanceType);
+        if (isFuel && IsFuelFixedAmountType(model.AllowanceType))
+        {
+            if (model.Amount <= 0m)
+                modelState.AddModelError(nameof(model.Amount), "Amount is required for Fuel Allowance with type Fixed Amount.");
+        }
+        else if (isFuel && IsFuelQuantityType(model.AllowanceType))
+        {
+            if (model.Quantity <= 0)
+                modelState.AddModelError(nameof(model.Quantity), "Quantity is required for Fuel Allowance with type Quantity.");
         }
         else if (model.Amount < 0)
+        {
             modelState.AddModelError(nameof(model.Amount), "Amount cannot be negative.");
+        }
     }
 
     private async Task LoadEmployeeSelectAsync(int? selectedUid = null)
@@ -143,15 +201,81 @@ public class AllowancesController : Controller
         ViewBag.DepartmentFilterOptions = deptItems;
     }
 
-    /// <summary>View allowance rows filtered by employee department and/or employee ID, name, or internal uid.</summary>
+    /// <summary>Dropdown options from dbo.Configuration where ConfigKey = AllowanceTypes.</summary>
+    private async Task LoadAllowanceTypeSelectAsync(string? selected = null)
+    {
+        var types = await GetAllowanceTypesFromConfigurationAsync();
+        ViewBag.AllowanceType = new SelectList(types, selected ?? string.Empty);
+    }
+
+    /// <summary>Dropdown options from dbo.Configuration where ConfigKey = AllowanceNames.</summary>
+    private async Task LoadAllowanceNameSelectAsync(string? selected = null)
+    {
+        var names = await GetAllowanceNamesFromConfigurationAsync();
+        ViewBag.AllowanceName = new SelectList(names, selected ?? string.Empty);
+    }
+
+    private void LoadFrequencySelect(string? selected = null)
+    {
+        var sel = string.IsNullOrWhiteSpace(selected) ? "Monthly" : selected!;
+        ViewBag.Frequency = new SelectList(Frequencies, sel);
+    }
+
+    private async Task ValidateConfiguredTypeAndNameAsync(Allowance model, ModelStateDictionary modelState)
+    {
+        var allowedTypes = await GetAllowanceTypesFromConfigurationAsync();
+        var trimmedType = (model.AllowanceType ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(trimmedType))
+        {
+            modelState.AddModelError(nameof(model.AllowanceType), "Select an allowance type.");
+        }
+        else if (!allowedTypes.Any(t => string.Equals(t, trimmedType, StringComparison.OrdinalIgnoreCase)))
+        {
+            modelState.AddModelError(nameof(model.AllowanceType),
+                $"The selected allowance type is not defined for ConfigKey {AllowanceTypesConfigKey}.");
+        }
+        else
+        {
+            model.AllowanceType = allowedTypes.First(t =>
+                string.Equals(t, trimmedType, StringComparison.OrdinalIgnoreCase));
+        }
+
+        var allowedNames = await GetAllowanceNamesFromConfigurationAsync();
+        var trimmedName = (model.Name ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(trimmedName))
+        {
+            modelState.AddModelError(nameof(model.Name), "Select an allowance name.");
+        }
+        else if (!allowedNames.Any(n => string.Equals(n, trimmedName, StringComparison.OrdinalIgnoreCase)))
+        {
+            modelState.AddModelError(nameof(model.Name),
+                $"The selected allowance name is not defined for ConfigKey {AllowanceNamesConfigKey}.");
+        }
+        else
+        {
+            model.Name = allowedNames.First(n =>
+                string.Equals(n, trimmedName, StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
+    private async Task LoadAllowanceFormSelectsAsync(Allowance model)
+    {
+        await LoadAllowanceTypeSelectAsync(model.AllowanceType);
+        await LoadAllowanceNameSelectAsync(model.Name);
+        LoadFrequencySelect(string.IsNullOrWhiteSpace(model.Frequency) ? "Monthly" : model.Frequency);
+    }
+
+    /// <summary>View allowance rows filtered by employee department and/or employee ID, name, or allowance type.</summary>
     // GET: Allowances
-    public async Task<IActionResult> Index(int? deptId = null, string? empSearch = null, bool? isActive = null, int page = 1)
+    public async Task<IActionResult> Index(int? deptId = null, string? empSearch = null, string? allowanceType = null, int page = 1)
     {
         ViewData["Module"] = "Allowances";
         ViewData["Title"] = "Allowances";
 
         if (page < 1) page = 1;
         const int pageSize = 20;
+
+        var typeFilter = string.IsNullOrWhiteSpace(allowanceType) ? null : allowanceType.Trim();
 
         var query = _context.Allowances
             .AsNoTracking()
@@ -187,21 +311,38 @@ public class AllowancesController : Controller
             }
         }
 
-        if (isActive == true)
-            query = query.Where(a => a.IsActive);
-        else if (isActive == false)
-            query = query.Where(a => !a.IsActive);
+        if (!string.IsNullOrWhiteSpace(typeFilter))
+            query = query.Where(a => a.AllowanceType == typeFilter);
 
         query = query.OrderByDescending(a => a.EffectiveDate).ThenBy(a => a.Name);
 
         var list = await PaginatedList<Allowance>.CreateAsync(query, page, pageSize);
 
         await LoadDepartmentFilterOptionsAsync(deptId);
+        await LoadAllowanceTypeFilterOptionsAsync(typeFilter);
         ViewBag.CurrentDeptId = deptId;
         ViewBag.CurrentEmpSearch = empSearch ?? "";
-        ViewBag.CurrentIsActive = isActive;
+        ViewBag.CurrentAllowanceType = typeFilter ?? "";
 
         return View(list);
+    }
+
+    /// <summary>Index filter dropdown: All + ConfigKey AllowanceTypes values.</summary>
+    private async Task LoadAllowanceTypeFilterOptionsAsync(string? selected)
+    {
+        var types = await GetAllowanceTypesFromConfigurationAsync();
+        var items = new List<SelectListItem>
+        {
+            new() { Value = "", Text = "All types", Selected = string.IsNullOrWhiteSpace(selected) }
+        };
+        items.AddRange(types.Select(t => new SelectListItem
+        {
+            Value = t,
+            Text = t,
+            Selected = !string.IsNullOrWhiteSpace(selected)
+                       && string.Equals(t, selected, StringComparison.OrdinalIgnoreCase)
+        }));
+        ViewBag.AllowanceTypeFilterOptions = items;
     }
 
     // GET: Allowances/Add — bulk add: filter employees, select checkboxes, apply configured allowance.
@@ -233,13 +374,22 @@ public class AllowancesController : Controller
         ViewBag.CurrentDeptId = deptId;
         ViewBag.CurrentEPage = ePage;
 
-        var allowanceNames = await GetAllowanceNamesFromConfigurationAsync();
-        var nameItems = new List<SelectListItem>
+        var allowanceTypes = await GetAllowanceTypesFromConfigurationAsync();
+        var typeItems = new List<SelectListItem>
         {
             new() { Value = "", Text = "— Select allowance type —", Selected = true }
         };
+        typeItems.AddRange(allowanceTypes.Select(n => new SelectListItem { Value = n, Text = n }));
+        ViewBag.AllowanceTypeOptions = typeItems;
+
+        var allowanceNames = await GetAllowanceNamesFromConfigurationAsync();
+        var nameItems = new List<SelectListItem>
+        {
+            new() { Value = "", Text = "— Select allowance name —", Selected = true }
+        };
         nameItems.AddRange(allowanceNames.Select(n => new SelectListItem { Value = n, Text = n }));
         ViewBag.AllowanceNameOptions = nameItems;
+        ViewBag.BulkFrequencyOptions = new SelectList(Frequencies, "Monthly");
 
         return View(employeesPage);
     }
@@ -249,8 +399,9 @@ public class AllowancesController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> BulkCreateAllowances(
         List<int>? selectedEmployeeIds,
-        string? allowanceName,
+        string? allowanceType,
         string? name,
+        string? frequency,
         decimal amount,
         int quantity = 1,
         bool isPercentage = false,
@@ -275,26 +426,42 @@ public class AllowancesController : Controller
             return RedirectToAction(nameof(Add), routeValues);
         }
 
-        if (string.IsNullOrWhiteSpace(allowanceName))
+        if (string.IsNullOrWhiteSpace(allowanceType))
         {
             TempData["ErrorMessage"] = "Select an allowance type from the configuration list.";
             return RedirectToAction(nameof(Add), routeValues);
         }
 
-        var allowedNames = await GetAllowanceNamesFromConfigurationAsync();
-        var trimmedType = allowanceName.Trim();
-        if (!allowedNames.Any(n => string.Equals(n, trimmedType, StringComparison.OrdinalIgnoreCase)))
+        var allowedTypes = await GetAllowanceTypesFromConfigurationAsync();
+        var trimmedType = allowanceType.Trim();
+        if (!allowedTypes.Any(n => string.Equals(n, trimmedType, StringComparison.OrdinalIgnoreCase)))
         {
-            TempData["ErrorMessage"] = "The selected allowance type is not defined for ConfigKey Allowances.";
+            TempData["ErrorMessage"] = $"The selected allowance type is not defined for ConfigKey {AllowanceTypesConfigKey}.";
             return RedirectToAction(nameof(Add), routeValues);
         }
+        trimmedType = allowedTypes.First(n => string.Equals(n, trimmedType, StringComparison.OrdinalIgnoreCase));
 
+        var allowedNames = await GetAllowanceNamesFromConfigurationAsync();
         var trimmedName = (name ?? "").Trim();
         if (string.IsNullOrWhiteSpace(trimmedName))
         {
-            TempData["ErrorMessage"] = "Enter an allowance name.";
+            TempData["ErrorMessage"] = "Select an allowance name from the configuration list.";
             return RedirectToAction(nameof(Add), routeValues);
         }
+        if (!allowedNames.Any(n => string.Equals(n, trimmedName, StringComparison.OrdinalIgnoreCase)))
+        {
+            TempData["ErrorMessage"] = $"The selected allowance name is not defined for ConfigKey {AllowanceNamesConfigKey}.";
+            return RedirectToAction(nameof(Add), routeValues);
+        }
+        trimmedName = allowedNames.First(n => string.Equals(n, trimmedName, StringComparison.OrdinalIgnoreCase));
+
+        var freqNorm = string.IsNullOrWhiteSpace(frequency) ? "Monthly" : frequency.Trim();
+        if (!Frequencies.Any(f => string.Equals(f, freqNorm, StringComparison.OrdinalIgnoreCase)))
+        {
+            TempData["ErrorMessage"] = "Select a valid frequency.";
+            return RedirectToAction(nameof(Add), routeValues);
+        }
+        freqNorm = Frequencies.First(f => string.Equals(f, freqNorm, StringComparison.OrdinalIgnoreCase));
 
         if (isPercentage)
         {
@@ -306,6 +473,22 @@ public class AllowancesController : Controller
             if (percentageValue.Value < 0 || percentageValue.Value > 100)
             {
                 TempData["ErrorMessage"] = "Percentage must be between 0 and 100.";
+                return RedirectToAction(nameof(Add), routeValues);
+            }
+        }
+        else if (IsFuelAllowanceName(trimmedName) && IsFuelFixedAmountType(trimmedType))
+        {
+            if (amount <= 0m)
+            {
+                TempData["ErrorMessage"] = "Amount is required for Fuel Allowance with type Fixed Amount.";
+                return RedirectToAction(nameof(Add), routeValues);
+            }
+        }
+        else if (IsFuelAllowanceName(trimmedName) && IsFuelQuantityType(trimmedType))
+        {
+            if (quantity <= 0)
+            {
+                TempData["ErrorMessage"] = "Quantity is required for Fuel Allowance with type Quantity.";
                 return RedirectToAction(nameof(Add), routeValues);
             }
         }
@@ -334,7 +517,7 @@ public class AllowancesController : Controller
         var type = trimmedType.Length <= 50 ? trimmedType : trimmedType[..50];
         var displayName = trimmedName.Length <= 200 ? trimmedName : trimmedName[..200];
         var qty = quantity < 0 ? 0 : quantity;
-        var resolvedAmount = ResolveBulkAllowanceAmount(amount, isPercentage);
+        var resolvedAmount = ResolveStoredAllowanceAmount(type, displayName, amount, isPercentage);
         var trimmedRemarks = string.IsNullOrWhiteSpace(remarks) ? null : remarks.Trim();
         if (trimmedRemarks != null && trimmedRemarks.Length > 500)
             trimmedRemarks = trimmedRemarks[..500];
@@ -350,6 +533,7 @@ public class AllowancesController : Controller
                 EmployeeId = uid,
                 AllowanceType = type,
                 Name = displayName,
+                Frequency = freqNorm,
                 Amount = resolvedAmount,
                 Quantity = qty,
                 IsPercentage = isPercentage,
@@ -376,6 +560,8 @@ public class AllowancesController : Controller
         string valueText;
         if (isPercentage)
             valueText = $"{percentageValue:N2}%";
+        else if (IsFuelAllowanceName(displayName) && IsFuelQuantityType(type))
+            valueText = $"FuelPrice × Qty ({qty})";
         else if (IsFuelAllowance(type, displayName) && resolvedAmount <= 0m)
             valueText = $"Amount empty → payroll uses FuelPrice × Qty ({qty})";
         else
@@ -408,21 +594,24 @@ public class AllowancesController : Controller
     }
 
     // GET: Allowances/Create
-    public IActionResult Create()
+    public async Task<IActionResult> Create()
     {
         ViewData["Module"] = "Allowances";
         ViewData["Title"] = "Add allowance";
         ViewBag.EmployeeCode = "";
         ViewBag.EmployeeDisplayName = "";
-        return View(new Allowance
+        var model = new Allowance
         {
             EffectiveDate = DateTime.Today,
             IsActive = true,
             CreatedBy = User.Identity?.Name ?? "System",
             Amount = 0,
             Quantity = 1,
-            IsPercentage = false
-        });
+            IsPercentage = false,
+            Frequency = "Monthly"
+        };
+        await LoadAllowanceFormSelectsAsync(model);
+        return View(model);
     }
 
     /// <summary>Lookup active employee by Employee ID (exact, then contains) for Create form search.</summary>
@@ -470,13 +659,14 @@ public class AllowancesController : Controller
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(
-        [Bind("EmployeeId,AllowanceType,Name,Amount,Quantity,IsPercentage,PercentageValue,EffectiveDate,EndDate,IsActive,Remarks")] Allowance allowance,
+        [Bind("EmployeeId,AllowanceType,Name,Frequency,Amount,Quantity,IsPercentage,PercentageValue,EffectiveDate,EndDate,IsActive,Remarks")] Allowance allowance,
         string? employeeCode)
     {
         ViewData["Module"] = "Allowances";
         ViewData["Title"] = "Add allowance";
         ModelState.Remove(nameof(Allowance.Employee));
         ValidateAllowance(allowance, ModelState);
+        await ValidateConfiguredTypeAndNameAsync(allowance, ModelState);
 
         Employee? employee = null;
         if (allowance.EmployeeId > 0)
@@ -511,6 +701,8 @@ public class AllowancesController : Controller
         if (ModelState.IsValid)
         {
             allowance.Quantity = allowance.Quantity < 0 ? 0 : allowance.Quantity;
+            allowance.Amount = ResolveStoredAllowanceAmount(
+                allowance.AllowanceType, allowance.Name, allowance.Amount, allowance.IsPercentage);
             allowance.Remarks = string.IsNullOrWhiteSpace(allowance.Remarks) ? null : allowance.Remarks.Trim();
             allowance.CreatedDate = DateTime.Now;
             allowance.CreatedBy = User.Identity?.Name ?? "System";
@@ -522,6 +714,7 @@ public class AllowancesController : Controller
             return RedirectToAction(nameof(Index));
         }
 
+        await LoadAllowanceFormSelectsAsync(allowance);
         return View(allowance);
     }
 
@@ -531,40 +724,46 @@ public class AllowancesController : Controller
         ViewData["Module"] = "Allowances";
         if (id == null) return NotFound();
 
-        var allowance = await _context.Allowances.FindAsync(id);
+        var allowance = await _context.Allowances
+            .Include(a => a.Employee)
+            .FirstOrDefaultAsync(a => a.Id == id);
         if (allowance == null) return NotFound();
 
-        await LoadEmployeeSelectAsync(allowance.EmployeeId);
+        SetEmployeeReadOnlyDisplay(allowance.Employee, allowance.EmployeeId);
+        await LoadAllowanceFormSelectsAsync(allowance);
         return View(allowance);
     }
 
     // POST: Allowances/Edit/5
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(int id, [Bind("Id,EmployeeId,AllowanceType,Name,Amount,Quantity,IsPercentage,PercentageValue,EffectiveDate,EndDate,IsActive,Remarks,CreatedDate,CreatedBy")] Allowance posted)
+    public async Task<IActionResult> Edit(int id, [Bind("Id,AllowanceType,Name,Frequency,Amount,Quantity,IsPercentage,PercentageValue,EffectiveDate,EndDate,IsActive,Remarks,CreatedDate,CreatedBy")] Allowance posted)
     {
         ViewData["Module"] = "Allowances";
         if (id != posted.Id) return NotFound();
 
+        var existing = await _context.Allowances
+            .Include(a => a.Employee)
+            .FirstOrDefaultAsync(a => a.Id == id);
+        if (existing == null) return NotFound();
+
+        // Employee is read-only on edit — always keep the original assignment.
+        posted.EmployeeId = existing.EmployeeId;
+
         ValidateAllowance(posted, ModelState);
-
-        if (posted.EmployeeId <= 0)
-            ModelState.AddModelError(nameof(posted.EmployeeId), "Select an employee.");
-
-        if (!await _context.Employees.AnyAsync(e => e.uid == posted.EmployeeId))
-            ModelState.AddModelError(nameof(posted.EmployeeId), "Select a valid employee.");
+        await ValidateConfiguredTypeAndNameAsync(posted, ModelState);
 
         if (ModelState.IsValid)
         {
             try
             {
-                var existing = await _context.Allowances.FindAsync(id);
-                if (existing == null) return NotFound();
+                var oldSnapshot = SnapshotAllowance(existing);
 
-                existing.EmployeeId = posted.EmployeeId;
                 existing.AllowanceType = posted.AllowanceType;
                 existing.Name = posted.Name;
-                existing.Amount = posted.Amount;
+                existing.Frequency = posted.Frequency;
+                existing.Amount = ResolveStoredAllowanceAmount(
+                    posted.AllowanceType, posted.Name, posted.Amount, posted.IsPercentage);
                 existing.Quantity = posted.Quantity < 0 ? 0 : posted.Quantity;
                 existing.IsPercentage = posted.IsPercentage;
                 existing.PercentageValue = posted.PercentageValue;
@@ -576,6 +775,16 @@ public class AllowancesController : Controller
                 existing.ModifiedBy = User.Identity?.Name ?? "System";
 
                 await _context.SaveChangesAsync();
+
+                await _auditLog.WriteAsync(
+                    tableName: "Allowances",
+                    operation: "UPDATE",
+                    recordId: existing.Id.ToString(),
+                    employeeId: existing.EmployeeId,
+                    oldData: oldSnapshot,
+                    newData: SnapshotAllowance(existing),
+                    moduleName: "Allowances");
+
                 TempData["SuccessMessage"] = "Allowance updated successfully.";
                 return RedirectToAction(nameof(Index));
             }
@@ -587,8 +796,36 @@ public class AllowancesController : Controller
             }
         }
 
-        await LoadEmployeeSelectAsync(posted.EmployeeId);
+        SetEmployeeReadOnlyDisplay(existing.Employee, existing.EmployeeId);
+        await LoadAllowanceFormSelectsAsync(posted);
         return View(posted);
+    }
+
+    private static object SnapshotAllowance(Allowance a) => new
+    {
+        a.Id,
+        a.EmployeeId,
+        a.AllowanceType,
+        a.Name,
+        a.Frequency,
+        a.Amount,
+        a.Quantity,
+        a.IsPercentage,
+        a.PercentageValue,
+        EffectiveDate = a.EffectiveDate.ToString("yyyy-MM-dd"),
+        EndDate = a.EndDate?.ToString("yyyy-MM-dd"),
+        a.IsActive,
+        a.Remarks,
+        a.ModifiedBy,
+        ModifiedDate = a.ModifiedDate?.ToString("o")
+    };
+
+    private void SetEmployeeReadOnlyDisplay(Employee? employee, int employeeId)
+    {
+        ViewBag.EmployeeCode = employee?.EmployeeID ?? employeeId.ToString();
+        ViewBag.EmployeeDisplayName = employee == null
+            ? $"#{employeeId}"
+            : $"{employee.EmployeeName} ({employee.EmployeeID})";
     }
 
     // GET: Allowances/Delete/5
