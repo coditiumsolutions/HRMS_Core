@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using HRMBT.Web.Data;
 using HRMBT.Web.Models;
+using HRMBT.Web.Services;
+using HRMBT.Web.Services.Payroll;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -10,7 +12,8 @@ namespace HRMBT.Web.Controllers;
 
 public class DeductionsController : Controller
 {
-    private const string DeductionTypesConfigKey = "DeductionTypes";
+    private const string DeductionTypeConfigKey = "DeductionType";
+    private const string DeductionTypesConfigKeyLegacy = "DeductionTypes";
     private const string DeductionNamesConfigKey = "DeductionNames";
 
     private static readonly string[] FallbackDeductionTypes =
@@ -26,10 +29,17 @@ public class DeductionsController : Controller
     };
 
     private readonly ApplicationDbContext _context;
+    private readonly IAuditLogService _auditLog;
+    private readonly IPayslipLockService _payslipLock;
 
-    public DeductionsController(ApplicationDbContext context)
+    public DeductionsController(
+        ApplicationDbContext context,
+        IAuditLogService auditLog,
+        IPayslipLockService payslipLock)
     {
         _context = context;
+        _auditLog = auditLog;
+        _payslipLock = payslipLock;
     }
 
     private static IEnumerable<string> SplitConfigCsv(string? csv)
@@ -63,9 +73,9 @@ public class DeductionsController : Controller
             .ToList();
     }
 
-    /// <summary>Types from <c>dbo.Configuration</c> where <c>ConfigKey</c> is DeductionTypes (CSV in ConfigValue).</summary>
+    /// <summary>Types from <c>dbo.Configuration</c> where <c>ConfigKey</c> is DeductionType (CSV in ConfigValue).</summary>
     private Task<List<string>> GetDeductionTypesFromConfigurationAsync() =>
-        GetConfigValuesAsync(DeductionTypesConfigKey);
+        GetConfigValuesAsync(DeductionTypeConfigKey, DeductionTypesConfigKeyLegacy);
 
     /// <summary>Names from <c>dbo.Configuration</c> where <c>ConfigKey</c> is DeductionNames (CSV in ConfigValue).</summary>
     private Task<List<string>> GetDeductionNamesFromConfigurationAsync() =>
@@ -113,12 +123,12 @@ public class DeductionsController : Controller
         else if (allowedTypes.Count == 0)
         {
             modelState.AddModelError(nameof(model.DeductionType),
-                $"No deduction types are configured. Add ConfigKey = '{DeductionTypesConfigKey}' in dbo.Configuration.");
+                $"No deduction types are configured. Add ConfigKey = '{DeductionTypeConfigKey}' in dbo.Configuration.");
         }
         else if (!allowedTypes.Any(t => string.Equals(t, trimmedType, StringComparison.OrdinalIgnoreCase)))
         {
             modelState.AddModelError(nameof(model.DeductionType),
-                $"The selected deduction type is not defined for ConfigKey {DeductionTypesConfigKey}.");
+                $"The selected deduction type is not defined for ConfigKey {DeductionTypeConfigKey}.");
         }
         else
         {
@@ -197,13 +207,13 @@ public class DeductionsController : Controller
         if (types.Count == 0)
             types = FallbackDeductionTypes.ToList();
         types = WithSelectedOption(types, selected);
-        ViewBag.DeductionType = new SelectList(types, selected ?? string.Empty);
+        ViewBag.DeductionTypeList = new SelectList(types, selected ?? string.Empty);
     }
 
     private async Task LoadDeductionNameSelectAsync(string? selected = null)
     {
         var names = WithSelectedOption(await GetDeductionNamesFromConfigurationAsync(), selected);
-        ViewBag.DeductionName = new SelectList(names, selected ?? string.Empty);
+        ViewBag.DeductionNameList = new SelectList(names, selected ?? string.Empty);
     }
 
     private async Task LoadDeductionFormSelectsAsync(Deduction model)
@@ -234,14 +244,13 @@ public class DeductionsController : Controller
     }
 
     // GET: Deductions
-    public async Task<IActionResult> Index(int? deptId = null, string? empSearch = null, bool? isActive = null, int page = 1, int pageSize = 20)
+    public async Task<IActionResult> Index(int? deptId = null, string? empSearch = null, bool? isActive = null, int page = 1)
     {
         ViewData["Module"] = "Deductions";
         ViewData["Title"] = "Deductions";
 
         if (page < 1) page = 1;
-        if (pageSize < 1) pageSize = 20;
-        if (pageSize > 100) pageSize = 100;
+        const int pageSize = 20;
 
         var query = _context.Deductions
             .AsNoTracking()
@@ -290,8 +299,6 @@ public class DeductionsController : Controller
         ViewBag.CurrentDeptId = deptId;
         ViewBag.CurrentEmpSearch = empSearch ?? "";
         ViewBag.CurrentIsActive = isActive;
-        ViewBag.CurrentPageSize = pageSize;
-        ViewBag.PageSizeOptions = new List<int> { 10, 20, 50, 100 };
 
         return View(list);
     }
@@ -407,7 +414,7 @@ public class DeductionsController : Controller
         if (allowedTypes.Count == 0)
         {
             TempData["ErrorMessage"] =
-                $"No deduction types are configured. Add rows in dbo.Configuration with ConfigKey = '{DeductionTypesConfigKey}' and a comma-separated ConfigValue.";
+                $"No deduction types are configured. Add rows in dbo.Configuration with ConfigKey = '{DeductionTypeConfigKey}' and a comma-separated ConfigValue.";
             return RedirectToAction(nameof(Add), routeValues);
         }
 
@@ -423,7 +430,7 @@ public class DeductionsController : Controller
 
         if (!allowedTypes.Any(t => string.Equals(t, trimmedType, StringComparison.OrdinalIgnoreCase)))
         {
-            TempData["ErrorMessage"] = $"The selected deduction type is not listed under Configuration.{DeductionTypesConfigKey}.";
+            TempData["ErrorMessage"] = $"The selected deduction type is not listed under Configuration.{DeductionTypeConfigKey}.";
             return RedirectToAction(nameof(Add), routeValues);
         }
 
@@ -684,33 +691,65 @@ public class DeductionsController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(int id,
         [Bind("Id,EmployeeId,DeductionType,DeductionName,Frequency,CalculationMethod,PercentageValue,IsMandatory,EffectiveDate,EndDate,IsActive,CreatedDate,CreatedBy")]
-        Deduction deduction)
+        Deduction posted)
     {
         ViewData["Module"] = "Deductions";
         ViewData["Title"] = "Edit deduction";
-        if (id != deduction.Id) return NotFound();
+        if (id != posted.Id) return NotFound();
         ModelState.Remove(nameof(Deduction.Employee));
 
-        if (deduction.EmployeeId <= 0)
-            ModelState.AddModelError(nameof(deduction.EmployeeId), "Employee is required.");
+        var existing = await _context.Deductions
+            .Include(d => d.Employee)
+            .FirstOrDefaultAsync(d => d.Id == id);
+        if (existing == null) return NotFound();
 
-        ValidateDeduction(deduction, ModelState);
-        await ValidateConfiguredTypeAndNameAsync(deduction, ModelState);
+        // Employee is read-only on edit — keep the original assignment.
+        posted.EmployeeId = existing.EmployeeId;
+
+        if (posted.EmployeeId <= 0)
+            ModelState.AddModelError(nameof(posted.EmployeeId), "Employee is required.");
+
+        ValidateDeduction(posted, ModelState);
+        await ValidateConfiguredTypeAndNameAsync(posted, ModelState);
 
         if (ModelState.IsValid)
         {
             try
             {
-                deduction.ModifiedDate = DateTime.Now;
-                deduction.ModifiedBy = User.Identity?.Name ?? "System";
-                _context.Update(deduction);
+                var oldSnapshot = SnapshotDeduction(existing);
+
+                existing.DeductionType = posted.DeductionType;
+                existing.DeductionName = posted.DeductionName;
+                existing.Frequency = posted.Frequency;
+                existing.CalculationMethod = posted.CalculationMethod;
+                existing.PercentageValue = posted.PercentageValue;
+                existing.IsMandatory = posted.IsMandatory;
+                existing.EffectiveDate = posted.EffectiveDate;
+                existing.EndDate = posted.EndDate;
+                existing.IsActive = posted.IsActive;
+                existing.ModifiedDate = DateTime.Now;
+                existing.ModifiedBy = User.Identity?.Name ?? "System";
+
                 await _context.SaveChangesAsync();
-                TempData["SuccessMessage"] = "Deduction updated successfully.";
+
+                await _auditLog.WriteAsync(
+                    tableName: "Deductions",
+                    operation: "UPDATE",
+                    recordId: existing.Id.ToString(),
+                    employeeId: existing.EmployeeId,
+                    oldData: oldSnapshot,
+                    newData: SnapshotDeduction(existing),
+                    moduleName: "Deductions");
+
+                var lockedCount = await _payslipLock.LockEmployeePayslipsAsync(existing.EmployeeId, "Deductions");
+                TempData["SuccessMessage"] = lockedCount > 0
+                    ? $"Deduction updated. Locked {lockedCount} unlocked payslip(s) for this employee."
+                    : "Deduction updated successfully.";
                 return RedirectToAction(nameof(Index));
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!await DeductionExistsAsync(deduction.Id))
+                if (!await DeductionExistsAsync(posted.Id))
                     return NotFound();
                 ModelState.AddModelError(string.Empty, "This deduction was changed by another user. Reload and try again.");
             }
@@ -721,10 +760,27 @@ public class DeductionsController : Controller
             }
         }
 
-        await SetEmployeeDisplayAsync(deduction.EmployeeId);
-        await LoadDeductionFormSelectsAsync(deduction);
-        return View(deduction);
+        await SetEmployeeDisplayAsync(existing.EmployeeId);
+        await LoadDeductionFormSelectsAsync(posted);
+        return View(posted);
     }
+
+    private static object SnapshotDeduction(Deduction d) => new
+    {
+        d.Id,
+        d.EmployeeId,
+        d.DeductionType,
+        d.DeductionName,
+        d.Frequency,
+        d.CalculationMethod,
+        d.PercentageValue,
+        d.IsMandatory,
+        EffectiveDate = d.EffectiveDate.ToString("yyyy-MM-dd"),
+        EndDate = d.EndDate?.ToString("yyyy-MM-dd"),
+        d.IsActive,
+        d.ModifiedBy,
+        ModifiedDate = d.ModifiedDate?.ToString("o")
+    };
 
     // GET: Deductions/Delete/5
     public async Task<IActionResult> Delete(int? id)

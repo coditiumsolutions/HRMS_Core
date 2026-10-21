@@ -54,7 +54,7 @@ public class ReportsController : Controller
         GetConfigValuesAsync("Department");
 
     private Task<List<string>> GetDeductionTypesFromConfigurationAsync() =>
-        GetConfigValuesAsync("DeductionTypes");
+        GetConfigValuesAsync("DeductionType", "DeductionTypes");
 
     private async Task<List<string>> GetDeductionNamesForFilterAsync()
     {

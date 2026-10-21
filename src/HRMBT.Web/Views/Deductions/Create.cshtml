@@ -171,14 +171,14 @@
                                     <tr>
                                         <th scope="row" class="pd-label">Deduction Name</th>
                                         <td class="pd-value">
-                                            <select asp-for="DeductionName" class="form-select" asp-items="ViewBag.DeductionName">
+                                            <select asp-for="DeductionName" class="form-select" asp-items="ViewBag.DeductionNameList">
                                                 <option value="">— Select name —</option>
                                             </select>
                                             <span asp-validation-for="DeductionName" class="text-danger"></span>
                                         </td>
                                         <th scope="row" class="pd-label">Deduction Type</th>
                                         <td class="pd-value">
-                                            <select asp-for="DeductionType" class="form-select" asp-items="ViewBag.DeductionType">
+                                            <select asp-for="DeductionType" class="form-select" asp-items="ViewBag.DeductionTypeList">
                                                 <option value="">— Select type —</option>
                                             </select>
                                             <span asp-validation-for="DeductionType" class="text-danger"></span>

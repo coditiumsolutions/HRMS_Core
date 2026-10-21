@@ -27,6 +27,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 // ✅ Payroll module services (REQUIRED)
 builder.Services.AddScoped<PayrollCalculationService>();
+builder.Services.AddScoped<IPayslipLockService, PayslipLockService>();
 
 // ✅ Attendance module services (REQUIRED)
 builder.Services.AddScoped<AttendanceService>();

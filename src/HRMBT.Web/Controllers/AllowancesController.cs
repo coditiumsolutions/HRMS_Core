@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using HRMBT.Web.Data;
 using HRMBT.Web.Models;
 using HRMBT.Web.Services;
+using HRMBT.Web.Services.Payroll;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -21,11 +22,16 @@ public class AllowancesController : Controller
 
     private readonly ApplicationDbContext _context;
     private readonly IAuditLogService _auditLog;
+    private readonly IPayslipLockService _payslipLock;
 
-    public AllowancesController(ApplicationDbContext context, IAuditLogService auditLog)
+    public AllowancesController(
+        ApplicationDbContext context,
+        IAuditLogService auditLog,
+        IPayslipLockService payslipLock)
     {
         _context = context;
         _auditLog = auditLog;
+        _payslipLock = payslipLock;
     }
 
     private static IEnumerable<string> SplitConfigCsv(string? csv)
@@ -785,7 +791,10 @@ public class AllowancesController : Controller
                     newData: SnapshotAllowance(existing),
                     moduleName: "Allowances");
 
-                TempData["SuccessMessage"] = "Allowance updated successfully.";
+                var lockedCount = await _payslipLock.LockEmployeePayslipsAsync(existing.EmployeeId, "Allowances");
+                TempData["SuccessMessage"] = lockedCount > 0
+                    ? $"Allowance updated. Locked {lockedCount} unlocked payslip(s) for this employee."
+                    : "Allowance updated successfully.";
                 return RedirectToAction(nameof(Index));
             }
             catch (DbUpdateConcurrencyException)
