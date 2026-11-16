@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace HRMBT.Web.Models;
 
-/// <summary>Maps to dbo.AuditLogs (see db.txt).</summary>
+/// <summary>Maps to dbo.AuditLogs (see db.md).</summary>
 [Table("AuditLogs")]
 public class AuditLog
 {

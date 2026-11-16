@@ -72,7 +72,7 @@ namespace HRMBT.Web.Services.Payroll
             return a.Amount * qty;
         }
 
-        /// <summary>Percentage of gross when <see cref="Deduction.CalculationMethod"/> is Percentage; otherwise fixed PKR from <see cref="Deduction.PercentageValue"/> (dbo has no Amount column — see db.txt).</summary>
+        /// <summary>Percentage of gross when <see cref="Deduction.CalculationMethod"/> is Percentage; otherwise fixed PKR from <see cref="Deduction.PercentageValue"/> (dbo has no Amount column — see db.md).</summary>
         public static bool IsPercentageDeduction(Deduction d) =>
             string.Equals(d.CalculationMethod, "Percentage", StringComparison.OrdinalIgnoreCase);
 

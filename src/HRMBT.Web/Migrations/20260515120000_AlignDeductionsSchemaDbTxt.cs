@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace HRMBT.Web.Migrations
 {
-    /// <summary>Align dbo.Deductions with db.txt (DeductionName, Frequency; drop legacy Amount/Name if present).</summary>
+    /// <summary>Align dbo.Deductions with db.md (DeductionName, Frequency; drop legacy Amount/Name if present).</summary>
     public partial class AlignDeductionsSchemaDbTxt : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)

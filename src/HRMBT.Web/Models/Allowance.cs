@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
 namespace HRMBT.Web.Models
 {
-    /// <summary>Maps to dbo.Allowances (see db.txt).</summary>
+    /// <summary>Maps to dbo.Allowances (see db.md).</summary>
     public class Allowance
     {
         [Key]

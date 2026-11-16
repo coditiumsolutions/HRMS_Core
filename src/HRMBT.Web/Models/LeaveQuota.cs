@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace HRMBT.Web.Models;
 
 /// <summary>
-/// Maps to <c>dbo.LeaveQuota</c>: yearly quota per leave type (see db.txt).
+/// Maps to <c>dbo.LeaveQuota</c>: yearly quota per leave type (see db.md).
 /// </summary>
 public class LeaveQuota
 {

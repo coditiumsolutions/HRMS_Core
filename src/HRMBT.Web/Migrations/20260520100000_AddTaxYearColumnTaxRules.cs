@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace HRMBT.Web.Migrations
 {
-    /// <summary>Add dbo.TaxRules.TaxYear (aligned with db.txt); idempotent when column already exists.</summary>
+    /// <summary>Add dbo.TaxRules.TaxYear (aligned with db.md); idempotent when column already exists.</summary>
     public partial class AddTaxYearColumnTaxRules : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)

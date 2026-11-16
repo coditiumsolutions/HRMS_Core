@@ -1,7 +1,6 @@
-# Version: 1.4 | UpdatedAt: 23/09/2026
 Database: HRBTK
-Connection: DefaultConnection (src/HRMBT.Web/appsettings.json)
-Generated: 2026-09-23 14:32:06
+Connection: DefaultConnection (environment: Production)
+Generated: 2026-11-16 15:14:59
 
 [dbo].[__EFMigrationsHistory]
   - MigrationId (nvarchar(150), Nullable: NO)
@@ -48,6 +47,19 @@ Generated: 2026-09-23 14:32:06
   - SuccessCount (int, Nullable: YES)
   - FailureCount (int, Nullable: YES)
   - TotalRows (int, Nullable: YES)
+
+[dbo].[AuditLogs]
+  - LogId (int, Nullable: NO)
+  - TableName (nvarchar(128), Nullable: NO)
+  - Operation (nvarchar(20), Nullable: NO)
+  - RecordId (nvarchar(100), Nullable: YES)
+  - EmployeeId (int, Nullable: YES)
+  - OldData (nvarchar(MAX), Nullable: YES)
+  - NewData (nvarchar(MAX), Nullable: YES)
+  - ChangedBy (nvarchar(128), Nullable: YES)
+  - ChangedAt (datetime2(7), Nullable: NO)
+  - ModuleName (nvarchar(100), Nullable: YES)
+  - IPAddress (nvarchar(50), Nullable: YES)
 
 [dbo].[CarryforwardLeaves]
   - EmployeeId (nvarchar(50), Nullable: NO)
@@ -202,16 +214,3 @@ Generated: 2026-09-23 14:32:06
   - CreatedBy (varchar(MAX), Nullable: YES)
   - CreatedOn (varchar(MAX), Nullable: YES)
   - History (varchar(MAX), Nullable: YES)
-
-[dbo].[AuditLogs]
-  - LogId (int, Nullable: NO)
-  - TableName (nvarchar(128), Nullable: NO)
-  - Operation (nvarchar(20), Nullable: NO)
-  - RecordId (nvarchar(100), Nullable: YES)
-  - EmployeeId (int, Nullable: YES)
-  - OldData (nvarchar(MAX), Nullable: YES)
-  - NewData (nvarchar(MAX), Nullable: YES)
-  - ChangedBy (nvarchar(128), Nullable: YES)
-  - ChangedAt (datetime2(7), Nullable: NO)
-  - ModuleName (nvarchar(100), Nullable: YES)
-  - IPAddress (nvarchar(50), Nullable: YES)

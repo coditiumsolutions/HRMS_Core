@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
 namespace HRMBT.Web.Models
 {
-    /// <summary>Maps to dbo.Deductions (see db.txt). Fixed PKR amounts use <see cref="PercentageValue"/> when <see cref="CalculationMethod"/> is Fixed (no separate Amount column).</summary>
+    /// <summary>Maps to dbo.Deductions (see db.md). Fixed PKR amounts use <see cref="PercentageValue"/> when <see cref="CalculationMethod"/> is Fixed (no separate Amount column).</summary>
     public class Deduction
     {
         [Key]
