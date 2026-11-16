@@ -14,9 +14,20 @@ if (builder.Environment.IsDevelopment())
     mvcBuilder.AddRazorRuntimeCompilation();
 
 // ✅ DbContext
+// Connection strings are NOT committed: they come from appsettings.{Environment}.json (git-ignored; see the
+// *.example.json files) or from the ConnectionStrings__DefaultConnection environment variable.
+var defaultConnection = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrWhiteSpace(defaultConnection))
+{
+    throw new InvalidOperationException(
+        $"ConnectionStrings:DefaultConnection is not configured for environment '{builder.Environment.EnvironmentName}'. " +
+        $"Create src/HRMBT.Web/appsettings.{builder.Environment.EnvironmentName}.json from its .example.json file, " +
+        "or set the ConnectionStrings__DefaultConnection environment variable.");
+}
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(
-        builder.Configuration.GetConnectionString("DefaultConnection"),
+        defaultConnection,
         sql =>
         {
             sql.EnableRetryOnFailure(
