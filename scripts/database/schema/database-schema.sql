@@ -8,7 +8,7 @@ BEGIN
 END;
 GO
 
-/* HRMS: idempotent EF migration chain + catalog DDL aligned with repo db.txt (2026-05-12). */
+/* HRMS: idempotent EF migration chain + catalog DDL aligned with repo db.md (2026-05-12). */
 
 BEGIN TRANSACTION;
 IF NOT EXISTS (
@@ -1025,7 +1025,7 @@ GO
    Objects used by HRMS / EF but not created by the migration chain above.
    Shapes match ApplicationDbContext + models (EmployeeLeaves per dbo.EmployeeLeaves;
    LeaveQuota, GazettedHoliday, CarryforwardLeaves per EF). Production may still
-   expose legacy column names (see repo db.txt); align those databases manually.
+   expose legacy column names (see repo db.md); align those databases manually.
    Each block is idempotent (skips if the table already exists).
    ---------------------------------------------------------------------------- */
 

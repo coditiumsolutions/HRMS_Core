@@ -3,15 +3,15 @@
   Builds database-production.sql (schema + data) from the HRMS SQL Server database.
 
 .DESCRIPTION
-  Reads DefaultConnection from src/HRMBT.Web/appsettings.json unless -ConnectionString is set.
-  Schema: database-schema.sql + database-schema-patches.sql from repo root.
+  Reads DefaultConnection from src/HRMBT.Web/appsettings.Production.json (or the ConnectionStrings__DefaultConnection env var) unless -ConnectionString is set.
+  Schema: scripts/database/schema/database-schema.sql + database-schema-patches.sql.
   Data: INSERT statements for all dbo tables (FK-safe order, IDENTITY_INSERT where needed).
 
 .EXAMPLE
-  .\tools\export-database-production.ps1
-  .\tools\export-database-production.ps1 -ConnectionString "Server=.;Database=HRMS;Trusted_Connection=True;TrustServerCertificate=True"
-  .\tools\export-database-production.ps1 -SchemaOnly
-  .\tools\export-database-production.ps1 -DataOnly -OutputPath .\database-data.sql
+  .\scripts\database\tools\export-database-production.ps1
+  .\scripts\database\tools\export-database-production.ps1 -ConnectionString "Server=.;Database=HRMS;Trusted_Connection=True;TrustServerCertificate=True"
+  .\scripts\database\tools\export-database-production.ps1 -SchemaOnly
+  .\scripts\database\tools\export-database-production.ps1 -DataOnly -OutputPath .\database-data.sql
 #>
 [CmdletBinding()]
 param(
@@ -24,15 +24,16 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-$appsettings = Join-Path $repoRoot "src\HRMBT.Web\appsettings.json"
+$repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\..\.."))
+$appsettings = Join-Path $repoRoot "src\HRMBT.Web\appsettings.Production.json"
 
-if (-not $ConnectionString) {
-    if (-not (Test-Path $appsettings)) { throw "appsettings.json not found: $appsettings" }
+# Lookup order: -ConnectionString, env ConnectionStrings__DefaultConnection, appsettings.Production.json (git-ignored)
+if (-not $ConnectionString) { $ConnectionString = $env:ConnectionStrings__DefaultConnection }
+if (-not $ConnectionString -and (Test-Path -LiteralPath $appsettings)) {
     $json = Get-Content -Raw -LiteralPath $appsettings | ConvertFrom-Json
     $ConnectionString = $json.ConnectionStrings.DefaultConnection
 }
-if (-not $ConnectionString) { throw "No connection string. Pass -ConnectionString or set DefaultConnection in appsettings.json." }
+if (-not $ConnectionString) { throw "No connection string. Pass -ConnectionString, set ConnectionStrings__DefaultConnection, or create src\HRMBT.Web\appsettings.Production.json from appsettings.Production.example.json." }
 
 if (-not $OutputPath) {
     $OutputPath = Join-Path $repoRoot "database-production.sql"
@@ -224,8 +225,8 @@ function Export-TableData {
     return $count
 }
 
-$schemaFile = Join-Path $repoRoot "database-schema.sql"
-$patchFile = Join-Path $repoRoot "database-schema-patches.sql"
+$schemaFile = Join-Path $PSScriptRoot "..\schema\database-schema.sql"
+$patchFile = Join-Path $PSScriptRoot "..\schema\database-schema-patches.sql"
 if (-not $DataOnly) {
     if (-not (Test-Path $schemaFile)) { throw "Missing $schemaFile" }
 }
@@ -235,7 +236,7 @@ $sb = New-Object System.Text.StringBuilder
 [void]$sb.AppendLine(" HRMS production database script")
 [void]$sb.AppendLine(" Database: $DatabaseName")
 [void]$sb.AppendLine(" Generated: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')")
-[void]$sb.AppendLine(" Source: tools/export-database-production.ps1")
+[void]$sb.AppendLine(" Source: scripts/database/tools/export-database-production.ps1")
 [void]$sb.AppendLine("")
 [void]$sb.AppendLine(" Run on SQL Server (sqlcmd or SSMS):")
 [void]$sb.AppendLine("   sqlcmd -S YourServer -d master -i database-production.sql")

@@ -1,19 +1,26 @@
 @echo off
 REM Deploy HRMS (HRMBT.Web) to IIS
-REM Run this script from the HRMS repo root (same folder as this .bat), or adjust paths below.
+REM Lives in scripts\deploy; PROJECT_ROOT resolves to the repo root (two levels up).
 
 echo ========================================
 echo HRMS Application Deployment Script
 echo ========================================
 echo.
 
-set PROJECT_ROOT=%~dp0
+set PROJECT_ROOT=%~dp0..\..\
 set PROJECT_PATH=%PROJECT_ROOT%src\HRMBT.Web\
 set DEPLOY_PATH=C:\HRMSDeploy
 
 echo Project Path: %PROJECT_PATH%
 echo Deploy Path: %DEPLOY_PATH%
 echo.
+
+REM The production connection string is not in git. It must exist next to the project so publish copies it.
+if not exist "%PROJECT_PATH%appsettings.Production.json" (
+    echo [ERROR] %PROJECT_PATH%appsettings.Production.json not found.
+    echo         Create it from appsettings.Production.example.json ^(contains the production connection string^).
+    exit /b 1
+)
 
 REM Step 1: Clean previous build
 echo Step 1: Cleaning previous build...
@@ -89,15 +96,15 @@ echo Deployment completed successfully!
 echo ========================================
 echo.
 echo Deployment Location: %DEPLOY_PATH%
-echo Public URL (HTTP^): http://178.105.20.255:82/
-echo.
-echo IIS binding (you added the site^): http, port 82, host name blank ^(answers for IP^).
-echo Optional: add hostname zkbeclipse.pk on port 82 if you want that URL too.
+echo Public URL: https://hr.coditium.com/ ^(Teezhost 16GB, IIS 10^)
+echo Database: HRBTK on the same server ^(DefaultConnection in appsettings.json^)
 echo.
 echo One-time / server checks:
 echo   - Site name: HRMS  ^| Physical path: %DEPLOY_PATH% ^(must match your folder^)
+echo   - IIS bindings: https on 443 with the hr.coditium.com certificate, http on 80
 echo   - App pool: HRMS (No Managed Code, 64-bit^)
-echo   - Firewall: allow TCP 82 inbound to this server
+echo   - Firewall: allow TCP 80 and 443 inbound
 echo   - ASP.NET Core 8 Hosting Bundle installed
+echo   - REMINDER: this script wipes %DEPLOY_PATH% including wwwroot\uploads - back them up first
 echo.
 echo Deploy script finished.

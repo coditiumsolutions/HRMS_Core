@@ -1,11 +1,25 @@
-# One-off: regenerate db.txt from SQL Server DefaultConnection in appsettings.json
+# Dumps the live schema (tables/columns) from DefaultConnection (see lookup order below) to docs/db-schema-export.txt.
+# db.md at the repo root is hand-maintained: diff it against this export and update db.md (version, date, notes).
+# Connection string lookup order: -ConnectionString, env ConnectionStrings__DefaultConnection,
+# src/HRMBT.Web/appsettings.<Environment>.json (Environment = -Environment, $env:ASPNETCORE_ENVIRONMENT or Production).
+param(
+    [string]$ConnectionString,
+    [string]$Environment
+)
 $ErrorActionPreference = 'Stop'
-# Script lives in repo /tools; repo root is one level up
-$root = Split-Path $PSScriptRoot -Parent
-$appsettings = Join-Path $root 'src/HRMBT.Web/appsettings.json'
-$cfg = Get-Content $appsettings -Raw | ConvertFrom-Json
-$cs = $cfg.ConnectionStrings.DefaultConnection
-if (-not $cs) { throw "DefaultConnection missing in appsettings.json" }
+# Script lives in scripts/database/tools; repo root is three levels up
+$root = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\..\.."))
+if (-not $Environment) { $Environment = $env:ASPNETCORE_ENVIRONMENT }
+if (-not $Environment) { $Environment = 'Production' }
+$cs = $ConnectionString
+if (-not $cs) { $cs = $env:ConnectionStrings__DefaultConnection }
+if (-not $cs) {
+    $envFile = Join-Path $root "src/HRMBT.Web/appsettings.$Environment.json"
+    if (Test-Path -LiteralPath $envFile) {
+        $cs = (Get-Content -LiteralPath $envFile -Raw | ConvertFrom-Json).ConnectionStrings.DefaultConnection
+    }
+}
+if (-not $cs) { throw "No connection string. Pass -ConnectionString, set ConnectionStrings__DefaultConnection, or create src/HRMBT.Web/appsettings.$Environment.json from its .example.json file." }
 
 Add-Type -AssemblyName System.Data
 
@@ -71,10 +85,10 @@ if ($rows.Count -eq 0) { throw 'No tables/columns returned (empty database?).' }
 
 $stamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
 $db = $rows[0].DbName
-$outPath = Join-Path $root 'db.txt'
+$outPath = Join-Path $root 'docs/db-schema-export.txt'
 $lines = New-Object System.Collections.Generic.List[string]
 [void]$lines.Add("Database: $db")
-[void]$lines.Add('Connection: DefaultConnection (src/HRMBT.Web/appsettings.json)')
+[void]$lines.Add("Connection: DefaultConnection (environment: $Environment)")
 [void]$lines.Add("Generated: $stamp")
 
 $currentKey = $null

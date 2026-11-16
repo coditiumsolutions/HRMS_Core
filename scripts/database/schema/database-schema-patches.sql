@@ -1,4 +1,4 @@
-/* Post-migration patches aligned with live HRMS (db.txt). Idempotent. Run after database-schema.sql */
+/* Post-migration patches aligned with live HRMS (db.md). Idempotent. Run after schema/database-schema.sql */
 
 SET ANSI_NULLS ON;
 SET QUOTED_IDENTIFIER ON;
