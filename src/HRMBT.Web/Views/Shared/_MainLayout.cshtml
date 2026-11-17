@@ -104,6 +104,8 @@
             padding: 20px 10px;
             border-right: 1px solid #dee2e6;
             margin-bottom: 0;
+            position: relative;
+            transition: flex-basis 0.2s ease, max-width 0.2s ease, padding 0.2s ease, opacity 0.15s ease;
         }
         .sidebar h5 {
             color: white;
@@ -116,6 +118,9 @@
             border-radius: 4px;
             font-size: 0.875rem;
             border-bottom: 1px solid #D4AF37;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .sidebar hr {
             border-color: #D4AF37 !important;
@@ -127,6 +132,62 @@
         }
         .sidebar .text-muted {
             color: rgba(255, 255, 255, 0.7) !important;
+        }
+        .sidebar-toggle {
+            position: absolute;
+            top: 0.65rem;
+            right: -0.7rem;
+            z-index: 5;
+            width: 1.4rem;
+            height: 1.4rem;
+            padding: 0;
+            border-radius: 50%;
+            border: 1px solid #d4af37;
+            background: #00203f;
+            color: #d4af37;
+            font-size: 0.7rem;
+            line-height: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0.15rem 0.35rem rgba(0, 32, 63, 0.35);
+        }
+        .sidebar-toggle:hover {
+            background: #336b87;
+            color: #fff;
+        }
+        .layout-row {
+            display: flex;
+            flex-wrap: nowrap;
+            align-items: stretch;
+        }
+        .layout-sidebar {
+            flex: 0 0 16.666667%;
+            max-width: 16.666667%;
+            width: 16.666667%;
+        }
+        .layout-main {
+            flex: 1 1 0;
+            max-width: 100%;
+            min-width: 0;
+            transition: max-width 0.2s ease;
+        }
+        body.sidebar-collapsed .layout-sidebar {
+            flex-basis: 3.25rem;
+            max-width: 3.25rem;
+            width: 3.25rem;
+            padding-left: 0.35rem;
+            padding-right: 0.35rem;
+        }
+        body.sidebar-collapsed .sidebar .sidebar-body {
+            opacity: 0;
+            pointer-events: none;
+            overflow: hidden;
+            height: 0;
+        }
+        body.sidebar-collapsed .sidebar-toggle {
+            right: 0.55rem;
+            top: 0.75rem;
         }
         .main-content {
             padding: 20px;
@@ -285,29 +346,34 @@
 
     <!-- Main Content Area with Sidebar -->
     <div class="container-fluid">
-        <div class="row">
-            <!-- Sidebar (20% width) -->
-            <div class="col-2 sidebar">
-                @if (ViewData["Module"]?.ToString() == "Payroll")
-                {
-                    @await Html.PartialAsync("_PayrollSidebar")
-                }
-                else if (ViewData["Module"]?.ToString() == "Attendance")
-                {
-                    @await Html.PartialAsync("_AttendanceSidebar")
-                }
-                else if (ViewData["Module"]?.ToString() == "Deductions")
-                {
-                    @await Html.PartialAsync("_DeductionsSidebar")
-                }
-                else
-                {
-                    @await Html.PartialAsync("_Sidebar")
-                }
+        <div class="row layout-row">
+            <!-- Sidebar -->
+            <div class="layout-sidebar sidebar" id="appSidebar">
+                <button type="button" class="sidebar-toggle" id="sidebarToggle" title="Collapse or expand sidebar" aria-label="Collapse or expand sidebar" aria-expanded="true" aria-controls="sidebarBody">
+                    <span id="sidebarToggleIcon">«</span>
+                </button>
+                <div class="sidebar-body" id="sidebarBody">
+                    @if (ViewData["Module"]?.ToString() == "Payroll")
+                    {
+                        @await Html.PartialAsync("_PayrollSidebar")
+                    }
+                    else if (ViewData["Module"]?.ToString() == "Attendance")
+                    {
+                        @await Html.PartialAsync("_AttendanceSidebar")
+                    }
+                    else if (ViewData["Module"]?.ToString() == "Deductions")
+                    {
+                        @await Html.PartialAsync("_DeductionsSidebar")
+                    }
+                    else
+                    {
+                        @await Html.PartialAsync("_Sidebar")
+                    }
+                </div>
             </div>
-            
-            <!-- Main Content (80% width) -->
-            <div class="col-10 main-content">
+
+            <!-- Main Content -->
+            <div class="layout-main main-content">
                 <main role="main">
                     @RenderBody()
                 </main>
@@ -326,6 +392,31 @@
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+    <script>
+        (function () {
+            var storageKey = 'hrms.sidebar.collapsed';
+            var body = document.body;
+            var toggle = document.getElementById('sidebarToggle');
+            var icon = document.getElementById('sidebarToggleIcon');
+            if (!toggle || !icon) return;
+
+            function applyCollapsed(collapsed) {
+                body.classList.toggle('sidebar-collapsed', collapsed);
+                toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+                icon.textContent = collapsed ? '»' : '«';
+                try { localStorage.setItem(storageKey, collapsed ? '1' : '0'); } catch (e) { }
+            }
+
+            try {
+                if (localStorage.getItem(storageKey) === '1')
+                    applyCollapsed(true);
+            } catch (e) { }
+
+            toggle.addEventListener('click', function () {
+                applyCollapsed(!body.classList.contains('sidebar-collapsed'));
+            });
+        })();
+    </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

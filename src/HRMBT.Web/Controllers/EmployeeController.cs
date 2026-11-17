@@ -23,7 +23,7 @@ public class EmployeeController : Controller
     }
 
     // GET: Employee
-    public async Task<IActionResult> Index(string? department, string? designation, string? search, string? employeeName, string? employeeID, string? year2024, string? applyTax, string? sortBy = "EmployeeID", string? sortOrder = "asc", int page = 1, int pageSize = 20)
+    public async Task<IActionResult> Index(string? department, string? designation, string? project, string? search, string? employeeName, string? employeeID, string? year2024, string? applyTax, string? sortBy = "EmployeeID", string? sortOrder = "asc", int page = 1, int pageSize = 20)
     {
         ViewData["Module"] = "Employees";
         
@@ -36,6 +36,7 @@ public class EmployeeController : Controller
 
             // Combined name/ID search (legacy employeeName / employeeID still accepted)
             var searchTerm = (search ?? employeeName ?? employeeID)?.Trim();
+            var projectFilter = string.IsNullOrWhiteSpace(project) ? null : project.Trim();
 
             // Start with a query
             var query = _context.Employees.AsQueryable();
@@ -49,6 +50,11 @@ public class EmployeeController : Controller
             if (!string.IsNullOrEmpty(designation))
             {
                 query = query.Where(e => e.Designation == designation);
+            }
+
+            if (!string.IsNullOrEmpty(projectFilter))
+            {
+                query = query.Where(e => e.Project == projectFilter);
             }
 
             // Single search matches Employee Name OR Employee ID (partial)
@@ -80,6 +86,7 @@ public class EmployeeController : Controller
                 "employeename" => sortOrder == "desc" ? query.OrderByDescending(e => e.EmployeeName) : query.OrderBy(e => e.EmployeeName),
                 "department" => sortOrder == "desc" ? query.OrderByDescending(e => e.Department) : query.OrderBy(e => e.Department),
                 "designation" => sortOrder == "desc" ? query.OrderByDescending(e => e.Designation) : query.OrderBy(e => e.Designation),
+                "project" => sortOrder == "desc" ? query.OrderByDescending(e => e.Project) : query.OrderBy(e => e.Project),
                 "genstatus" => sortOrder == "desc" ? query.OrderByDescending(e => e.GenStatus) : query.OrderBy(e => e.GenStatus),
                 "basicSalary" => sortOrder == "desc" ? query.OrderByDescending(e => e.BasicSalary) : query.OrderBy(e => e.BasicSalary),
                 "year2024" => sortOrder == "desc" ? query.OrderByDescending(e => e.Year2024) : query.OrderBy(e => e.Year2024),
@@ -96,11 +103,13 @@ public class EmployeeController : Controller
                 .OrderBy(d => d.DepartmentName)
                 .ToListAsync();
             ViewBag.Designations = await _context.Employees.Select(e => e.Designation).Distinct().Where(d => d != null).OrderBy(d => d).ToListAsync();
+            ViewBag.Projects = await GetProjectOptionsAsync();
             ViewBag.Year2024Options = await _context.Employees.Select(e => e.Year2024).Distinct().Where(y => y != null).OrderBy(y => y).ToListAsync();
             
             // Preserve filter values
             ViewBag.CurrentDepartment = department;
             ViewBag.CurrentDesignation = designation;
+            ViewBag.CurrentProject = projectFilter;
             ViewBag.CurrentSearch = searchTerm;
             ViewBag.CurrentYear2024 = year2024;
             ViewBag.CurrentApplyTax = applyTax;
@@ -329,6 +338,7 @@ public class EmployeeController : Controller
             return NotFound();
         }
 
+        await LoadCreateFormOptionsAsync(employee.Project);
         ViewBag.EmployeeDocuments = await _documentService.BuildViewModelAsync(employee.uid, canUpload: true);
         return View(employee);
     }
@@ -377,6 +387,7 @@ public class EmployeeController : Controller
             return RedirectToAction(nameof(Index));
         }
 
+        await LoadCreateFormOptionsAsync(employee.Project);
         ViewBag.EmployeeDocuments = await _documentService.BuildViewModelAsync(employee.uid, canUpload: true);
         return View(employee);
     }
@@ -416,7 +427,54 @@ public class EmployeeController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    private async Task LoadCreateFormOptionsAsync()
+    private async Task<List<string>> GetProjectOptionsAsync(string? selected = null)
+    {
+        var configRows = await _context.HrConfigurations
+            .AsNoTracking()
+            .Where(c => c.ConfigKey != null && c.ConfigValue != null)
+            .ToListAsync();
+
+        static IEnumerable<string> SplitCsv(string? csv)
+        {
+            if (string.IsNullOrWhiteSpace(csv)) yield break;
+            foreach (var item in csv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                if (!string.IsNullOrWhiteSpace(item))
+                    yield return item;
+            }
+        }
+
+        var projects = configRows
+            .Where(c => c.ConfigKey != null &&
+                        (string.Equals(c.ConfigKey.Trim(), "Project", StringComparison.OrdinalIgnoreCase)
+                         || string.Equals(c.ConfigKey.Trim(), "Projects", StringComparison.OrdinalIgnoreCase)))
+            .SelectMany(c => SplitCsv(c.ConfigValue))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(v => v)
+            .ToList();
+
+        if (projects.Count == 0)
+        {
+            projects = await _context.Employees
+                .AsNoTracking()
+                .Where(e => e.Project != null && e.Project != "")
+                .Select(e => e.Project!)
+                .Distinct()
+                .OrderBy(p => p)
+                .ToListAsync();
+        }
+
+        if (!string.IsNullOrWhiteSpace(selected)
+            && !projects.Any(p => string.Equals(p, selected, StringComparison.OrdinalIgnoreCase)))
+        {
+            projects.Add(selected.Trim());
+            projects = projects.OrderBy(p => p, StringComparer.OrdinalIgnoreCase).ToList();
+        }
+
+        return projects;
+    }
+
+    private async Task LoadCreateFormOptionsAsync(string? selectedProject = null)
     {
         var configRows = await _context.HrConfigurations
             .AsNoTracking()
@@ -460,17 +518,10 @@ public class EmployeeController : Controller
             .OrderBy(v => v)
             .ToList();
 
-        var projectOptions = configRows
-            .Where(c => KeyMatches(c.ConfigKey, "Project", "Projects"))
-            .SelectMany(c => SplitCsv(c.ConfigValue))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(v => v)
-            .ToList();
-
         ViewBag.DepartmentOptions = departmentOptions;
         ViewBag.DesignationOptions = designationOptions;
         ViewBag.EmployeeStatusOptions = employeeStatusOptions;
-        ViewBag.ProjectOptions = projectOptions;
+        ViewBag.ProjectOptions = await GetProjectOptionsAsync(selectedProject);
     }
 
     private bool EmployeeExists(int id)

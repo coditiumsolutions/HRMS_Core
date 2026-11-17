@@ -100,6 +100,19 @@
                             }
                         </select>
                     </div>
+                    <div class="col-12 col-md">
+                        <label for="project" class="form-label">Project</label>
+                        <select name="project" id="project" class="form-select">
+                            <option value="">All</option>
+                            @if (ViewBag.Projects != null)
+                            {
+                                foreach (var proj in ViewBag.Projects)
+                                {
+                                    <option value="@proj" selected="@(ViewBag.CurrentProject == proj)">@proj</option>
+                                }
+                            }
+                        </select>
+                    </div>
                     <input type="hidden" name="pageSize" value="@ViewBag.CurrentPageSize" />
                     <div class="col-12 col-md-auto d-flex align-items-end">
                         <button type="submit" class="btn btn-filter-apply w-100">
@@ -157,6 +170,7 @@
                                            asp-route-sortOrder="@NextSort("EmployeeID")"
                                            asp-route-department="@ViewBag.CurrentDepartment"
                                            asp-route-designation="@ViewBag.CurrentDesignation"
+                                           asp-route-project="@ViewBag.CurrentProject"
                                            asp-route-search="@ViewBag.CurrentSearch"
                                            asp-route-pageSize="@ViewBag.CurrentPageSize">
                                             Emp ID <i class="bi @SortIcon("EmployeeID") ms-1"></i>
@@ -168,6 +182,7 @@
                                            asp-route-sortOrder="@NextSort("EmployeeName")"
                                            asp-route-department="@ViewBag.CurrentDepartment"
                                            asp-route-designation="@ViewBag.CurrentDesignation"
+                                           asp-route-project="@ViewBag.CurrentProject"
                                            asp-route-search="@ViewBag.CurrentSearch"
                                            asp-route-pageSize="@ViewBag.CurrentPageSize">
                                             Employee <i class="bi @SortIcon("EmployeeName") ms-1"></i>
@@ -179,34 +194,25 @@
                                            asp-route-sortOrder="@NextSort("Department")"
                                            asp-route-department="@ViewBag.CurrentDepartment"
                                            asp-route-designation="@ViewBag.CurrentDesignation"
+                                           asp-route-project="@ViewBag.CurrentProject"
                                            asp-route-search="@ViewBag.CurrentSearch"
                                            asp-route-pageSize="@ViewBag.CurrentPageSize">
                                             Department <i class="bi @SortIcon("Department") ms-1"></i>
                                         </a>
                                     </th>
-                                    <th>Status</th>
-                                    <th class="text-end col-salary">
-                                        <a asp-action="Index"
-                                           asp-route-sortBy="basicSalary"
-                                           asp-route-sortOrder="@NextSort("basicSalary")"
-                                           asp-route-department="@ViewBag.CurrentDepartment"
-                                           asp-route-designation="@ViewBag.CurrentDesignation"
-                                           asp-route-search="@ViewBag.CurrentSearch"
-                                           asp-route-pageSize="@ViewBag.CurrentPageSize">
-                                            Salary <i class="bi @SortIcon("basicSalary") ms-1"></i>
-                                        </a>
-                                    </th>
                                     <th>
                                         <a asp-action="Index"
-                                           asp-route-sortBy="GenStatus"
-                                           asp-route-sortOrder="@NextSort("GenStatus")"
+                                           asp-route-sortBy="project"
+                                           asp-route-sortOrder="@NextSort("project")"
                                            asp-route-department="@ViewBag.CurrentDepartment"
                                            asp-route-designation="@ViewBag.CurrentDesignation"
+                                           asp-route-project="@ViewBag.CurrentProject"
                                            asp-route-search="@ViewBag.CurrentSearch"
                                            asp-route-pageSize="@ViewBag.CurrentPageSize">
-                                            Gen status <i class="bi @SortIcon("GenStatus") ms-1"></i>
+                                            Project <i class="bi @SortIcon("project") ms-1"></i>
                                         </a>
                                     </th>
+                                    <th>Status</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -223,26 +229,14 @@
                                         <td class="col-emp-id"><span class="text-muted small emp-id-cell" title="@item.EmployeeID">@item.EmployeeID</span></td>
                                         <td>
                                             <div class="emp-name">@item.EmployeeName</div>
-                                            <div class="emp-meta">@item.Project</div>
+                                            <div class="emp-meta">@(string.IsNullOrWhiteSpace(item.Designation) ? "—" : item.Designation)</div>
                                         </td>
                                         <td>@item.Department</td>
+                                        <td>@(string.IsNullOrWhiteSpace(item.Project) ? "—" : item.Project)</td>
                                         <td>
                                             <span class="status-pill @StatusClass(item.EmployeeStatus)">
                                                 @(string.IsNullOrWhiteSpace(item.EmployeeStatus) ? "—" : item.EmployeeStatus)
                                             </span>
-                                        </td>
-                                        <td class="text-end salary col-salary">
-                                            @if (item.BasicSalary.HasValue)
-                                            {
-                                                <span class="salary-currency">PKR</span>@item.BasicSalary.Value.ToString("N0")
-                                            }
-                                            else
-                                            {
-                                                <span class="text-muted">—</span>
-                                            }
-                                        </td>
-                                        <td>
-                                            @(string.IsNullOrWhiteSpace(item.GenStatus) ? "—" : item.GenStatus)
                                         </td>
                                     </tr>
                                 }
@@ -261,6 +255,7 @@
                 <input type="hidden" name="search" value="@ViewBag.CurrentSearch" />
                 <input type="hidden" name="department" value="@ViewBag.CurrentDepartment" />
                 <input type="hidden" name="designation" value="@ViewBag.CurrentDesignation" />
+                <input type="hidden" name="project" value="@ViewBag.CurrentProject" />
                 <label for="pageSize" class="form-label mb-0 text-muted small text-nowrap">Per page</label>
                 <select name="pageSize" id="pageSize" class="form-select form-select-sm" style="width: auto; min-width: 4.5rem;" onchange="this.form.submit()">
                     @if (ViewBag.PageSizeOptions != null)
@@ -295,6 +290,7 @@
                                asp-route-pageSize="@ViewBag.CurrentPageSize"
                                asp-route-department="@ViewBag.CurrentDepartment"
                                asp-route-designation="@ViewBag.CurrentDesignation"
+                               asp-route-project="@ViewBag.CurrentProject"
                                asp-route-search="@ViewBag.CurrentSearch"
                                asp-route-sortBy="@ViewBag.CurrentSortBy"
                                asp-route-sortOrder="@ViewBag.CurrentSortOrder"
@@ -305,6 +301,7 @@
                                asp-route-pageSize="@ViewBag.CurrentPageSize"
                                asp-route-department="@ViewBag.CurrentDepartment"
                                asp-route-designation="@ViewBag.CurrentDesignation"
+                               asp-route-project="@ViewBag.CurrentProject"
                                asp-route-search="@ViewBag.CurrentSearch"
                                asp-route-sortBy="@ViewBag.CurrentSortBy"
                                asp-route-sortOrder="@ViewBag.CurrentSortOrder"
@@ -319,6 +316,7 @@
                                    asp-route-pageSize="@ViewBag.CurrentPageSize"
                                    asp-route-department="@ViewBag.CurrentDepartment"
                                    asp-route-designation="@ViewBag.CurrentDesignation"
+                                   asp-route-project="@ViewBag.CurrentProject"
                                    asp-route-search="@ViewBag.CurrentSearch"
                                    asp-route-sortBy="@ViewBag.CurrentSortBy"
                                    asp-route-sortOrder="@ViewBag.CurrentSortOrder">@i</a>
@@ -330,6 +328,7 @@
                                asp-route-pageSize="@ViewBag.CurrentPageSize"
                                asp-route-department="@ViewBag.CurrentDepartment"
                                asp-route-designation="@ViewBag.CurrentDesignation"
+                               asp-route-project="@ViewBag.CurrentProject"
                                asp-route-search="@ViewBag.CurrentSearch"
                                asp-route-sortBy="@ViewBag.CurrentSortBy"
                                asp-route-sortOrder="@ViewBag.CurrentSortOrder"
@@ -340,6 +339,7 @@
                                asp-route-pageSize="@ViewBag.CurrentPageSize"
                                asp-route-department="@ViewBag.CurrentDepartment"
                                asp-route-designation="@ViewBag.CurrentDesignation"
+                               asp-route-project="@ViewBag.CurrentProject"
                                asp-route-search="@ViewBag.CurrentSearch"
                                asp-route-sortBy="@ViewBag.CurrentSortBy"
                                asp-route-sortOrder="@ViewBag.CurrentSortOrder"
