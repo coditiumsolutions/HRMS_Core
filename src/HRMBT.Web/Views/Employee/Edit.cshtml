@@ -172,7 +172,16 @@
                                                     <tr class="emp-form-row">
                                                         <th scope="row" class="emp-label-cell"><label asp-for="Project" class="form-label mb-0"></label></th>
                                                         <td class="emp-field-cell">
-                                                            <input asp-for="Project" class="form-control" placeholder="Project or cost center" />
+                                                            <select asp-for="Project" class="form-select">
+                                                                <option value="">— Select Project —</option>
+                                                                @if (ViewBag.ProjectOptions is IEnumerable<string> projectOptions)
+                                                                {
+                                                                    foreach (var project in projectOptions)
+                                                                    {
+                                                                        <option value="@project">@project</option>
+                                                                    }
+                                                                }
+                                                            </select>
                                                             <span asp-validation-for="Project" class="field-validation-error"></span>
                                                         </td>
                                                         <th scope="row" class="emp-label-cell"><label asp-for="DateOfJoining" class="form-label mb-0"></label></th>
