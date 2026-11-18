@@ -112,7 +112,7 @@ Note: `Employee.EmployeeID` stays as is under A (it is the business key and the 
 - C Keep everything in `Configuration` (today).
 
 **Why not put these in `Configuration`?** Today each list is one row whose `ConfigValue` is a comma-separated string (`GetConfigValuesAsync` splits it). That means:
-- **No foreign key is possible.** A value inside a string cannot be referenced, so `Employee.Department`/`Project` are free text and drift from the list (8 live projects vs the 6 HR expects). This drift is the reason for the change.
+- **No foreign key is possible.** A value inside a string cannot be referenced, so `Employee.Department`/`Project` are free text and drift from the list (in the test data, project names on employees did not match the Setup list). This drift is the reason for the change.
 - **No attributes.** A project needs `SortOrder` and `HasLeaveManagement`; a department needs its project; a designation needs a rank. A CSV item has only a name.
 - **Renaming or removing an item silently orphans every row that uses the text,** and an item cannot be deactivated while its history stays valid.
 - **Status values are logic, not data.** If `Approved` lives in `Configuration`, an edit under Setup can break leave processing.
@@ -161,7 +161,7 @@ Note: `Employee.EmployeeID` stays as is under A (it is the business key and the 
 
 ### S17. Constraints (Status: Closed)
 **Suggested key**
-- A ★ Rules the database can check live in the database: `CHECK` for ranges and status sets, unique keys for business rules (one payslip per employee per month), composite FK for "department belongs to project". The app validates too, but never alone.
+- A ★ Rules the database can check live in the database: `CHECK` for ranges and status sets, unique keys for business rules (one payslip per employee per month). (2026-11-18: a composite "department belongs to project" key was dropped; HR confirmed they are not tightly linked, decision B2.) The app validates too, but never alone.
 - B App-level only.
 
 **Answer:** A  **Decided by / date:** Rayder / 17-11-2026
@@ -213,9 +213,21 @@ SQL Server has no exclusion constraint, so "no two overlapping leave requests / 
 
 **Answer:** A  **Decided by / date:** Rayder / 17-11-2026
 
+### S24. Notes and remarks (Status: Open)
+HR records edge cases (forgotten check-outs, late arrivals with a reason, special arrangements) in free-text notes on the record they concern, for example on that day's attendance. The names for these columns differ today (`Comments`, `Remarks`, `Notes`, `Details`, `Description`), most tables have none, and a single column per row is overwritten by the next note and loses who wrote it and when.
+
+**Suggested key**
+- A ★ Two layers. (1) Every table HR works in has one standard column `Notes nvarchar(1000) NULL` for the current short note (existing `Attendance.Comments` and `Allowances.Remarks` become `Notes`; `Payslips.Notes` already exists). (2) A `RecordNotes` table holds dated, signed notes (who, when, text), append-only, linked by a real FK to the record (S5), starting with attendance, employee and leave. Notes are context only: they never feed payroll or processing; anything that changes a status or pay goes in a structured table (`AttendanceCorrections`, `HalfDayRequests`).
+- B Only the `Notes` column (layer 1). Simple, but a day with two notes keeps only the last one and has no author or time.
+- C Only `RecordNotes`. Full history, but a quick one-line note needs a second table and screen.
+
+**Answer:** ______  **Decided by / date:** ______
+
 ---
 
 ## Idempotency review of the data structure
+**Data status (2026-11-18):** the data in `HRBTK` is treated as test data. The "Today" column describes the schema, and counts and findings come from the test data; re-run the checks on the real data before applying anything.
+
 Reviewed 2026-11-17 against the live schema (db.md v1.9), re-checked against the final draft (db_changes.md v3.0-draft). Nothing here is applied yet: the "After db_changes" column is the state once that draft is built.
 
 | Area | Replay risk | Today (live HRBTK) | After db_changes v3.0 |
@@ -224,7 +236,6 @@ Reviewed 2026-11-17 against the live schema (db.md v1.9), re-checked against the
 | Users create | Double submit | Username not unique: **unsafe** (6 distinct today, so no cleanup needed) | `UX_Users_Username`, `UX_Users_EmployeeId`; **safe** |
 | Configuration | Same key saved twice | No PK, no unique key: **unsafe** (19 distinct keys today) | PK `Id` + `UX_Configuration_ConfigKey`; **safe** |
 | Lookups (Projects, Designations, LeaveTypes, Shifts, Departments) | Same name added twice | Free text or CSV: **unsafe** | unique `Name` (and `Code` for LeaveTypes); **safe** |
-| Project departments | Same link twice | n/a | `UX_ProjectDepartments_Project_Department`; **safe** |
 | Tax slabs | Same slab saved twice | No key: **unsafe** (14 rows, no duplicates) | `UX_TaxRules_Year_MinSalary`; **safe** |
 | Payslip generation | Double click or re-run makes a second payslip | No unique key (0 duplicates today by luck): **unsafe** | `UX_Payslips_Employee_Year_Month`; regenerate in one transaction (decisions T4, open); **safe** |
 | Payslip lines | Regenerate doubles the lines | No uniqueness: **unsafe** (0 duplicates among 132) | `UX_PayslipDetails_Payslip_Item`; delete-and-insert in the same transaction; **safe** |
@@ -241,6 +252,7 @@ Reviewed 2026-11-17 against the live schema (db.md v1.9), re-checked against the
 | Attendance punches | Re-uploaded rows, unmatched codes | n/a | `UX_AttendancePunches_Dedup` on `(RawEmployeeCode, PunchAt, Direction)`; **safe** (the key does not depend on a matched employee) |
 | Attendance processing | Re-running recalculates | n/a (empty) | deterministic from punches + shift snapshot; `UX_Attendance_Employee_ShiftDate`; locked rows skipped; **safe** |
 | Attendance corrections | Double submit | n/a | `RequestId` unique filtered index; **safe** |
+| Record notes | Double click writes the same note twice | n/a | `RequestId` unique filtered index; **safe** |
 | Roster and shift assignment | Double entry, overlaps | n/a | `UX_RosterOverrides_Employee_Date`, `UX_ShiftAssignments_Employee_From_Priority`; overlap check (S22); **safe** |
 | Employee documents | Same file twice | none: **unsafe** (no duplicates among the 8 today) | `UX_EmployeeDocuments_Employee_FileHash`; **safe** |
 | AuditLogs | Append-only | n/a | intentionally not idempotent |

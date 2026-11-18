@@ -1,8 +1,8 @@
 # HRMS Database Schema - Proposed Changes (final draft)
-Version: 3.0-draft | Based on: db.md v1.9 (2026-11-16) | Date: 2026-11-17
+Version: 3.4-draft | Based on: db.md v1.9 (2026-11-16) | Date: 2026-11-18
 Database: HRBTK
 Server: Teezhost 16GB (production)
-Status: **FINAL DRAFT, not applied.** Nothing in this file has been run against any database. Production `HRBTK` stays read-only until each script is reviewed and approved (db_standards.md S19). This draft implements the rules in db_standards.md (S1-S23) and the answered decisions in decisions.md (T1, T2, T3, T5, T6). Items that wait for an open decision are tagged ⏸ and name the decision (T4, B1-B18).
+Status: **FINAL DRAFT, not applied.** Nothing in this file has been run against any database. Production `HRBTK` stays read-only until each script is reviewed and approved (db_standards.md S19). This draft implements the rules in db_standards.md (S1-S23) and the answered decisions in decisions.md (T1, T2, T3, T5, T6). Items that wait for an open decision are tagged ⏸ and name the decision (T4, T7, B1-B18). **Data status (2026-11-18):** the data in `HRBTK` is treated as test data. Row counts, "live checks" and findings in this file describe it for design purposes; they are not requirements (for example, the number of projects is not fixed, B3), and the checks are re-run on the real data before a script is applied.
 
 ## MAINTENANCE RULES:
     1. Bump Version and Date above whenever this file changes; when a change is applied, move it into db.md and add a Change History entry there
@@ -37,13 +37,14 @@ Column and key markers (first column of every column table, and at the start of 
 - **Status and type values (S11):** fixed sets are `varchar(n)` + `CHECK`. Lists with attributes are tables (Projects, Departments, Designations, LeaveTypes). `Configuration` holds single values and name-only dropdown lists.
 - **Audit columns (S13):** **set C** = `CreatedAt datetime2(0) NOT NULL DEFAULT sysdatetime()`, `CreatedBy nvarchar(100) NULL`. **set M** = set C + `ModifiedAt datetime2(0) NULL`, `ModifiedBy nvarchar(100) NULL`. Tables with existing audit columns (`CreatedDate`, `ModifiedOn`, `UploadedOn`...) keep them.
 - **Soft delete (S6, S14):** `IsActive` for lookups, master data and logins; `IsDeleted` for documents; transactional rows are cancelled or locked, never deleted. Rows that may really be deleted are decided case by case when the screen is built.
+- **Notes (S24, ⏸ T7):** HR-operated tables carry one standard `Notes nvarchar(1000) NULL` for the current short note; dated, signed notes go in the append-only `RecordNotes` table. Notes are context only and never feed payroll or processing. Existing `Attendance.Comments` and `Allowances.Remarks` become `Notes`.
 - **Concurrency and idempotency (S15, S21-S23):** `RowVersion rowversion` on Employee, LeaveRequests, HalfDayRequests, Attendance, Payslips; natural unique keys or a `RequestId` on every table that is written to; scripts are re-runnable.
 - **Names of keys and indexes (S16):** `PK_<Table>`, `FK_<Child>_<Parent>`, `IX_<Table>_<Cols>`, `UX_<Table>_<Cols>`, `CK_<Table>_<Rule>`, `DF_<Table>_<Column>` (every default is named; not repeated per column below). Every FK column leads at least one index. Existing auto-named constraints are renamed (Appendix A).
 - **Derived values (S18):** a stored value that could be calculated is marked "snapshot" with the reason.
 - **Case-insensitive collation:** SQL Server treats `EmployeeID` and `EmployeeId` as the same name, so a column can't be added next to its old name. During the expand phase the new column gets a temporary name (`MonthNo`, `EmployeeUid`) and is renamed in the contract phase (see Migration order).
 
 ## Summary
-19 existing tables + 11 new = 30 sections; 29 tables after `EmployeeLeaves` is dropped, plus 2 views.
+19 existing tables + 12 new = 31 sections; 30 tables after `EmployeeLeaves` is dropped, plus 2 views.
 
 | Table | Status | Why (one line) |
 |---|---|---|
@@ -57,7 +58,7 @@ Column and key markers (first column of every column table, and at the start of 
 | CarryforwardLeaves | CHANGED | Rebuilt (empty): `Id`, int employee key, `LeaveTypeId`, `FromYear`/`ToYear`. |
 | Configuration | CHANGED | Real PK `Id`, unique `ConfigKey`, audit columns; entity lists and tax/year rows move out. |
 | Deductions | CHANGED | `Amount` for fixed values, `RequestId`, `datetime2(0)`, FK index. |
-| Departments | CHANGED | Shared department list; project membership moves to ProjectDepartments (⏸ B2). |
+| Departments | CHANGED | One shared department list, independent of Project (B2 decided 2026-11-18): `SortOrder`, `IsActive`, audit. The main department (Administration, Operations...); the function inside it is a sub-department. |
 | Designations | NEW | Designation lookup with `Rank` (⏸ B4). |
 | Employee | CHANGED | Org FKs, leaving/return dates, pay basis, proper types, rowversion. |
 | EmployeeDocuments | CHANGED | Real FK, `DocumentType`, `FileHash`, `IsDeleted` NOT NULL. |
@@ -70,18 +71,20 @@ Column and key markers (first column of every column table, and at the start of 
 | LeaveTypes | NEW | Leave type lookup. |
 | PayslipDetails | CHANGED | Unique line key, constrained `ItemType`. |
 | Payslips | CHANGED | Numeric `Month`, unique per employee/month, hourly columns, rowversion. |
-| ProjectDepartments | NEW | Which departments belong to which project, with order (⏸ B2). |
 | Projects | NEW | The top of Employee -> Department -> Project, with SortOrder and HasLeaveManagement (⏸ B3). |
+| RecordNotes | NEW | Dated, signed, append-only notes HR writes against an attendance day, employee or leave request (⏸ T7). |
 | RosterOverrides | NEW | One-off schedule edge cases: shift change, off day, swap, extra duty (⏸ B8). |
 | ShiftAssignments | NEW | Which shift an employee works, on which weekdays, for which date range (⏸ B8). |
 | Shifts | NEW | Shift times, overnight flag, grace minutes, 7-hour full-day rule, half-day cutoff. |
+| SubDepartments | NEW | Optional detail under a department (the function: Mess, Transportation, Record...); information only (B2). |
 | TaxRules | CHANGED | `TaxYearStart` replaces the text label (T6); percentage `decimal(5,2)`; audit columns. |
 | Users | CHANGED | `IsActive`, int FK to Employee, constrained Role, unique Username, audit columns. |
 
-Count by status: NEW 11, CHANGED 17, UNCHANGED 1, TO BE REMOVED 1.
+Count by status: NEW 12, CHANGED 17, UNCHANGED 1, TO BE REMOVED 1.
 
 ## How the HR requirements map to the schema
-- 2026-11-16: **Employee -> Department -> Project, sorted by Project, then Department, then Designation.** `Projects.SortOrder`, `ProjectDepartments.SortOrder`, `Designations.Rank`; `Employee.ProjectId/DepartmentId/DesignationId`; view `vEmployeeDirectory` and index `IX_Employee_Org`.
+- 2026-11-16: **Employee, Department and Project, sorted by Project, then Department, then Designation.** `Projects.SortOrder`, `Departments.SortOrder`, `Designations.Rank`; `Employee.ProjectId/DepartmentId/DesignationId`; view `vEmployeeDirectory` and indexes `IX_Employee_Org`.
+- 2026-11-18: **Departments and projects are linked but not tightly (HR, decision B2).** Some departments exist in only one project (Galaxy has Maintenance), Admin and Security are in every project, and there is one HR department for all projects (under Bahria Town Karachi). So `Departments` is one shared list and `Employee` holds `ProjectId` and `DepartmentId` independently, with no rule tying them together. HR can sort department first (all Admin staff in every project), then by project, or the other way round: `IX_Employee_Department_Project` and `IX_Employee_Org`. 2026-11-18 (project owner): a function inside a department (`Admin - Mess`, `Operations - Record`) is the optional `Employee.SubDepartmentId`, for information only.
 - 2026-11-16: **Dastarkhuwans have no leave management.** `Projects.HasLeaveManagement = 0`; `Employee.IsLeaveManagedOverride` (NULL = follow project). Effective rule: `COALESCE(e.IsLeaveManagedOverride, p.HasLeaveManagement)`.
 - 2026-11-16: **Hourly pay, 7 hours = full day, less = hourly.** `Shifts.MinFullDayMinutes` (420); `Attendance.WorkedMinutes/PayableMinutes/DayStatus`; `Employee.PayBasis/HourlyRate`; `Payslips.HourlyMinutes/HourlyAmount` (⏸ B6).
 - 2026-11-16: **1 minute late/early grace.** `Shifts.GraceLateMinutes`, `Shifts.GraceEarlyMinutes`; `Attendance.LateMinutes/EarlyLeaveMinutes/IsLate`.
@@ -90,6 +93,7 @@ Count by status: NEW 11, CHANGED 17, UNCHANGED 1, TO BE REMOVED 1.
 - 2026-11-16: **Attendance follows the schedule; some check in and out on two different days.** `Attendance.ShiftDate` + full `CheckInAt/CheckOutAt`; `Shifts.IsOvernight`; `ShiftAssignments`, `RosterOverrides`.
 - 2026-11-16: **Same leave quota for everyone, changeable per person per case.** `LeaveQuota` + `LeaveEntitlementOverrides`; view `vLeaveBalances` (⏸ B5).
 - 2026-11-17: **Employees can leave and return (T1).** `Employee.DateOfLeaving`, `Employee.DateOfReturn`, both nullable.
+- 2026-11-17: **HR records edge cases (forgotten check-outs and the like) in notes on that day's attendance (S24, ⏸ T7).** `Notes` column on the HR tables for the current short note; `RecordNotes` for dated, signed notes with history. A note that changes a status or pay is a structured `AttendanceCorrections` row, not a note.
 
 ## Relationships (proposed)
 Existing foreign keys (kept; renamed to the S5 pattern, Appendix A):
@@ -99,9 +103,10 @@ Existing foreign keys (kept; renamed to the S5 pattern, Appendix A):
 - `Payslips.EmployeeId` -> `Employee.uid` (`FK_Payslips_Employee`, no action)
 
 New foreign keys (all no action unless stated; every FK column leads an index, see each table):
-- 🟢 `ProjectDepartments.ProjectId` -> `Projects.Id`; `ProjectDepartments.DepartmentId` -> `Departments.Id`
+- 🟢 `SubDepartments.DepartmentId` -> `Departments.Id`
+- 🟢 `Employee.(DepartmentId, SubDepartmentId)` -> `SubDepartments.(DepartmentId, Id)` (composite, so a sub-department can only be one of the chosen department's; optional: NULL `SubDepartmentId` skips the check)
 - 🟢 `Employee.ProjectId` -> `Projects.Id`
-- 🟢 `Employee.(ProjectId, DepartmentId)` -> `ProjectDepartments.(ProjectId, DepartmentId)` (composite; the database guarantees an employee's department belongs to their project)
+- 🟢 `Employee.DepartmentId` -> `Departments.Id` (2026-11-18, B2: independent of `ProjectId`; no composite key and no rule that the department belongs to the project)
 - 🟢 `Employee.DesignationId` -> `Designations.Id`
 - 🟢 `EmployeeDocuments.EmployeeId` -> `Employee.uid` (was convention only; EF already declares it)
 - 🟢 `Users.EmployeeId` -> `Employee.uid` (replaces the string `Users.EmployeeId`)
@@ -117,6 +122,7 @@ New foreign keys (all no action unless stated; every FK column leads an index, s
 - 🟢 `LeaveRequests.EmployeeId` -> `Employee.uid` (was convention only; 1 orphan row must be resolved first); `.LeaveTypeId` -> `LeaveTypes.Id`; `.DocumentId` -> `EmployeeDocuments.Id`; `.ApprovedByUserId` -> `Users.uid`
 - 🟢 `CarryforwardLeaves.EmployeeId` -> `Employee.uid`; `.LeaveTypeId` -> `LeaveTypes.Id`
 - 🟢 `AuditLogs.EmployeeId` -> `Employee.uid` (2026-11-17: safe because employees are never deleted, S6; check the 4 existing rows first)
+- 🟢 `RecordNotes.AttendanceId` -> `Attendance.Id`; `.EmployeeId` -> `Employee.uid`; `.LeaveRequestId` -> `LeaveRequests.Id` (⏸ T7; exactly one is set per note)
 
 Removed convention-only links: 🔴 `Attendance.EmployeeID`, `EmployeeLeaves.EmployeeID`, `CarryforwardLeaves.EmployeeId` (string), `Users.EmployeeId` (string) -> `Employee.EmployeeID`. After migration nothing joins on `Employee.EmployeeID`; it remains the unique business key for display and for matching device/upload codes (decision D1).
 
@@ -157,7 +163,7 @@ Rows on 2026-11-16: 23.
 | 🟡 CHANGED | **ModifiedDate** | datetime2(0) | NULL |  | was datetime2(7). |
 | 🟡 CHANGED | **ModifiedBy** | nvarchar(100) | NULL |  | was nvarchar(MAX) NULL. Same length as `CreatedBy` (S7); check `MAX(LEN(ModifiedBy))` first. |
 |  | Quantity | int | NOT NULL | 1 | Added 2026-09-18 (migration 20260918120000, not recorded in __EFMigrationsHistory). |
-|  | Remarks | nvarchar(500) | NULL |  | Added 2026-09-18 (migration 20260918130000). |
+| 🟡 CHANGED | **Notes** | nvarchar(1000) | NULL |  | was `Remarks` nvarchar(500) NULL, added 2026-09-18 (migration 20260918130000). 2026-11-17 (S24, ⏸ T7): standard note column name and length; renamed at contract. |
 |  | Frequency | nvarchar(30) | NOT NULL | 'Monthly' | Stored, not honoured by payroll (app issue). |
 | 🟢 NEW | **RequestId** | uniqueidentifier | NULL |  | 2026-11-17 (S21): idempotency key; the form generates the GUID when it renders, so a replayed POST is rejected. NULL for existing rows. |
 
@@ -199,7 +205,7 @@ Rows on 2026-11-16: 0.
 | 🟢 NEW | **LeaveRequestId** | int | NULL |  | FK -> LeaveRequests.Id. Set when `DayStatus = 'Leave'`. |
 | 🟢 NEW | **IsLocked** | bit | NOT NULL | 0 | Set after payroll for the month. |
 | 🟢 NEW | **ProcessedAt** | datetime2(0) | NULL |  | Last time the row was (re)calculated. |
-|  | Comments | nvarchar(255) | NULL |  |  |
+| 🟡 CHANGED | **Notes** | nvarchar(1000) | NULL |  | was `Comments` nvarchar(255) NULL. 2026-11-17 (S24, ⏸ T7): HR's short note on that day (e.g. a forgotten check-out told to HR); renamed at contract. Context only, never read by processing or payroll; dated, signed notes go in `RecordNotes`. |
 | 🟢 NEW | **CreatedAt** | datetime2(0) | NOT NULL | sysdatetime() | Set M. |
 | 🟢 NEW | **CreatedBy** | nvarchar(100) | NULL |  |  |
 | 🟢 NEW | **ModifiedAt** | datetime2(0) | NULL |  |  |
@@ -391,6 +397,7 @@ Rows on 2026-11-16: 11.
 |  | CreatedBy | nvarchar(100) | NOT NULL |  |  |
 | 🟡 CHANGED | **ModifiedDate** | datetime2(0) | NULL |  | was datetime2(7). |
 |  | ModifiedBy | nvarchar(100) | NULL |  |  |
+| 🟢 NEW | **Notes** | nvarchar(1000) | NULL |  | S24, ⏸ T7: HR's short note. |
 | 🟢 NEW | **RequestId** | uniqueidentifier | NULL |  | S21 idempotency key, generated by the form. |
 
 Keys and indexes
@@ -401,22 +408,24 @@ Keys and indexes
 - 🟢 `CK_Deductions_Value` - (CalculationMethod = 'Percentage' AND PercentageValue BETWEEN 0 AND 100) OR (CalculationMethod = 'Fixed' AND Amount IS NOT NULL AND Amount >= 0). Added after the backfill.
 
 ## Table: dbo.Departments [CHANGED]
-Shared department list, the FK target of `Employee.DepartmentId` (through ProjectDepartments). 2026-11-17: a department no longer belongs to one project; membership and order live in `ProjectDepartments` (⏸ B2).
+One shared department list, the FK target of `Employee.DepartmentId`. 2026-11-18 (decision B2, from HR): projects and departments are linked but not tightly. A department is not owned by a project, so this table has no `ProjectId` and there is no link table.
 Rows on 2026-11-16: 4.
-- 2026-11-17: Why shared (⏸ B2): live data has 14 department names used in more than one project (Security in 4, Accounts & Finance in 4, Admin - Transportation, Operations, House Keeping and Information Technology in 3 each, and 8 more in 2). A `ProjectDepartments` link table represents "shared" and "per project" equally well (a per-project answer just means one link row per department), so it is drafted as the default. The mapping of the 58 free-text department strings still needs HR.
-- 2026-11-16: The 4 existing rows (Software Development, Human Resource, Civil Staff, Azizabad Dastarkhuwan) are kept and linked to their projects.
+- 2026-11-18: HR's examples: Galaxy Construction has a Maintenance department that other projects do not have; every project has Admin and Security; there is one HR department for all projects and its staff sit under Bahria Town Karachi. HR sorts department first (all Admin staff in every project) and then by project, or the reverse. This matches the live data: 14 department names are used in more than one project (Security in 4, Accounts & Finance in 4, Admin - Transportation, Operations, House Keeping and Information Technology in 3 each, and 8 more in 2).
+- 2026-11-18: Employee holds `ProjectId` and `DepartmentId` independently; the database does not check that a department "belongs" to the project. A project's department dropdown can be built from the departments already used in that project, or show them all.
+- 2026-11-16: The 4 existing rows (Software Development, Human Resource, Civil Staff, Azizabad Dastarkhuwan) are kept. The list is seeded from the 58 distinct `Employee.Department` strings; the mapping of those strings to departments still needs HR (B2).
+- 2026-11-18 (project owner, B2): this table holds the **main** department. The test data has names that are a base plus a function (`Admin - Mess`, `Operations - Record`); the base goes here and the function goes to `SubDepartments`. `Admin` is the Administration department, so that row is named `Administration`. Split rule: at the first ` - ` (see Migration order). Only Administration and Operations have sub-departments in the test data. For HR at go-live: whether `Administrator` (BT Tower, Icon) is the Administration department, and whether `Mess` and `Transportation` (no `Admin - ` prefix) are its functions.
 
 | Change | Column | Type | Null | Default | Notes |
 |---|---|---|---|---|---|
 | 🟡 CHANGED | **Id** | int | NOT NULL |  | PK, identity. was `DepartmentID` (S1); renamed at contract. |
 | 🟡 CHANGED | **DepartmentName** | nvarchar(100) | NOT NULL |  | was nvarchar(100) NULL. Existing name kept (S4). Unique. |
+| 🟢 NEW | **SortOrder** | int | NOT NULL | 0 | Default order of departments in lists (a global order now, not per project). |
 | 🟢 NEW | **IsActive** | bit | NOT NULL | 1 | S14. |
 | 🟢 NEW | **CreatedAt / CreatedBy / ModifiedAt / ModifiedBy** | datetime2(0) / nvarchar(100) | per set M |  | Set M. |
 
 Keys and indexes
 - 🟡 `PK_Departments` - primary key, clustered, (Id). was `PK__Departme__B2079BCDAEBFDBAB`.
 - 🟢 `UX_Departments_DepartmentName` - unique, nonclustered, (DepartmentName). Idempotency key for the department seed and Setup.
-
 ## Table: dbo.Designations [NEW]
 Designation lookup, replacing the free-text `Employee.Designation` and the Configuration dropdown list. Shared by all projects. Lets employee lists sort by seniority (`Rank`) instead of alphabetically.
 Rows: new table (seeded from distinct `Employee.Designation` values; 141 distinct in Bahria Town Karachi alone, so expect a long list to review).
@@ -437,9 +446,9 @@ Keys and indexes
 Employee master. `uid` is the FK used by every table after this change; `EmployeeID` (unique) stays the business key for display and for matching device/upload codes (decision D1). Table name kept (S3 exception).
 Rows on 2026-11-16: 848.
 - 2026-11-17: Live check: `EmployeeID` is numeric for all 848 rows and at most 6 characters; `EmployeeName` at most 33, `CNIC` 15, `MobileNo` 12; `FatherName` is empty on every row. The proposed lengths below are therefore safe. Names are text people type (S7), so they become `nvarchar`.
-- 2026-11-16: Org structure becomes FKs (Project -> Department -> Designation). The free-text columns stay until the app has switched, then are dropped. Backfilling needs the HR mappings (⏸ B2, B3, B4); `ProjectId` and `DepartmentId` become NOT NULL once every employee is mapped.
+- 2026-11-16: Org structure becomes FKs (Project -> Department -> Designation). The free-text columns stay until the app has switched, then are dropped. Backfilling needs the HR mappings (the 58 department strings from B2, and ⏸ B3, B4); `ProjectId` and `DepartmentId` become NOT NULL once every employee is mapped.
 - 2026-11-17 (T1): `DateOfLeaving` and `DateOfReturn` record leaving and returning. A second leave/return cycle is not representable; if it happens, the assignment history (⏸ B14) would carry it.
-- ⏸ B18: the 7 legacy per-year leave columns are **live data** (828 of 848 employees have values), so they are not dropped; they stay as they are, then are archived/converted once HR says what they mean. Their `float` types break S8; they are fixed only when B18 is answered.
+- ⏸ B18: the 7 legacy per-year leave columns hold values for 828 of 848 employees in the test data. They are left as they are until B18 is answered (then converted or dropped; they are archived first only if the real data carries balances in them). Their `float` types break S8; they are fixed only when B18 is answered.
 - 2026-11-16: All length/type tightenings need a `MAX(LEN(...))` / `TRY_CONVERT` check on the 848 rows first.
 
 | Change | Column | Type | Null | Default | Notes |
@@ -451,7 +460,7 @@ Rows on 2026-11-16: 848.
 | 🟡 CHANGED | **FatherName** | nvarchar(100) | NULL |  | was varchar(250). |
 | 🟡 CHANGED | **DOB** | date | NULL |  | was varchar(250) (text). Converted with TRY_CONVERT; unparseable values listed for HR first. |
 | 🟡 CHANGED | **MobileNo** | varchar(20) | NULL |  | was varchar(250). |
-| 🔴 DROP | Department | varchar(250) | NULL |  | Free text (58 distinct values). Replaced by DepartmentId. |
+| 🔴 DROP | Department | varchar(250) | NULL |  | Free text (58 distinct values in the test data, some of the form `Base - Function`). Replaced by DepartmentId (base) and SubDepartmentId (function). |
 | 🔴 DROP | Designation | varchar(250) | NULL |  | Replaced by DesignationId. |
 |  | DateOfJoining | date | NULL |  |  |
 | 🟢 NEW | **DateOfLeaving** | date | NULL |  | T1. Last working day; processing skips attendance/payroll after it. |
@@ -460,9 +469,10 @@ Rows on 2026-11-16: 848.
 | 🟡 CHANGED | **ModifiedBy** | nvarchar(100) | NULL |  | was varchar(MAX) NULL. Existing name kept (S13). |
 | 🟡 CHANGED | **ModifiedOn** | datetime2(0) | NULL |  | was nvarchar(MAX) NULL (text). Converted with TRY_CONVERT. Existing name kept. |
 |  | Details | nvarchar(MAX) | NULL |  |  |
-| 🔴 DROP | Project | nvarchar(50) | NULL |  | Free text, 8 distinct values. Replaced by ProjectId. |
+| 🔴 DROP | Project | nvarchar(50) | NULL |  | Free text (8 distinct values in the test data). Replaced by ProjectId. |
 | 🟢 NEW | **ProjectId** | int | NULL |  | FK -> Projects.Id. NOT NULL once every employee is mapped (⏸ B3). |
-| 🟢 NEW | **DepartmentId** | int | NULL |  | Composite FK (ProjectId, DepartmentId) -> ProjectDepartments (⏸ B2). NULL columns skip the check until backfilled. |
+| 🟢 NEW | **DepartmentId** | int | NULL |  | FK -> Departments.Id. Independent of `ProjectId` (B2, 2026-11-18): the same department can appear in many projects and a project can use any department. NOT NULL once every employee is mapped. |
+| 🟢 NEW | **SubDepartmentId** | int | NULL |  | 2026-11-18 (B2): the function inside the department (e.g. Mess under Administration). Optional and for information only: no rule, payroll or approval reads it. Composite FK (DepartmentId, SubDepartmentId) -> SubDepartments(DepartmentId, Id). |
 | 🟢 NEW | **DesignationId** | int | NULL |  | FK -> Designations.Id (⏸ B4). |
 | 🟢 NEW | **IsLeaveManagedOverride** | bit | NULL |  | NULL = follow Projects.HasLeaveManagement; 1/0 = exception for this person (S10 exception). |
 | 🟢 NEW | **PayBasis** | varchar(10) | NOT NULL | 'Monthly' | `Monthly` or `Hourly` (⏸ B6). |
@@ -477,6 +487,7 @@ Rows on 2026-11-16: 848.
 |  | BasicSalary | decimal(18,2) | NULL |  | Payroll basis for gross and tax. |
 | 🟡 CHANGED | **ApplyTax** | bit | NOT NULL | 1 | was nvarchar(10) NULL. Live `1` (827), `Yes` (1), `0` (1), empty (19). `1`/`Yes` -> 1; `0`/empty -> 0 (matches today's payroll rule). Existing name kept (S4). |
 |  | GenStatus | nvarchar(50) | NULL |  |  |
+| 🟢 NEW | **Notes** | nvarchar(1000) | NULL |  | S24, ⏸ T7: HR's short note on the employee. `Details` (purpose undocumented) is left as it is. |
 | 🟢 NEW | **CreatedAt** | datetime2(0) | NOT NULL | sysdatetime() | S13. Existing 848 rows get the migration time (noted). |
 | 🟢 NEW | **CreatedBy** | nvarchar(100) | NULL |  |  |
 | 🟢 NEW | **RowVersion** | rowversion | NOT NULL |  | S15: two HR users editing the same employee no longer overwrite each other silently. |
@@ -484,9 +495,11 @@ Rows on 2026-11-16: 848.
 Keys and indexes
 - 🟡 `PK_Employee` - primary key, clustered, (uid). was `PK__Employee__DD701264105802DC`.
 - 🟡 `UX_Employee_EmployeeID` - unique, nonclustered, (EmployeeID). was `UQ__Employee__7AD04FF0F2154625`. Idempotency key for creating and importing employees.
-- 🟢 `IX_Employee_Org` - nonclustered, (ProjectId, DepartmentId, DesignationId) INCLUDE (EmployeeID, EmployeeName, EmployeeStatus). Supports the Project -> Department -> Designation listing; also leads the `FK_Employee_Projects` and composite department FKs.
+- 🟢 `IX_Employee_Org` - nonclustered, (ProjectId, DepartmentId, DesignationId) INCLUDE (EmployeeID, EmployeeName, EmployeeStatus). Supports the Project, then Department, then Designation listing; also leads the `FK_Employee_Projects` FK.
+- 🟢 `IX_Employee_Department_Project` - nonclustered, (DepartmentId, ProjectId, DesignationId) INCLUDE (EmployeeID, EmployeeName, EmployeeStatus). 2026-11-18 (B2): HR also sorts department first (all Admin staff, then by project); leads the `FK_Employee_Departments` FK.
+- 🟢 `IX_Employee_Department_SubDepartment` - nonclustered, (DepartmentId, SubDepartmentId) WHERE SubDepartmentId IS NOT NULL. Leads the composite `FK_Employee_SubDepartments` and serves "everyone in Administration / Mess".
 - 🟢 `IX_Employee_DesignationId` - nonclustered, (DesignationId) WHERE DesignationId IS NOT NULL.
-- 🟢 `FK_Employee_Projects`, `FK_Employee_ProjectDepartments` (composite), `FK_Employee_Designations`.
+- 🟢 `FK_Employee_Projects`, `FK_Employee_Departments`, `FK_Employee_SubDepartments` (composite), `FK_Employee_Designations`.
 - 🟢 `CK_Employee_PayBasis` - PayBasis IN ('Monthly','Hourly'); `CK_Employee_EmployeeStatus` - EmployeeStatus IN (confirmed list, ⏸ B9); `CK_Employee_HourlyRate` - HourlyRate IS NULL OR HourlyRate > 0.
 - 🟢 `CK_Employee_Dates` - (DateOfLeaving IS NULL OR DateOfJoining IS NULL OR DateOfLeaving >= DateOfJoining) AND (DateOfReturn IS NULL OR (DateOfLeaving IS NOT NULL AND DateOfReturn > DateOfLeaving)).
 
@@ -585,6 +598,7 @@ Rows: new table.
 | 🟢 NEW | **ApprovedByUserId** | int | NULL |  | FK -> Users.uid. Approver or rejecter. |
 | 🟢 NEW | **ApprovedAt** | datetime2(0) | NULL |  |  |
 | 🟢 NEW | **ReviewerComments** | nvarchar(500) | NULL |  |  |
+| 🟢 NEW | **Notes** | nvarchar(1000) | NULL |  | S24, ⏸ T7: HR's short note. |
 | 🟢 NEW | **CreatedAt / CreatedBy / ModifiedAt / ModifiedBy** | datetime2(0) / nvarchar(100) | per set M |  | Set M. |
 | 🟢 NEW | **RowVersion** | rowversion | NOT NULL |  | S15. |
 
@@ -668,6 +682,7 @@ Rows on 2026-11-16: 24 (live statuses: `Applied` 7, `Approved` 17).
 | 🟢 NEW | **ApprovedByUserId** | int | NULL |  | FK -> Users.uid. |
 | 🟢 NEW | **ApprovedAt** | datetime2(0) | NULL |  |  |
 | 🟢 NEW | **SupervisorComments** | nvarchar(1000) | NULL |  | From EmployeeLeaves.DepSupervisorComments. |
+| 🟢 NEW | **Notes** | nvarchar(1000) | NULL |  | S24, ⏸ T7: HR's short note (`Reason` is the applicant's). |
 | 🟢 NEW | **AppliedAt** | datetime2(0) | NOT NULL | sysdatetime() | The 24 existing rows have no original applied date; they get the migration time (noted in the migration). |
 | 🟢 NEW | **CreatedBy** | nvarchar(100) | NULL |  |  |
 | 🟢 NEW | **ModifiedAt** | datetime2(0) | NULL |  |  |
@@ -724,7 +739,7 @@ Keys and indexes
 
 ## Table: dbo.Payslips [CHANGED]
 Payslip header: one per employee per month/year, with totals and lock state. Existing `GeneratedDate/GeneratedBy` serve as the audit columns. Table name stays.
-Rows on 2026-11-16: 99 (8 locked; 11 month/year combinations, a few dated Jan/Feb 2027, i.e. in the future: test data to confirm).
+Rows on 2026-11-16: 99 (test data; 8 locked; 11 month/year combinations, a few dated Jan/Feb 2027, i.e. in the future).
 - 2026-11-17 (T2): the period is `Year` (int) + `Month` (tinyint 1-12); the text month name is shown by the app. Expand/contract: `MonthNo` is added, backfilled from the text name, the app switches, the text `Month` is dropped, then `MonthNo` is renamed `Month` (collation is case-insensitive, so the old and new `Month` can't coexist).
 - 2026-11-17 (T6): payroll finds the tax year from the payslip: `Month >= 7 ? Year : Year - 1`, matched to `TaxRules.TaxYearStart`.
 - 2026-11-17 (S18): `TotalAllowances`, `TotalDeductions`, `NetSalary`, `WorkingDays`, `LeaveDays`, `LeaveBalance` and the hourly columns are **snapshots** of the generated slip (they must not change when attendance or rules change later).
@@ -761,29 +776,12 @@ Keys and indexes
 - 🟢 `UX_Payslips_Employee_Year_Month` - unique, nonclustered, (EmployeeId, Year, Month). S21 idempotency key: a double click or re-run cannot create a second payslip for the same month. Live check: 0 duplicate groups. (Named `..._MonthNo` until the contract rename.) Also leads the `EmployeeId` FK.
 - 🟢 `CK_Payslips_Month` - Month BETWEEN 1 AND 12; `CK_Payslips_Year` - Year BETWEEN 2000 AND 2100.
 
-## Table: dbo.ProjectDepartments [NEW]
-Which departments belong to which project, with their order inside the project. The FK target of `Employee.(ProjectId, DepartmentId)`, so an employee's department must be one the project actually has.
-Rows: new table (seeded from the live `Project`/`Department` pairs, reviewed by HR: 8 projects, 58 distinct department strings).
-- ⏸ B2: if HR says departments are strictly per project, the same table works (each department is linked once); only the unique name rule on `Departments` is revisited.
-
-| Change | Column | Type | Null | Default | Notes |
-|---|---|---|---|---|---|
-| 🟢 NEW | **Id** | int | NOT NULL |  | PK, identity. |
-| 🟢 NEW | **ProjectId** | int | NOT NULL |  | FK -> Projects.Id. |
-| 🟢 NEW | **DepartmentId** | int | NOT NULL |  | FK -> Departments.Id. |
-| 🟢 NEW | **SortOrder** | int | NOT NULL | 0 | Order within the project (second sort key of employee lists). |
-| 🟢 NEW | **IsActive** | bit | NOT NULL | 1 |  |
-| 🟢 NEW | **CreatedAt / CreatedBy / ModifiedAt / ModifiedBy** | datetime2(0) / nvarchar(100) | per set M |  | Set M. |
-
-Keys and indexes
-- 🟢 `PK_ProjectDepartments` - primary key, clustered, (Id).
-- 🟢 `UX_ProjectDepartments_Project_Department` - unique, nonclustered, (ProjectId, DepartmentId). Idempotency key and composite FK target. Leads `FK_ProjectDepartments_Projects`.
-- 🟢 `IX_ProjectDepartments_DepartmentId` - nonclustered, (DepartmentId).
-
 ## Table: dbo.Projects [NEW]
-Project lookup, the top of Employee -> Department -> Project. `Employee.Project` is free text (8 distinct values, HR says 6) and the Configuration list drifts from the data (decisions B3).
-Rows: new table (seeded from the distinct `Employee.Project` values once HR confirms the list).
-- 2026-11-17: The Setup list and the data disagree: 4 of the 8 employee values (including Bahria Town Karachi, 338 people) are not in the list, two list entries are spelled differently from the data, and the list contains a test row "Sample Entry Project". Every old value and list entry is mapped to one `Projects` row (⏸ B3).
+Project lookup: one of the two org dimensions of an employee, next to Department. **A dynamic, HR-managed list** (decision B3, 2026-11-18): no number of projects and no project name is built into the schema or the app. HR adds, renames, reorders and deactivates projects from Setup.
+Rows: new table, seeded from the distinct `Employee.Project` values of the test data for development; HR supplies the real list at go-live.
+- 2026-11-18 (B3): `Employee.Project` is free text and the Configuration project list is a comma-separated string, so the two had drifted apart (the earlier "6 or 8 projects" question is dropped: the count is whatever HR keeps in this table). The data in the database is test data and is not a source of truth for the list.
+- 2026-11-18 (S6, S14): a project that has employees or history is never hard-deleted; `IsActive = 0` hides it from new-employee dropdowns and keeps old records valid. The FK from `Employee.ProjectId` is `NO ACTION`, so the database refuses to delete a project that is still used. A project nobody uses may be deleted.
+- 2026-11-18: `HasLeaveManagement` and `SortOrder` are per project and edited by HR; nothing in code assumes a particular project (the Dastarkhuwans rule is the value `0` on that project's row, not a name check).
 
 | Change | Column | Type | Null | Default | Notes |
 |---|---|---|---|---|---|
@@ -799,6 +797,33 @@ Keys and indexes
 - 🟢 `PK_Projects` - primary key, clustered, (Id).
 - 🟢 `UX_Projects_Name` - unique, nonclustered, (Name).
 
+## Table: dbo.RecordNotes [NEW]
+Dated, signed notes HR writes against a record, for the edge cases HR tracks: a forgotten check-out told to HR, a late arrival with its reason, a special arrangement. Append-only: a note is never edited; a wrong one is retracted with `IsDeleted` (S14), kept in the table and hidden from the screen. ⏸ T7.
+Rows: new table.
+- 2026-11-17 (S5): there is no generic `TableName`/`RecordId` pair, because that cannot be a foreign key. Each target is its own nullable FK column and exactly one is set per note. The targets drafted are the attendance day, the employee and the leave request; another target later is one more nullable FK column, its index and a term in the CHECK.
+- 2026-11-17: Context only. A note never feeds processing or payroll; a change to a day's status or pay is an `AttendanceCorrections` row (or a half-day or leave request) with the note as extra explanation.
+- 2026-11-17 (S24): the `Notes` column on each HR table holds the current short note; this table keeps the history with who wrote it and when.
+
+| Change | Column | Type | Null | Default | Notes |
+|---|---|---|---|---|---|
+| 🟢 NEW | **Id** | int | NOT NULL |  | PK, identity. |
+| 🟢 NEW | **AttendanceId** | int | NULL |  | FK -> Attendance.Id. Set when the note is about one shift day (the main use). |
+| 🟢 NEW | **EmployeeId** | int | NULL |  | FK -> Employee.uid. Set when the note is about the person, not a day. |
+| 🟢 NEW | **LeaveRequestId** | int | NULL |  | FK -> LeaveRequests.Id. |
+| 🟢 NEW | **Note** | nvarchar(1000) | NOT NULL |  | The text. |
+| 🟢 NEW | **IsDeleted** | bit | NOT NULL | 0 | Retracted note: kept, hidden. Who retracted it is in `AuditLogs`. |
+| 🟢 NEW | **CreatedAt** | datetime2(0) | NOT NULL | sysdatetime() | When the note was written. |
+| 🟢 NEW | **CreatedBy** | nvarchar(100) | NULL |  | Username of the author. |
+| 🟢 NEW | **RequestId** | uniqueidentifier | NULL |  | S21 idempotency key, generated by the form: a double click does not write the same note twice. |
+
+Keys and indexes
+- 🟢 `PK_RecordNotes` - primary key, clustered, (Id).
+- 🟢 `IX_RecordNotes_AttendanceId` - nonclustered, (AttendanceId, CreatedAt) WHERE AttendanceId IS NOT NULL; `IX_RecordNotes_EmployeeId` - (EmployeeId, CreatedAt) WHERE EmployeeId IS NOT NULL; `IX_RecordNotes_LeaveRequestId` - (LeaveRequestId, CreatedAt) WHERE LeaveRequestId IS NOT NULL. FK indexes (S16) that also serve "notes of this day/person, newest first".
+- 🟢 `UX_RecordNotes_RequestId` - unique, nonclustered, (RequestId) WHERE RequestId IS NOT NULL.
+- 🟢 `FK_RecordNotes_Attendance`, `FK_RecordNotes_Employee`, `FK_RecordNotes_LeaveRequests`.
+- 🟢 `CK_RecordNotes_OneTarget` - (CASE WHEN AttendanceId IS NULL THEN 0 ELSE 1 END + CASE WHEN EmployeeId IS NULL THEN 0 ELSE 1 END + CASE WHEN LeaveRequestId IS NULL THEN 0 ELSE 1 END) = 1.
+- 🟢 `CK_RecordNotes_Note` - LEN(LTRIM(RTRIM(Note))) > 0.
+
 ## Table: dbo.RosterOverrides [NEW]
 One-off changes to an employee's schedule on a single date: shift change, extra off day, swap with a colleague, extra duty on a weekly off, without editing the regular assignment. Overrides win over `ShiftAssignments`. ⏸ B8: the full edge-case list from HR is still open.
 Rows: new table.
@@ -812,6 +837,7 @@ Rows: new table.
 | 🟢 NEW | **ShiftId** | int | NULL |  | FK -> Shifts.Id. Required for ShiftChange, ExtraDuty and Swap; NULL for Off. |
 | 🟢 NEW | **SwapWithEmployeeId** | int | NULL |  | FK -> Employee.uid. Colleague for a Swap (each side gets a row). |
 | 🟢 NEW | **Reason** | nvarchar(500) | NULL |  |  |
+| 🟢 NEW | **Notes** | nvarchar(1000) | NULL |  | S24, ⏸ T7: HR's short note. |
 | 🟢 NEW | **ApprovedByUserId** | int | NULL |  | FK -> Users.uid. |
 | 🟢 NEW | **ApprovedAt** | datetime2(0) | NULL |  |  |
 | 🟢 NEW | **CreatedAt / CreatedBy / ModifiedAt / ModifiedBy** | datetime2(0) / nvarchar(100) | per set M |  | Set M. |
@@ -839,6 +865,7 @@ Rows: new table.
 | 🟢 NEW | **DaysOfWeekMask** | tinyint | NOT NULL |  | Days this shift is worked. |
 | 🟢 NEW | **WeeklyOffMask** | tinyint | NOT NULL | 0 | Rest days (become `WeeklyOff` in Attendance). |
 | 🟢 NEW | **Priority** | tinyint | NOT NULL | 0 | Higher wins on overlap. |
+| 🟢 NEW | **Notes** | nvarchar(1000) | NULL |  | S24, ⏸ T7: HR's short note (e.g. why a Ramadan timing applies). |
 | 🟢 NEW | **CreatedAt / CreatedBy / ModifiedAt / ModifiedBy** | datetime2(0) / nvarchar(100) | per set M |  | Set M. |
 
 Keys and indexes
@@ -874,6 +901,26 @@ Keys and indexes
 - 🟢 `UX_Shifts_Name` - unique, nonclustered, (Name).
 - 🟢 `CK_Shifts_Times` - StartTime <> EndTime (a 24-hour shift would need a separate flag; not expected).
 - 🟢 `CK_Shifts_Minutes` - MinFullDayMinutes > 0 AND (HalfDayMinMinutes IS NULL OR HalfDayMinMinutes < MinFullDayMinutes).
+
+## Table: dbo.SubDepartments [NEW]
+Optional detail under a department: the function inside it (Mess, Transportation and Sweeper under Administration; Record, Transfer, Dispatch and others under Operations). 2026-11-18 (decision B2, project owner): **information and detail only**. No attendance, payroll, leave or approval rule reads it, and a department with no sub-departments simply has none. Each sub-department belongs to exactly one department.
+Rows: new table, seeded by splitting the test-data department names at the first ` - `: 10 sub-departments under 2 departments (Administration: Mess, Sweeper, Transportation; Operations: Audit & Verification, Data Center Q.C, Dispatch, Lahore / Rawalpindi, Nawabshah, Record, Transfer).
+- 2026-11-18 (S11): a table and not free text on `Employee`, because free text drifts (the test data already has `Mess` and `Admin - Mess` for the same function). The simpler alternative is a free-text `SubDepartment nvarchar(100)` column on `Employee`.
+
+| Change | Column | Type | Null | Default | Notes |
+|---|---|---|---|---|---|
+| 🟢 NEW | **Id** | int | NOT NULL |  | PK, identity. |
+| 🟢 NEW | **DepartmentId** | int | NOT NULL |  | FK -> Departments.Id. |
+| 🟢 NEW | **Name** | nvarchar(100) | NOT NULL |  | The function, without the department prefix (`Mess`, not `Admin - Mess`). |
+| 🟢 NEW | **SortOrder** | int | NOT NULL | 0 | Order inside the department. |
+| 🟢 NEW | **IsActive** | bit | NOT NULL | 1 | S14. |
+| 🟢 NEW | **CreatedAt / CreatedBy / ModifiedAt / ModifiedBy** | datetime2(0) / nvarchar(100) | per set M |  | Set M. |
+
+Keys and indexes
+- 🟢 `PK_SubDepartments` - primary key, clustered, (Id).
+- 🟢 `UX_SubDepartments_Department_Name` - unique, nonclustered, (DepartmentId, Name). Idempotency key; leads the `DepartmentId` FK.
+- 🟢 `UX_SubDepartments_Department_Id` - unique, nonclustered, (DepartmentId, Id). Target of the composite FK from `Employee`.
+- 🟢 `FK_SubDepartments_Departments`.
 
 ## Table: dbo.TaxRules [CHANGED]
 Income-tax slabs per tax year. Tax = BasicSalary x TaxPercentage / 100 for the slab containing the basic salary (⏸ B17: basic or gross is open).
@@ -924,7 +971,7 @@ Keys and indexes
 - 🟢 `CK_Users_Role` - Role IS NULL OR Role IN ('Admin','HR').
 
 ## Views (proposed)
-- 🟢 `dbo.vEmployeeDirectory` - Employee joined to Projects, ProjectDepartments, Departments, Designations. Columns: uid, EmployeeID, EmployeeName, ProjectName, DepartmentName, DesignationName, EmployeeStatus, plus the sort keys `Projects.SortOrder`, `ProjectDepartments.SortOrder`, `Designations.Rank`. Lists use `ORDER BY p.SortOrder, pd.SortOrder, g.Rank, e.EmployeeName` (a view can't carry ORDER BY). Backed by `IX_Employee_Org`.
+- 🟢 `dbo.vEmployeeDirectory` - Employee joined to Projects, Departments, Designations. Columns: uid, EmployeeID, EmployeeName, ProjectName, DepartmentName, SubDepartmentName, DesignationName, EmployeeStatus, plus the sort keys `Projects.SortOrder`, `Departments.SortOrder`, `Designations.Rank`. Lists use either `ORDER BY p.SortOrder, d.SortOrder, g.Rank, e.EmployeeName` or, for department-first (HR's "all Admin staff, then by project"), `ORDER BY d.SortOrder, p.SortOrder, g.Rank, e.EmployeeName` (a view can't carry ORDER BY). Backed by `IX_Employee_Org` and `IX_Employee_Department_Project`.
 - 🟢 `dbo.vLeaveBalances` - per employee, leave type and year: `Entitled = COALESCE(OverrideTotalDays, LeaveQuota.TotalDays) + SUM(AdjustmentDays) + CarryforwardLeaves.CarryForwardDays (where ToYear = year)`, `Taken = SUM(TotalDays)` of `Approved` LeaveRequests in that year, `Pending` likewise, `Remaining = Entitled - Taken`. Only employees with `COALESCE(e.IsLeaveManagedOverride, p.HasLeaveManagement) = 1`. Derived, never stored (S18).
 
 ## Idempotency (standards S21-S23)
@@ -936,7 +983,7 @@ Every table people or imports write to is replay-safe. The guard that makes a se
 | Users | `UX_Users_Username`; `UX_Users_EmployeeId` |
 | Configuration | `UX_Configuration_ConfigKey` |
 | Projects / Designations / LeaveTypes / Shifts / Departments | unique `Name` (and `Code` for LeaveTypes) |
-| ProjectDepartments | `UX_ProjectDepartments_Project_Department` |
+| SubDepartments | `UX_SubDepartments_Department_Name` |
 | TaxRules | `UX_TaxRules_Year_MinSalary` |
 | Payslips | `UX_Payslips_Employee_Year_Month` |
 | PayslipDetails | `UX_PayslipDetails_Payslip_Item` |
@@ -953,6 +1000,7 @@ Every table people or imports write to is replay-safe. The guard that makes a se
 | EmployeeDocuments | `UX_EmployeeDocuments_Employee_FileHash` |
 | RosterOverrides | `UX_RosterOverrides_Employee_Date` |
 | ShiftAssignments | `UX_ShiftAssignments_Employee_From_Priority` + overlap check (S22) |
+| RecordNotes | `RequestId` unique filtered index (a note has no natural key) |
 | AuditLogs | none, append-only by design |
 
 Concurrency (S15, `rowversion`): Employee, LeaveRequests, HalfDayRequests, Attendance, Payslips. A `rowversion` detects two people editing at once; it does **not** stop a replayed insert, which is what the keys above are for.
@@ -964,7 +1012,7 @@ App-side requirements these keys depend on (not schema, listed so they are not f
 - The payslip lock service writes its `AuditLogs` row only when `IsLocked` actually changes.
 - Upload code computes the SHA-256 file hash and answers "already imported on <date>" on a duplicate.
 
-Live-data findings that affect the keys (read-only checks, 2026-11-17):
+Findings from the current database that affect the keys (read-only checks, 2026-11-17). **This is test data (2026-11-18)**, so these are design evidence, not cleanup work; re-run the checks on the real data before creating the unique indexes:
 - No duplicates exist for Payslips, PayslipDetails, Users.Username, Configuration.ConfigKey, TaxRules `(TaxYear, MinSalary)`, active Deductions, exact LeaveRequests, or EmployeeDocuments, so those indexes can be created without cleanup.
 - Active Allowances: employees 325 and 376 each have two active `Fuel Allowance` rows. No unique key is added there until payroll says whether that is valid.
 - LeaveRequests: requests 21 and 22 (employee uid 143) overlap. Review before overlap enforcement.
@@ -982,9 +1030,10 @@ All live in decisions.md. The draft shows the assumption it made; nothing below 
 | Decision | Assumption in this draft | Tables affected |
 |---|---|---|
 | T4 payslip regeneration | delete and re-insert lines in one transaction | Payslips, PayslipDetails |
+| T7 notes and remarks | `Notes` column on HR tables + append-only `RecordNotes` (attendance, employee, leave request) | Attendance, Allowances, Deductions, Employee, LeaveRequests, HalfDayRequests, RosterOverrides, ShiftAssignments, RecordNotes |
 | B1 half day vs leave | optional `LeaveRequestId` link on HalfDayRequests | HalfDayRequests, LeaveRequests |
-| B2 departments | shared list + `ProjectDepartments` link table | Departments, ProjectDepartments, Employee |
-| B3 projects (6 or 8) | seed from HR's final list | Projects, Employee |
+| B2 departments | decided 2026-11-18: one shared main-department list, independent of project, plus optional `SubDepartments`. Still open at go-live: HR's mapping of the names (`Administrator`, `Mess`, `Transportation`) | Departments, SubDepartments, Employee |
+| B3 projects | decided 2026-11-18: a dynamic HR-managed list, no fixed count; test-data seed for development, HR's list at go-live | Projects, Employee |
 | B4 designation rank | default 100, alphabetical until HR ranks | Designations |
 | B5 leave year, quotas | calendar year, no carry-forward cap | LeaveQuota, CarryforwardLeaves, LeaveEntitlementOverrides, vLeaveBalances |
 | B6 hourly pay | exact minutes; `HourlyRate` optional | Employee, Attendance, Payslips |
@@ -995,18 +1044,18 @@ All live in decisions.md. The draft shows the assumption it made; nothing below 
 | B14 transfer history | current position only, no history table | Employee |
 | B15 payslip unlock | no schema change | Payslips, AuditLogs |
 | B17 tax base | basic salary | TaxRules |
-| B18 legacy leave columns | kept as they are | Employee |
+| B18 legacy leave columns | kept as they are until HR defines them (test data today) | Employee |
 
 ## Migration order
 Production stays untouched until each script below has been reviewed and approved. Each phase is an EF migration or a **re-runnable** SQL script (S23: guard every change with `IF COL_LENGTH(...) IS NULL`, `IF OBJECT_ID(...) IS NULL` or `IF NOT EXISTS` on the index/constraint name; write backfills as "update where the new column IS NULL"; seed with `MERGE` on the natural key; run in a transaction with a rollback script; running twice changes nothing), **recorded in `__EFMigrationsHistory`** (or a `SchemaChangeLog` row), and preceded by a backup of `HRBTK` (S19). Create unique indexes **after** the backfill and after checking for duplicates (live checks are listed in the Idempotency section). `sqlcmd` runs against production only with your approval before each run.
 
 0. **Bookkeeping.** Back up. Record the six hand-applied migrations (`20260105120000`, `20260512100000`, `20260515120000`, `20260515140000`, `20260520100000`, `20260918120000`) and decide what to do with `20260110114250_LMSModule` (recorded but missing from the repo).
-1. **Lookups and keys (additive, safe).** Create `Projects`, `Designations`, `LeaveTypes`, `ProjectDepartments`; change `Departments` (unique name, `IsActive`, audit); add PKs/unique keys to `Configuration` (`Id` PK, unique `ConfigKey`) and `LeaveQuota` after checking for NULL/duplicate keys; add the missing indexes (`IX_Deductions_EmployeeId`, `UX_PayslipDetails_Payslip_Item`), the `EmployeeDocuments` and `AuditLogs` FKs, and the `Users.Username` unique key; rename the auto-named constraints (Appendix A, `sp_rename`, no data change).
-2. **Backfill Employee org FKs.** Add `Employee.ProjectId/DepartmentId/DesignationId` (NULL), `DateOfLeaving`, `DateOfReturn`, `PayBasis`, `HourlyRate`, `IsLeaveManagedOverride`, `CreatedAt/CreatedBy`, `RowVersion`. Build a temporary mapping table (e.g. `mig.EmployeeOrgMap`: raw Department string -> Department, raw Project string -> Project) for the **58 department strings** and 8 project values, reviewed by HR, then update Employee from it (set only where NULL). Seed Designations from distinct values. Unmapped rows are reported, not guessed. Then the Employee type conversions (DOB, ModifiedOn, ApplyTax, lengths, `nvarchar` names) after `TRY_CONVERT` / `MAX(LEN)` checks. The 7 legacy leave columns stay (⏸ B18).
+1. **Lookups and keys (additive, safe).** Create `Projects`, `Designations`, `LeaveTypes`, `SubDepartments`; change `Departments` (unique name, `SortOrder`, `IsActive`, audit); add PKs/unique keys to `Configuration` (`Id` PK, unique `ConfigKey`) and `LeaveQuota` after checking for NULL/duplicate keys; add the missing indexes (`IX_Deductions_EmployeeId`, `UX_PayslipDetails_Payslip_Item`), the `EmployeeDocuments` and `AuditLogs` FKs, and the `Users.Username` unique key; rename the auto-named constraints (Appendix A, `sp_rename`, no data change).
+2. **Backfill Employee org FKs.** Add `Employee.ProjectId/DepartmentId/SubDepartmentId/DesignationId` (NULL), `DateOfLeaving`, `DateOfReturn`, `PayBasis`, `HourlyRate`, `IsLeaveManagedOverride`, `CreatedAt/CreatedBy`, `RowVersion`. Build a temporary mapping table (e.g. `mig.EmployeeOrgMap`: raw Department string -> Department, raw Project string -> Project) for the **58 department strings** and 8 project values, reviewed by HR, then update Employee from it (set only where NULL). Seed Designations from distinct values. Department names are split at the first ` - ` (re-runnable, set only where NULL): the left side is the department (`Admin` is named `Administration`), the right side is the sub-department, created under that department (test data: `Admin - Mess` -> Administration / Mess; `Operations - Record` -> Operations / Record; names without ` - ` get no sub-department; `Mess`, `Transportation` and `Administrator` wait for HR). Unmapped rows are reported, not guessed. Then the Employee type conversions (DOB, ModifiedOn, ApplyTax, lengths, `nvarchar` names) after `TRY_CONVERT` / `MAX(LEN)` checks. The 7 legacy leave columns stay (⏸ B18).
 3. **Leave consolidation.** Seed `LeaveTypes`; map `LeaveQuota` (3 rows) to `LeaveTypeId` and int `Year`; add the new `LeaveRequests` columns and migrate the **24 rows** (type, dates, status `Applied` -> `Pending`, TotalDays), resolving the **1 orphan** (fix its EmployeeId or archive the row) and reviewing the overlapping requests 21/22 before adding the FK and unique index; create `LeaveEntitlementOverrides`; rebuild `CarryforwardLeaves` (empty); create `vLeaveBalances`. Add `Users.EmployeeUid` (backfilled by EmployeeID match; the orphan stays NULL) and `Users.IsActive`.
-4. **Attendance, schedule and payroll columns (all empty or additive).** Create `Shifts`, `ShiftAssignments`, `RosterOverrides`, `AttendancePunches`, `HalfDayRequests`, `AttendanceCorrections`; **expand** `Attendance` (add the new columns beside the old ones; the app still writes the old ones until step 5); rebuild `GazettedHolidays` (empty); `AttendanceUploadLogs` types, backfilled `Status`, `FileHash`; `EmployeeDocuments.FileHash`; `Payslips.MonthNo` (backfill from the month name), `TaxPercentage` type, hourly columns, `RowVersion`, unique key; `TaxRules.TaxYearStart` (backfill `LEFT(TaxYear, 4)`); `Deductions.Amount` and `RequestId` (backfill Amount from the 11 `Fixed` rows); `Allowances.RequestId` and date types.
+4. **Attendance, schedule and payroll columns (all empty or additive).** Create `Shifts`, `ShiftAssignments`, `RosterOverrides`, `AttendancePunches`, `HalfDayRequests`, `AttendanceCorrections`, `RecordNotes` (and add the `Notes` columns, widening `Attendance.Comments` and `Allowances.Remarks` to 1000 first); **expand** `Attendance` (add the new columns beside the old ones; the app still writes the old ones until step 5); rebuild `GazettedHolidays` (empty); `AttendanceUploadLogs` types, backfilled `Status`, `FileHash`; `EmployeeDocuments.FileHash`; `Payslips.MonthNo` (backfill from the month name), `TaxPercentage` type, hourly columns, `RowVersion`, unique key; `TaxRules.TaxYearStart` (backfill `LEFT(TaxYear, 4)`); `Deductions.Amount` and `RequestId` (backfill Amount from the 11 `Fixed` rows); `Allowances.RequestId` and date types.
 5. **App switch.** Release the app version that reads and writes only the new columns and tables (org FKs, LeaveTypeId, int employee keys, `Id` primary keys, `MonthNo`/`TaxYearStart`, attendance processing, dropdowns from the new tables, `RequestId` hidden fields, file hashing, the tax-year lookup fix). Verify in production for an agreed period.
-6. **Contract (last, after a backup).** Drop the 🔴 columns (`Employee.Department/Designation/Project`, `Attendance.EmployeeID/EmployeeName/DepartmentName/AttendanceDate/TimeIn/TimeOut/Status`, `LeaveQuota.LeaveTypeName`, `LeaveRequests.LeaveType`, `Users.EmployeeId` (string), `CarryforwardLeaves.LeavesUsed/LeavesRemaining`, `Payslips.Month` (text), `TaxRules.TaxYear`), the moved Configuration rows and the `EmployeeLeaves` table; **then rename** the temporary columns (`EmployeeUid` -> `EmployeeId` in Users and Attendance, `MonthNo` -> `Month`) and the PKs (`AttendanceID`, `DepartmentID`, `LogId`, `UID` -> `Id`); make `Employee.ProjectId` and `Employee.DepartmentId` NOT NULL. Then update db.md (v2.0) and its Change History.
+6. **Contract (last, after a backup).** Drop the 🔴 columns (`Employee.Department/Designation/Project`, `Attendance.EmployeeID/EmployeeName/DepartmentName/AttendanceDate/TimeIn/TimeOut/Status`, `LeaveQuota.LeaveTypeName`, `LeaveRequests.LeaveType`, `Users.EmployeeId` (string), `CarryforwardLeaves.LeavesUsed/LeavesRemaining`, `Payslips.Month` (text), `TaxRules.TaxYear`), the moved Configuration rows and the `EmployeeLeaves` table; **then rename** the temporary columns (`EmployeeUid` -> `EmployeeId` in Users and Attendance, `MonthNo` -> `Month`, `Attendance.Comments` and `Allowances.Remarks` -> `Notes`) and the PKs (`AttendanceID`, `DepartmentID`, `LogId`, `UID` -> `Id`); make `Employee.ProjectId` and `Employee.DepartmentId` NOT NULL. Then update db.md (v2.0) and its Change History.
 
 ## Appendix A. Constraint renames (S5, S16)
 Renamed with `sp_rename` in step 1; no data change.

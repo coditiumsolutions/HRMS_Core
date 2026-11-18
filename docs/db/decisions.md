@@ -1,10 +1,11 @@
 # HRMS Database - Pending Decisions
-Version: 2.0 | Date: 2026-11-17 | Related: db_standards.md, db_changes.md (v3.0-draft), db.md (v1.9)
+Version: 2.4 | Date: 2026-11-18 | Related: db_standards.md, db_changes.md (v3.4-draft), db.md (v1.9)
 
 ## How to use this file
 - Only **pending** decisions are listed here. Answered ones are removed and recorded where they apply (rules in db_standards.md, schema in db_changes.md).
 - Each decision has a **Suggested key** (★ = recommended) and an **Answer** block. Write the chosen letter (or "Other: ...") in `Answer`, then who and when; add free text in `Notes`.
 - Part A is technical (the dev team decides). Part B is business logic (HR / management decides); each B-item says what it affects in the schema so the answer can go straight into db_changes.md.
+- **Data status (2026-11-18):** the data now in `HRBTK` is **test data**. Counts and findings quoted below (employees, projects, leave balances, duplicates) describe it for design purposes only; they are not requirements, and the checks are re-run on real data before anything is applied.
 - Removed on 2026-11-17 as decided: employee key (`uid` stays, `EmployeeID` is the business key; see S1 and S5) and the attendance migration approach (expand then contract; see S19).
 
 ---
@@ -111,6 +112,28 @@ Status: Closed
 
 ---
 
+## T7. Notes and remarks on HR records
+Status: Open
+
+**Context.** HR keeps track of edge cases in notes, for example a forgotten check-out noted on that day's attendance. Today only some tables have a free-text note and the names differ (`Comments` on Attendance, `Remarks` on Allowances, `Notes` on Payslips, `Details` on Employee). A single column per row is overwritten by the next note and records no author or time. The rule is db_standards.md S24; the drafted tables are in db_changes.md (`Notes` columns and `RecordNotes`).
+
+**Suggested key (design)**
+- A ★ A standard `Notes nvarchar(1000) NULL` column on HR-operated tables, plus an append-only `RecordNotes` table (who, when, text) linked to Attendance, Employee and LeaveRequests by real FKs (exactly one per note).
+- B Only the `Notes` column.
+- C Only `RecordNotes`.
+
+**Questions to settle with the design**
+1. Which records get dated notes first? Suggested: Attendance, Employee, LeaveRequests (the drafted FKs); others are added the same way when needed.
+2. Can a note be edited or removed? Suggested: no editing; a wrong note is retracted (`IsDeleted`), kept in the table and hidden from the screen.
+3. Should notes be categorised (e.g. `ForgotCheckout`, `LateArrival`, `Other`) so HR can filter them? Suggested: not now; a `Category` column can be added once HR lists the categories.
+4. Who can read notes? Suggested: Admin and HR only, same as the rest of the app until roles are enforced (B13).
+
+**Answer:** ______
+**Decided by / date:** ______
+**Notes:** ______
+
+---
+
 # Part B. Business logic questions (HR)
 
 ## B1. Half days: separate request or part of leave?
@@ -129,56 +152,52 @@ Status: Open
 ---
 
 ## B2. Departments: per project or shared?
-Status: Open
-**Affects:** `Departments`, `Employee` composite FK, sorting.
+Status: Closed (two follow-ups still open, below)
+**Affects:** `Departments`, `Employee.DepartmentId`, sorting.
 
 **Question.** Is "Accounts" in one project a different department from "Accounts" in another, or one shared department? Also needed: the mapping of the 58 free-text department strings.
 
 **Suggested key**
 - A ★ Per project: one row per project/department pair.
 - B Shared departments plus a `ProjectDepartments` link table.
+- C Other: one shared department list with no link to projects at all.
 
-**Answer:** ______  **Decided by / date:** ______  **Notes:** ______
+**HR's response (received 2026-11-18).** Projects and departments are linked, but not tightly:
+- Galaxy Construction has a Maintenance department that the other projects do not have.
+- Every project has Admin and Security departments. When HR wants to see them, HR first sorts by Admin, which should show all the admin staff regardless of project, and then by project, which shows the admin staff of that project.
+- There is only one HR department for all the projects, and it comes under Bahria Town Karachi (BTK).
+
+**Answer:** Other (C): one shared `Departments` list, independent of `Projects`. An employee has `ProjectId` and `DepartmentId` as two separate fields; the database does not tie one to the other, and there is no `ProjectDepartments` link table. Lists can sort department first, then project, or the reverse.
+**Decided by / date:** Rayder / 18-11-2026, on HR's response above
+**Notes:** Applied in db_changes.md v3.2 (`Departments.SortOrder`, `Employee.DepartmentId` -> `Departments.Id`, new index `IX_Employee_Department_Project`; the link table and the composite key are removed). HR staff are employees of the project Bahria Town Karachi, with a department of Human Resource. Two follow-ups, the second now decided:
+1. **Mapping of the 58 free-text department strings** to the shared list. These strings come from the test data, so this is a go-live task with HR's real list, not a blocker now; development seeds `Departments` from the test values.
+2. **Sub-departments (decided 2026-11-18, project owner).** Some names in the test data are a base department plus a function: `Admin - Mess`, `Admin - Transportation`, `Admin - Sweeper`; `Operations - Record`, `Operations - Transfer`, `Operations - Dispatch` and so on. Decision: `Employee.DepartmentId` stays the **main department** (and `Admin` is the Administration department, so the department is named `Administration`). A new **optional** `Employee.SubDepartmentId` carries the function. It is information and detail only: no processing, payroll, leave or approval rule reads it, and a department that has no sub-departments leaves it empty. This replaces the held `ParentDepartmentId` idea (a hierarchy inside `Departments`), which is dropped.
+   - **Design:** sub-departments are a small table (`SubDepartments`, each one belongs to one department; S11), not free text on `Employee`, so the same function is not spelled two ways (`Mess` against `Admin - Mess` in the test data is exactly that drift). A free-text `SubDepartment` column was the simpler alternative.
+   - **Migration rule:** split each test-data department name at the first ` - `: the left side is the department, the right side the sub-department. Only two bases carry a ` - ` in the test data: Administration (Mess, Sweeper, Transportation) and Operations (Audit & Verification, Data Center Q.C, Dispatch, Lahore / Rawalpindi, Nawabshah, Record, Transfer). That turns 58 test names into 48 departments plus 10 sub-departments; the rest (`Sales`, `Accounts & Finance`...) stay plain departments.
+   - **Still to confirm with HR (go-live):** whether `Mess` (BT Tower) and `Transportation` (Icon), which have no `Admin - ` prefix, are the Administration functions of the same name (suggested: yes); and whether `Administrator` (BT Tower, Icon) is the Administration department (suggested: yes, but HR confirms, it may be a role).
 
 ---
 
-## B3. Projects: 6 or 8, and the order
-Status: Open
-**Affects:** `Projects` seed, `Employee.ProjectId`, all employee lists.
+## B3. Projects: a dynamic list, not a fixed number
+Status: Closed (the initial list is still needed at go-live)
+**Affects:** `Projects`, `Employee.ProjectId`, all employee lists, Setup screen.
 
-**Question.** Live data has 8 projects, HR said 6. Which two are merged into others or are really departments? What is the display order?
+**Question (original).** The test data has 8 distinct project names while HR mentioned 6. Which are merged, and in what order are they shown?
 
-**The 8 values in `Employee.Project` (live `HRBTK`, 848 employees, checked 2026-11-17).** Exact strings, no stray spaces or case variants.
-
-| # | Value in `Employee.Project` | Employees | Departments | Designations | Joined (earliest - latest) | In the `Configuration` project list? |
-|---|---|---|---|---|---|---|
-| 1 | Bahria Town Karachi | 338 | 28 | 141 | 2004 - Oct 2024 | **No** |
-| 2 | Bahria Dastarkhuwans | 324 | 14 | 25 | 2009 - Nov 2024 | Yes |
-| 3 | Maintenance & Services - BT Tower | 83 | 7 | 38 | 2009 - Sep 2024 | **No** |
-| 4 | Galaxy Construction | 45 | 12 | 26 | 2007 - Sep 2022 | Yes (typed as ". Galaxy Construction") |
-| 5 | The Arena Karachi | 27 | 8 | 17 | 2012 - Oct 2024 | **No**; the list has "The Arena Cinema - Karachi" |
-| 6 | Maintenance & Services - Icon | 11 | 4 | 9 | 2006 - Jan 2024 | **No**; the list has "Bahria Town Icon Project" |
-| 7 | Bahria Town Tower Project | 11 | 3 | 5 | Dec 2024 - Oct 2025 | Yes |
-| 8 | BTK - Customer Support Center (Head Office) | 9 | 4 | 6 | Dec 2023 - Aug 2025 | Yes |
-
-**The `Configuration` project list** (what the Setup dropdown offers) has 7 entries: Bahria Dastarkhuwans, Bahria Town Icon Project, Bahria Town Tower Project, BTK - Customer Support Center (Head Office), Galaxy Construction, **Sample Entry Project** (a test row, 0 employees) and The Arena Cinema - Karachi. Without the sample that is **6 names**, which may be where HR's "6" comes from. Four of the 8 employee values are not in that list at all (Bahria Town Karachi, which has 338 people; Maintenance & Services - BT Tower; The Arena Karachi; Maintenance & Services - Icon), and two list entries are spelled differently from the data. The dropdown and the data have drifted apart.
-
-**Likely conflicts for HR to rule on**
-1. **Bahria Town Tower Project (11) vs Maintenance & Services - BT Tower (83):** same building? Both use Security, House Keeping and Maintenance & Engineering. The Tower Project people all joined Dec 2024 - Oct 2025 (a newer batch).
-2. **Maintenance & Services - Icon (11) vs "Bahria Town Icon Project" (list):** the same project under two names?
-3. **The Arena Karachi (27) vs "The Arena Cinema - Karachi" (list):** the same project under two names?
-4. **BTK - Customer Support Center (Head Office) (9):** its departments (Admin - Transportation, SMQ Farm House, Accounts & Finance, Operations - Transfer) are all departments of Bahria Town Karachi. A separate project, or a location inside Bahria Town Karachi?
-5. **Maintenance & Services - BT Tower / - Icon:** is "Maintenance & Services" a project, or a department-type group sitting under the Tower and Icon projects?
-6. **Sample Entry Project:** delete (test row).
-
-**Related finding for B2.** 14 of the department names are used in more than one project: Security (4 projects), Accounts & Finance (4), Admin - Transportation (3), Operations (3), House Keeping (3), Information Technology (3), and 8 more used in 2 (Admin - Mess, Sales, Maintenance & Engineering, Admin, Operations - Transfer, SMQ Farm House, Administrator, Marketing). That is evidence for B2 option B (shared departments with a link table), not per-project departments.
+**Answer from the project owner (2026-11-18).** The number of projects is not fixed and must not be built in. HR adds, renames and removes projects as they see fit, so 6 or 8 does not matter, and the system is dynamic. The data currently in the database is **test data** and is not a source of truth for the project list.
 
 **Suggested key**
-- A ★ HR supplies the final list (names, which of the 8 values map to which project) and the sort order; unmapped employees are reported, not guessed. Name drift is fixed by mapping every old value and every list entry to one `Projects` row.
-- B Keep all 8 as they are, delete the sample, and fix the list names to match the data.
-- C Merge as suggested above (Tower Project into BT Tower, Customer Support Center into Bahria Town Karachi): needs HR confirmation first.
+- A ★ `Projects` is an HR-managed table. No project name or count is hard-coded in the app or the schema. HR can add, rename, reorder (`SortOrder`) and deactivate projects from Setup. A project that has employees (or any history) is never hard-deleted: it is deactivated (`IsActive = 0`), which hides it from new-employee dropdowns and keeps old records valid (S6, S14). A project with no employees at all may be deleted.
+- B A fixed project list with changes made by the developers (rejected: this is what the Configuration CSV already was, and it drifted from the data).
 
-**Answer:** ______  **Decided by / date:** ______  **Notes:** Final list of 6 and the order: ______
+**Answer:** A (dynamic, HR-managed)
+**Decided by / date:** Rayder / 18-11-2026
+**Notes:**
+- Applied in db_changes.md v3.3: the `Projects` section says the list is fully HR-managed and the 6 or 8 question is removed.
+- **Setup screen:** the app needs add, rename, reorder and deactivate for projects, the same way Departments and Designations are managed. The old project dropdown in `Configuration` (a comma-separated string) is retired in the last phase (S11).
+- **Starting list:** for development the table is seeded from the distinct values in the test data. At go-live HR provides the real list; nothing is built around today's names.
+- **What the test data showed (kept as evidence for the table design, not as requirements):** the Setup dropdown and the employee records had drifted apart. Some project names in employee records were not in the dropdown at all, and some were spelled differently (for example "Bahria Town Icon Project" in the list against "Maintenance & Services - Icon" on employees), plus a test row "Sample Entry Project". A table with a foreign key removes this class of problem, because a project can only be chosen from the list and a rename is one row.
+- **Still true for any project list:** `Projects.HasLeaveManagement` (0 for projects such as Dastarkhuwans where leave is not managed) and `SortOrder` are per project and edited by HR, not fixed in code.
 
 ---
 
@@ -377,9 +396,9 @@ Status: Open
 
 ## B18. Legacy per-year leave figures on Employee
 Status: Open
-**Affects:** `Employee` (7 columns), `CarryforwardLeaves`, `LeaveEntitlementOverrides`, leave balances. **This is live data, not dead columns** (see below).
+**Affects:** `Employee` (7 columns), `CarryforwardLeaves`, `LeaveEntitlementOverrides`, leave balances. **Test data (2026-11-18), so nothing needs archiving yet** (see below).
 
-**What is in the live database (2026-11-17).** 828 of 848 employees have values in `CarryForwardLeaves`, `Year2022`, `Year2023`, `Year2023New` and `CarryForwardLeaves1`; `AdjustedAjusted` is empty. `Year2024` holds whole numbers: 14 for 512 employees, other positive values 0-13, and many negatives down to -353. It looks like a leave balance at the end of 2024 (14 = a full annual quota, negatives = leave taken beyond the quota), not a year. The Employee screens show these as "Year 2022", "Year 2023", "Year 2023 New", "Year 2024", "Carry Forward Leaves", "Carry Forward Leaves 1" and "Adjusted Ajusted".
+**What is in the database (2026-11-17, now treated as test data).** The values below show how the old columns were used; they are not figures to preserve. 828 of 848 employees have values in `CarryForwardLeaves`, `Year2022`, `Year2023`, `Year2023New` and `CarryForwardLeaves1`; `AdjustedAjusted` is empty. `Year2024` holds whole numbers: 14 for 512 employees, other positive values 0-13, and many negatives down to -353. It looks like a leave balance at the end of 2024 (14 = a full annual quota, negatives = leave taken beyond the quota), not a year. The Employee screens show these as "Year 2022", "Year 2023", "Year 2023 New", "Year 2024", "Carry Forward Leaves", "Carry Forward Leaves 1" and "Adjusted Ajusted".
 
 **Questions.**
 1. What does each column mean (balance at the end of that year? days taken? days carried?) and which ones are still used?
@@ -387,11 +406,11 @@ Status: Open
 3. Which figures must be kept as history, and which are leftovers?
 
 **Suggested key**
-- A ★ Keep the values: archive them in a read-only `EmployeeLegacyLeaveBalances` table (one row per employee, original column names), then convert the figures HR confirms into `CarryforwardLeaves` / `LeaveEntitlementOverrides` rows. Drop the columns from `Employee` after that.
-- B Convert the confirmed figures into the new leave tables, drop the rest without archiving.
-- C Keep the columns as they are.
+- A ★ Since the current values are test data: keep the 7 columns untouched until HR says what real opening balances look like and how the old system used them. Then convert the confirmed figures into `CarryforwardLeaves` / `LeaveEntitlementOverrides` rows and drop the columns. If real data turns out to carry balances in these columns, archive them in a read-only `EmployeeLegacyLeaveBalances` table first (one row per employee, original column names).
+- B Drop the 7 columns with the other legacy columns, without archiving (only if HR confirms no real data uses them).
+- C Keep the columns as they are, permanently.
 
-**Answer:** ______  **Decided by / date:** ______  **Notes:** The draft's "archive then drop" assumed these were legacy; this needs HR first.
+**Answer:** ______  **Decided by / date:** ______  **Notes:** Re-check on the real data before dropping anything: if it carries opening balances in these columns, A applies in full.
 
 ---
 
