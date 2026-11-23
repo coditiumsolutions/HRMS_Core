@@ -1,3 +1,4 @@
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -401,6 +402,7 @@ public class EmployeeController : Controller
     }
 
     // GET: Employee/Delete/5
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Delete(int? id)
     {
         ViewData["Module"] = "Employees";
@@ -422,13 +424,17 @@ public class EmployeeController : Controller
     // POST: Employee/Delete/5
     [HttpPost, ActionName("Delete")]
     [ValidateAntiForgeryToken]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> DeleteConfirmed(int id)
     {
         ViewData["Module"] = "Employees";
+        // Employees are never hard-deleted: payslips, leave and attendance reference them. Mark inactive instead.
         var employee = await _context.Employees.FindAsync(id);
-        if (employee != null)
+        if (employee != null && employee.EmployeeStatus != "Inactive")
         {
-            _context.Employees.Remove(employee);
+            employee.EmployeeStatus = "Inactive";
+            employee.ModifiedBy = User.Identity?.Name;
+            employee.ModifiedOn = DateTime.Now.ToString("yyyy-MM-dd HH:mm");
             await _context.SaveChangesAsync();
         }
 

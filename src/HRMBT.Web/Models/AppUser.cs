@@ -38,8 +38,11 @@ public class AppUser
     [StringLength(255)]
     public string PasswordHash { get; set; } = string.Empty;
 
-    [StringLength(30)]
-    public string? Role { get; set; }
+    /// <summary>Roles held by this login (table UserRoles). Several are allowed, e.g. HR and Admin.</summary>
+    public List<UserRole> Roles { get; set; } = new();
+
+    [NotMapped]
+    public string RoleNames => string.Join(", ", Roles.Select(r => r.Role).OrderBy(r => r));
 
     /// <summary>Logins are never deleted; IsActive = 0 disables one.</summary>
     public bool IsActive { get; set; } = true;

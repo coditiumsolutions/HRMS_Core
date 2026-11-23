@@ -6,7 +6,8 @@
 
 <h1>Delete Employee</h1>
 
-<h3>Are you sure you want to delete this?</h3>
+<h3>Mark this employee as Inactive?</h3>
+<p class="text-muted">The record, payslips, leave and attendance history are kept. Only the status changes.</p>
 <div>
     <hr />
     <dl class="row">
@@ -42,9 +43,9 @@
         </dd>
     </dl>
     
-    <form asp-action="Delete">
+    <form asp-action="Delete" method="post">
         <input type="hidden" asp-for="uid" />
-        <input type="submit" value="Delete" class="btn btn-danger" />
+        <input type="submit" value="Mark Inactive" class="btn btn-danger" />
         <a asp-action="Index" class="btn btn-secondary">Back to List</a>
     </form>
 </div>

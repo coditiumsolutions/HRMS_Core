@@ -263,7 +263,12 @@ public class EmployeeDocumentService : IEmployeeDocumentService
     }
 
     private string GetEmployeePhysicalDirectory(int employeeUid) =>
-        Path.Combine(_environment.WebRootPath, _options.UploadRoot.Replace('/', Path.DirectorySeparatorChar), employeeUid.ToString(CultureInfo.InvariantCulture));
+        Path.Combine(StorageBase, _options.UploadRoot.Replace('/', Path.DirectorySeparatorChar), employeeUid.ToString(CultureInfo.InvariantCulture));
+
+    private string StorageBase =>
+        string.IsNullOrWhiteSpace(_options.StorageBasePath)
+            ? _environment.WebRootPath
+            : Path.GetFullPath(_options.StorageBasePath, _environment.ContentRootPath);
 
     private string CombineRelativePath(int employeeUid, string storedName) =>
         $"{_options.UploadRoot.TrimEnd('/')}/{employeeUid}/{storedName}".Replace('\\', '/');
@@ -271,7 +276,7 @@ public class EmployeeDocumentService : IEmployeeDocumentService
     private string GetPhysicalPath(string relativePath)
     {
         var normalized = relativePath.Replace('/', Path.DirectorySeparatorChar);
-        return Path.Combine(_environment.WebRootPath, normalized);
+        return Path.Combine(StorageBase, normalized);
     }
 
     private static string NormalizeExtension(string? extension)

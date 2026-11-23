@@ -368,11 +368,19 @@ namespace HRMBT.Web.Data
                 entity.Property(e => e.EmployeeUid).HasColumnName("EmployeeId");
                 entity.Property(e => e.Username).HasMaxLength(100).IsRequired();
                 entity.Property(e => e.PasswordHash).HasMaxLength(255).IsRequired();
-                entity.Property(e => e.Role).HasMaxLength(30);
                 entity.Property(e => e.CreatedOn).HasColumnType("datetime2(0)");
                 entity.Property(e => e.ModifiedAt).HasColumnType("datetime2(0)");
                 entity.HasOne(e => e.Employee).WithMany().HasForeignKey(e => e.EmployeeUid).OnDelete(DeleteBehavior.Restrict);
                 entity.Navigation(e => e.Employee).AutoInclude();
+                entity.HasMany(e => e.Roles).WithOne().HasForeignKey(r => r.UserId).OnDelete(DeleteBehavior.Cascade);
+                entity.Navigation(e => e.Roles).AutoInclude();
+            });
+
+            modelBuilder.Entity<UserRole>(entity =>
+            {
+                entity.ToTable("UserRoles");
+                entity.HasKey(r => new { r.UserId, r.Role });
+                entity.Property(r => r.Role).HasMaxLength(30);
             });
 
             modelBuilder.Entity<HrConfiguration>(entity =>

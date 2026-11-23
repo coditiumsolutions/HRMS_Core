@@ -14,11 +14,15 @@ namespace HRMBT.Web.Services
     public class AttendanceService
     {
         private readonly ApplicationDbContext _context;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public AttendanceService(ApplicationDbContext context)
+        public AttendanceService(ApplicationDbContext context, IHttpContextAccessor httpContextAccessor)
         {
             _context = context;
+            _httpContextAccessor = httpContextAccessor;
         }
+
+        private string CurrentUserName => _httpContextAccessor.HttpContext?.User?.Identity?.Name ?? "System";
 
         public async Task<UploadResult> ProcessCsvAsync(IFormFile csvFile)
         {
@@ -43,7 +47,7 @@ namespace HRMBT.Web.Services
             var uploadLog = new AttendanceUploadLog
             {
                 UploadDate = DateTime.Now,
-                UploadedBy = "System", // TODO: Get from current user
+                UploadedBy = CurrentUserName,
                 FileName = csvFile.FileName,
                 FileHash = fileHash,
                 TotalRows = 0,
@@ -262,7 +266,7 @@ namespace HRMBT.Web.Services
                 uploadLog = new AttendanceUploadLog
                 {
                     UploadDate = DateTime.Now,
-                    UploadedBy = "System", // TODO: Get from current user
+                    UploadedBy = CurrentUserName,
                     FileName = excelFile.FileName,
                     FileHash = fileHash,
                     TotalRows = 0,

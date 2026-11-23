@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HRMBT.Web.Controllers;
 
-[AllowAnonymous]
+[Authorize(Roles = "Admin")]
 public class SetupController : Controller
 {
     private readonly ApplicationDbContext _context;
@@ -117,7 +117,7 @@ public class SetupController : Controller
 
     public async Task<IActionResult> Users()
     {
-        var users = await _context.AppUsers.AsNoTracking().OrderBy(u => u.Username).ToListAsync();
+        var users = await _context.AppUsers.AsNoTracking().OrderBy(u => u.Username).ToListAsync(); // roles are auto-included
         return View(users);
     }
 
@@ -150,10 +150,10 @@ public class SetupController : Controller
             ModelState.AddModelError(nameof(model.EmployeeId), employeeError);
             return View(model);
         }
-        var roleError = ValidateRole(model.Role);
+        var roleError = ValidateRoles(model.Roles);
         if (roleError != null)
         {
-            ModelState.AddModelError(nameof(model.Role), roleError);
+            ModelState.AddModelError(nameof(model.Roles), roleError);
             return View(model);
         }
 
@@ -161,7 +161,7 @@ public class SetupController : Controller
         {
             Username = model.Username.Trim(),
             EmployeeUid = employeeUid,
-            Role = string.IsNullOrWhiteSpace(model.Role) ? null : model.Role.Trim(),
+            Roles = model.Roles.Distinct().Select(r => new UserRole { Role = r }).ToList(),
             PasswordHash = LoginPasswordHasher.Hash(model.Password!),
             IsActive = true,
             CreatedBy = actor,
@@ -178,7 +178,7 @@ public class SetupController : Controller
     [HttpGet]
     public async Task<IActionResult> EditUser(int id)
     {
-        var user = await _context.AppUsers.FindAsync(id);
+        var user = await _context.AppUsers.FirstOrDefaultAsync(u => u.Uid == id);
         if (user == null)
             return NotFound();
 
@@ -187,7 +187,7 @@ public class SetupController : Controller
             Uid = user.Uid,
             Username = user.Username,
             EmployeeId = user.EmployeeId,
-            Role = user.Role
+            Roles = user.Roles.Select(r => r.Role).ToList()
         };
         return View(vm);
     }
@@ -199,7 +199,7 @@ public class SetupController : Controller
         if (id != model.Uid)
             return BadRequest();
 
-        var user = await _context.AppUsers.FindAsync(id);
+        var user = await _context.AppUsers.FirstOrDefaultAsync(u => u.Uid == id);
         if (user == null)
             return NotFound();
 
@@ -219,16 +219,23 @@ public class SetupController : Controller
             ModelState.AddModelError(nameof(model.EmployeeId), employeeError);
             return View(model);
         }
-        var roleError = ValidateRole(model.Role);
+        var roleError = ValidateRoles(model.Roles);
+        if (roleError == null && user.IsActive && user.Roles.Any(r => r.Role == AppRoles.Admin) && !model.Roles.Contains(AppRoles.Admin)
+            && !await AnotherActiveAdminExistsAsync(id))
+            roleError = "At least one active user must keep the Admin role.";
         if (roleError != null)
         {
-            ModelState.AddModelError(nameof(model.Role), roleError);
+            ModelState.AddModelError(nameof(model.Roles), roleError);
             return View(model);
         }
 
         user.Username = model.Username.Trim();
         user.EmployeeUid = employeeUid;
-        user.Role = string.IsNullOrWhiteSpace(model.Role) ? null : model.Role.Trim();
+        var wanted = model.Roles.Distinct().ToHashSet();
+        foreach (var existing in user.Roles.Where(r => !wanted.Contains(r.Role)).ToList())
+            user.Roles.Remove(existing);
+        foreach (var role in wanted.Where(w => user.Roles.All(r => r.Role != w)))
+            user.Roles.Add(new UserRole { UserId = user.Uid, Role = role });
         user.ModifiedAt = DateTime.Now;
         user.ModifiedBy = User.Identity?.Name ?? "Setup";
 
@@ -257,7 +264,7 @@ public class SetupController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteUserConfirmed(int id)
     {
-        var user = await _context.AppUsers.FindAsync(id);
+        var user = await _context.AppUsers.FirstOrDefaultAsync(u => u.Uid == id);
         if (user == null)
             return NotFound();
 
@@ -265,6 +272,12 @@ public class SetupController : Controller
         if (string.Equals(name, User.Identity?.Name, StringComparison.OrdinalIgnoreCase))
         {
             TempData["ErrorMessage"] = "You cannot disable the account you are signed in with.";
+            return RedirectToAction(nameof(Users));
+        }
+
+        if (user.IsActive && user.Roles.Any(r => r.Role == AppRoles.Admin) && !await AnotherActiveAdminExistsAsync(id))
+        {
+            TempData["ErrorMessage"] = "You cannot disable the last active Admin.";
             return RedirectToAction(nameof(Users));
         }
 
@@ -295,12 +308,14 @@ public class SetupController : Controller
         return (uid, null);
     }
 
-    private static string? ValidateRole(string? role)
+    private static string? ValidateRoles(IEnumerable<string>? roles)
     {
-        var r = role?.Trim();
-        if (string.IsNullOrEmpty(r)) return null;
-        return r is "Admin" or "HR" ? null : "Role must be Admin or HR (or left blank).";
+        var bad = (roles ?? Enumerable.Empty<string>()).FirstOrDefault(r => !AppRoles.All.Contains(r));
+        return bad == null ? null : $"Unknown role \"{bad}\". Allowed: {string.Join(", ", AppRoles.All)}.";
     }
+
+    private Task<bool> AnotherActiveAdminExistsAsync(int exceptUserId) =>
+        _context.AppUsers.AnyAsync(u => u.Uid != exceptUserId && u.IsActive && u.Roles.Any(r => r.Role == AppRoles.Admin));
 
     private void ValidatePasswordForCreate(SetupUserFormVm model)
     {

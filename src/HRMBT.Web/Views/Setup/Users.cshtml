@@ -71,7 +71,7 @@
                                         </td>
                                         <td><div class="emp-name">@u.Username</div></td>
                                         <td>@(u.EmployeeId ?? "—")</td>
-                                        <td>@(u.Role ?? "—")@if (!u.IsActive) { <span class="badge bg-secondary ms-1">disabled</span> }</td>
+                                        <td>@(string.IsNullOrEmpty(u.RoleNames) ? "—" : u.RoleNames)@if (!u.IsActive) { <span class="badge bg-secondary ms-1">disabled</span> }</td>
                                         <td class="text-muted small">@(u.CreatedOn?.ToString("yyyy-MM-dd HH:mm") ?? "—")</td>
                                     </tr>
                                 }

@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using HRMBT.Web.Data;
 using HRMBT.Web.Infrastructure;
 using HRMBT.Web.Models;
@@ -21,15 +22,22 @@ public class HomeController : Controller
     private readonly ILogger<HomeController> _logger;
     private readonly ApplicationDbContext _context;
     private readonly IWebHostEnvironment _env;
+    private readonly Microsoft.Extensions.Caching.Memory.IMemoryCache _cache;
+
+    private const int MaxFailedLogins = 5;
+    private static readonly TimeSpan LockoutWindow = TimeSpan.FromMinutes(15);
+    private const string InvalidLoginMessage = "Invalid username or password.";
 
     public HomeController(
         ILogger<HomeController> logger,
         ApplicationDbContext context,
-        IWebHostEnvironment env)
+        IWebHostEnvironment env,
+        Microsoft.Extensions.Caching.Memory.IMemoryCache cache)
     {
         _logger = logger;
         _context = context;
         _env = env;
+        _cache = cache;
     }
 
     public async Task<IActionResult> Index()
@@ -65,45 +73,6 @@ public class HomeController : Controller
         }
 
         return View();
-    }
-
-    [HttpGet]
-    public async Task<IActionResult> Test()
-    {
-        var results = new List<string>();
-        var connection = _context.Database.GetDbConnection();
-        try
-        {
-            await connection.OpenAsync();
-            results.Add($"Connected to: {connection.Database}");
-            using (var command = connection.CreateCommand())
-            {
-                command.CommandText = "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'";
-                using (var reader = await command.ExecuteReaderAsync())
-                {
-                    results.Add("Tables found:");
-                    while (await reader.ReadAsync())
-                    {
-                        results.Add("- " + reader.GetString(0));
-                    }
-                }
-            }
-            string[] tablesToCheck = { "Employee", "Employees", "Payroll", "Payrolls" };
-            foreach (var table in tablesToCheck)
-            {
-                try
-                {
-                    using var command = connection.CreateCommand();
-                    command.CommandText = $"SELECT COUNT(*) FROM [{table}]";
-                    var count = await command.ExecuteScalarAsync();
-                    results.Add($"Table [{table}] count: {count}");
-                }
-                catch { }
-            }
-        }
-        catch (System.Exception ex) { results.Add($"Error: {ex.Message}"); }
-        finally { await connection.CloseAsync(); }
-        return Ok(results);
     }
 
     /// <summary>Shown when a signed-in user lacks the role an area needs (cookie AccessDeniedPath).</summary>
@@ -149,31 +118,36 @@ public class HomeController : Controller
             return View(model);
         }
 
+        // Throttle by client address + username so one attacker cannot lock a known account for everyone.
+        var lockKey = $"login:{HttpContext.Connection.RemoteIpAddress}:{name.ToLowerInvariant()}";
+        if (_cache.TryGetValue(lockKey, out int failures) && failures >= MaxFailedLogins)
+        {
+            _logger.LogWarning("Login throttled for {Candidate} from {Ip}", name, HttpContext.Connection.RemoteIpAddress);
+            ModelState.AddModelError(string.Empty, "Too many failed attempts. Try again in 15 minutes.");
+            return View(model);
+        }
+
         try
         {
-            var user = await _context.AppUsers.AsNoTracking()
+            var user = await _context.AppUsers
                 .FirstOrDefaultAsync(u => u.Username.ToLower() == name.ToLower() && u.IsActive);
 
-            if (user == null)
+            if (user == null || string.IsNullOrWhiteSpace(user.PasswordHash)
+                || !LoginPasswordHasher.Verify(model.Password, user.PasswordHash))
             {
-                ModelState.AddModelError(string.Empty,
-                    $"No row in Users for username \"{name}\". Either the name does not exist in dbo.Users, or it does not match when compared case-insensitive. Add or fix the row under Setup → Users, or check the database your app connects to.");
+                _cache.Set(lockKey, failures + 1, LockoutWindow);
+                _logger.LogWarning("Failed login for {Candidate} from {Ip}", name, HttpContext.Connection.RemoteIpAddress);
+                ModelState.AddModelError(string.Empty, InvalidLoginMessage);
                 return View(model);
             }
 
-            if (string.IsNullOrWhiteSpace(user.PasswordHash))
-            {
-                ModelState.AddModelError(string.Empty,
-                    $"User \"{user.Username}\" was found, but PasswordHash is empty or whitespace. Edit this user in Setup → Users and set a password, or UPDATE dbo.Users SET PasswordHash = ... ");
-                return View(model);
-            }
+            _cache.Remove(lockKey);
 
-            if (!LoginPasswordHasher.Verify(model.Password, user.PasswordHash))
+            // Upgrade legacy plain-text / SHA-256 / low-iteration hashes now that we hold the correct password.
+            if (LoginPasswordHasher.NeedsRehash(user.PasswordHash))
             {
-                var hint = LoginPasswordHasher.DescribeStoredFormat(user.PasswordHash);
-                ModelState.AddModelError(string.Empty,
-                    $"Password was rejected for user \"{user.Username}\". {hint}");
-                return View(model);
+                user.PasswordHash = LoginPasswordHasher.Hash(model.Password);
+                await _context.SaveChangesAsync();
             }
 
             await SignInAsync(user);
@@ -182,12 +156,7 @@ public class HomeController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Login failed for username candidate {Candidate}", name);
-            var root = ex.GetBaseException().Message;
-            var hint = _env.IsDevelopment()
-                ? $" Root cause: {root}"
-                : " Check server logs for the full exception.";
-            ModelState.AddModelError(string.Empty,
-                $"Sign-in could not talk to the database or complete processing: {ex.Message}.{hint} Confirm SQL Server is reachable and table dbo.Users exists for this connection.");
+            ModelState.AddModelError(string.Empty, "Sign-in is temporarily unavailable. Please try again or contact an administrator.");
             return View(model);
         }
     }
@@ -212,8 +181,9 @@ public class HomeController : Controller
             new Claim(AuthClaims.LoginAt, loginAtStr),
         };
 
-        if (!string.IsNullOrWhiteSpace(user.Role))
-            claims.Add(new Claim(ClaimTypes.Role, user.Role));
+        // One role claim per role: a user can hold several (e.g. HR and Admin).
+        foreach (var role in user.Roles)
+            claims.Add(new Claim(ClaimTypes.Role, role.Role));
 
         var principal = new ClaimsPrincipal(new ClaimsIdentity(
             claims,
@@ -253,6 +223,8 @@ public class HomeController : Controller
     }
 
     [AllowAnonymous]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> Logout()
     {
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);

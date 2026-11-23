@@ -89,10 +89,13 @@
                                     </td>
                                 </tr>
                                 <tr>
-                                    <th scope="row" class="pd-label">Role</th>
+                                    <th scope="row" class="pd-label">Roles</th>
                                     <td class="pd-value">
-                                        <input asp-for="Role" class="form-control" placeholder="e.g. Admin, HR" />
-                                        <span asp-validation-for="Role" class="text-danger small"></span>
+                                        @foreach (var r in HRMBT.Web.Models.AppRoles.All)
+                                        {
+                                            <div class="form-check"><input class="form-check-input" type="checkbox" name="Roles" id="role_@r" value="@r" @(Model.Roles.Contains(r) ? "checked" : null) /><label class="form-check-label" for="role_@r">@r</label></div>
+                                        }
+                                        <span asp-validation-for="Roles" class="text-danger small"></span>
                                     </td>
                                     <th scope="row" class="pd-label">Password</th>
                                     <td class="pd-value">

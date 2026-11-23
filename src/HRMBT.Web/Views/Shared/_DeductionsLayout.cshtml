@@ -258,7 +258,7 @@
                     else
                     {
                         <li class="nav-item">
-                            <a class="nav-link" asp-controller="Home" asp-action="Logout">Logout</a>
+                            <form asp-controller="Home" asp-action="Logout" method="post" class="d-inline"><button type="submit" class="nav-link btn btn-link">Logout</button></form>
                         </li>
                     }
                 </ul>

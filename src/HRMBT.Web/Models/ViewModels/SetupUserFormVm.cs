@@ -15,9 +15,9 @@ public class SetupUserFormVm
     [StringLength(50)]
     public string? EmployeeId { get; set; }
 
-    [Display(Name = "Role")]
-    [StringLength(200)]
-    public string? Role { get; set; }
+    /// <summary>Roles ticked in the form (Admin, HR). Empty = a login with no role.</summary>
+    [Display(Name = "Roles")]
+    public List<string> Roles { get; set; } = new();
 
     [DataType(DataType.Password)]
     [Display(Name = "Password")]

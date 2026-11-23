@@ -9,7 +9,10 @@ using HRMBT.Web.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // MVC (runtime Razor compilation only in Development — avoids IIS publish issues)
-var mvcBuilder = builder.Services.AddControllersWithViews();
+// Every unsafe request (POST/PUT/DELETE) must carry an antiforgery token, even if a new action forgets the attribute.
+var mvcBuilder = builder.Services.AddControllersWithViews(options =>
+    options.Filters.Add(new Microsoft.AspNetCore.Mvc.AutoValidateAntiforgeryTokenAttribute()));
+builder.Services.AddMemoryCache();
 if (builder.Environment.IsDevelopment())
     mvcBuilder.AddRazorRuntimeCompilation();
 
@@ -65,6 +68,10 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.Cookie.HttpOnly = true;
         options.Cookie.IsEssential = true;
         options.Cookie.SameSite = SameSiteMode.Lax;
+        // Secure cookie everywhere except local Development (plain http://localhost).
+        options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+            ? CookieSecurePolicy.SameAsRequest
+            : CookieSecurePolicy.Always;
     });
 
 builder.Services.AddAuthorization(options =>
@@ -81,7 +88,19 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
+    app.UseHttpsRedirection();
 }
+
+// Employee documents must only be served through EmployeeDocumentsController.Download (login + IsDeleted check).
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.StartsWithSegments("/uploads", StringComparison.OrdinalIgnoreCase))
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+    await next();
+});
 
 app.UseStaticFiles();
 
