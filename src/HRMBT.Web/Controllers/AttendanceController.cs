@@ -36,41 +36,14 @@ namespace HRMBT.Web.Controllers
         private static bool ConfigKeyMatches(string? key, string match) =>
             !string.IsNullOrWhiteSpace(key) && string.Equals(key.Trim(), match, StringComparison.OrdinalIgnoreCase);
 
-        /// <summary>Leave types from dbo.Configuration (ConfigKey LeaveTypes, CSV) or LeaveQuota.</summary>
+        /// <summary>Active leave type names from dbo.LeaveTypes.</summary>
         private async Task<List<string>> GetOffDayLeaveTypesAsync()
         {
-            var rows = await _context.HrConfigurations.AsNoTracking()
-                .Where(c => c.ConfigKey != null && c.ConfigValue != null)
+            return await _context.LeaveTypes.AsNoTracking()
+                .Where(t => t.IsActive)
+                .OrderBy(t => t.SortOrder).ThenBy(t => t.Name)
+                .Select(t => t.Name)
                 .ToListAsync();
-
-            var fromConfig = rows
-                .Where(c => ConfigKeyMatches(c.ConfigKey, LeaveTypesConfigKey))
-                .SelectMany(c => SplitConfigCsv(c.ConfigValue))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(v => v, StringComparer.OrdinalIgnoreCase)
-                .ToList();
-
-            if (fromConfig.Count > 0)
-                return fromConfig;
-
-            var yearStr = DateTime.Now.Year.ToString();
-            var fromQuota = await _context.LeaveQuotas.AsNoTracking()
-                .Where(lq => lq.Year == yearStr)
-                .Select(lq => lq.LeaveTypeName)
-                .Where(n => n != null && n != "")
-                .Distinct()
-                .OrderBy(n => n)
-                .ToListAsync();
-
-            if (fromQuota.Count > 0)
-                return fromQuota!;
-
-            return await _context.LeaveQuotas.AsNoTracking()
-                .Select(lq => lq.LeaveTypeName)
-                .Where(n => n != null && n != "")
-                .Distinct()
-                .OrderBy(n => n)
-                .ToListAsync()!;
         }
 
         // GET: Attendance Dashboard
@@ -114,7 +87,7 @@ namespace HRMBT.Web.Controllers
             // Filter by department if provided
             if (!string.IsNullOrWhiteSpace(department))
             {
-                query = query.Where(e => e.Department != null && e.Department == department);
+                query = query.Where(e => e.DepartmentInfo!.DepartmentName != null && e.DepartmentInfo!.DepartmentName == department);
             }
 
             // Apply ordering before pagination
@@ -125,8 +98,8 @@ namespace HRMBT.Web.Controllers
 
             // Get distinct departments for dropdown
             var departments = await _context.Employees
-                .Where(e => e.Department != null && e.Department != "")
-                .Select(e => e.Department)
+                .Where(e => e.DepartmentInfo!.DepartmentName != null && e.DepartmentInfo!.DepartmentName != "")
+                .Select(e => e.DepartmentInfo!.DepartmentName)
                 .Distinct()
                 .OrderBy(d => d)
                 .ToListAsync();
@@ -205,9 +178,7 @@ namespace HRMBT.Web.Controllers
                     // Create attendance record
                     var attendance = new Attendance
                     {
-                        EmployeeID = employee.EmployeeID ?? employeeId,
-                        EmployeeName = employee.EmployeeName ?? "",
-                        DepartmentName = employee.Department ?? "",
+                        EmployeeUid = employee.uid,
                         AttendanceDate = attendanceDate,
                         TimeIn = timeIn,
                         TimeOut = timeOut,
@@ -268,14 +239,14 @@ namespace HRMBT.Web.Controllers
 
             var query = _context.Employees.AsQueryable();
             if (!string.IsNullOrWhiteSpace(department))
-                query = query.Where(e => e.Department != null && e.Department == department);
+                query = query.Where(e => e.DepartmentInfo!.DepartmentName != null && e.DepartmentInfo!.DepartmentName == department);
 
             query = query.OrderBy(e => e.EmployeeName);
             var paginatedEmployees = await PaginatedList<Employee>.CreateAsync(query, page, pageSize);
 
             var departments = await _context.Employees
-                .Where(e => e.Department != null && e.Department != "")
-                .Select(e => e.Department)
+                .Where(e => e.DepartmentInfo!.DepartmentName != null && e.DepartmentInfo!.DepartmentName != "")
+                .Select(e => e.DepartmentInfo!.DepartmentName)
                 .Distinct()
                 .OrderBy(d => d)
                 .ToListAsync();
@@ -324,7 +295,7 @@ namespace HRMBT.Web.Controllers
             {
                 TempData["ErrorMessage"] = string.IsNullOrWhiteSpace(leaveType)
                     ? "Please select a leave type."
-                    : "The selected leave type is not allowed. Configure types under Configuration (LeaveTypes) or LeaveQuota.";
+                    : "The selected leave type is not allowed. Leave types are managed in the LeaveTypes table.";
                 return RedirectToAction(nameof(OffDay), new { department, page, pageSize });
             }
 
@@ -362,10 +333,15 @@ namespace HRMBT.Web.Controllers
             var existingEmployeeIds = await _context.LeaveRequests.AsNoTracking()
                 .Where(l => uids.Contains(l.EmployeeId)
                     && l.FromDate >= day && l.FromDate < dayEnd
-                    && l.LeaveType == canonicalType)
+                    && l.LeaveTypeInfo!.Name == canonicalType)
                 .Select(l => l.EmployeeId)
                 .ToListAsync();
             var existingSet = existingEmployeeIds.ToHashSet();
+
+            var leaveTypeId = await _context.LeaveTypes.AsNoTracking()
+                .Where(t => t.Name == canonicalType)
+                .Select(t => t.Id)
+                .FirstAsync();
 
             var toAdd = new List<LeaveRequest>();
             var skipped = new List<string>();
@@ -389,9 +365,11 @@ namespace HRMBT.Web.Controllers
                 toAdd.Add(new LeaveRequest
                 {
                     EmployeeId = emp.uid,
-                    LeaveType = canonicalType,
+                    LeaveTypeId = leaveTypeId,
                     FromDate = day,
                     ToDate = day,
+                    TotalDays = 1,
+                    CreatedBy = User.Identity?.Name,
                     Status = "Approved"
                 });
                 existingSet.Add(emp.uid);
@@ -589,8 +567,8 @@ namespace HRMBT.Web.Controllers
             
             // Get distinct departments for dropdown
             var departments = await _context.Employees
-                .Where(e => e.Department != null && e.Department != "")
-                .Select(e => e.Department)
+                .Where(e => e.DepartmentInfo!.DepartmentName != null && e.DepartmentInfo!.DepartmentName != "")
+                .Select(e => e.DepartmentInfo!.DepartmentName)
                 .Distinct()
                 .OrderBy(d => d)
                 .ToListAsync();
@@ -613,8 +591,8 @@ namespace HRMBT.Web.Controllers
             
             // Get all departments
             var departments = await _context.Employees
-                .Where(e => e.Department != null && e.Department != "")
-                .Select(e => e.Department)
+                .Where(e => e.DepartmentInfo!.DepartmentName != null && e.DepartmentInfo!.DepartmentName != "")
+                .Select(e => e.DepartmentInfo!.DepartmentName)
                 .Distinct()
                 .OrderBy(d => d)
                 .ToListAsync();
@@ -635,7 +613,7 @@ namespace HRMBT.Web.Controllers
                 {
                     DepartmentName = dept ?? string.Empty,
                     TotalEmployees = await _context.Employees
-                        .CountAsync(e => e.Department == dept && e.EmployeeStatus == "Active"),
+                        .CountAsync(e => e.DepartmentInfo!.DepartmentName == dept && e.EmployeeStatus == "Active"),
                     Present = deptAttendances.Count(a => a.Status == "P"),
                     Absent = deptAttendances.Count(a => a.Status == "A"),
                     Late = deptAttendances.Count(a => a.Status == "L"),

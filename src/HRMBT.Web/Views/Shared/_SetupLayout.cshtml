@@ -248,6 +248,16 @@
                     <li class="nav-item"><a class="@A("Index")" asp-controller="Setup" asp-action="Index">Overview</a></li>
                     <li class="nav-item"><a class="@A("Users")" asp-controller="Setup" asp-action="Users">Users</a></li>
                     <li class="nav-item"><a class="@A("Config")" asp-controller="Setup" asp-action="Config">Config</a></li>
+                    @{
+                        var lk = (ctrl == "Lookups") ? (Context.Request.Query["kind"].ToString() is { Length: > 0 } qk ? qk : (ViewContext.ViewData.Model as HRMBT.Web.Models.ViewModels.LookupFormVm)?.Kind ?? "projects") : "";
+                        string L(string k) => lk == k ? "nav-link active" : "nav-link";
+                    }
+                    <li class="nav-item mt-2"><small class="text-uppercase text-muted ps-2">Lists</small></li>
+                    <li class="nav-item"><a class="@L("projects")" asp-controller="Lookups" asp-action="Index" asp-route-kind="projects">Projects</a></li>
+                    <li class="nav-item"><a class="@L("departments")" asp-controller="Lookups" asp-action="Index" asp-route-kind="departments">Departments</a></li>
+                    <li class="nav-item"><a class="@L("subdepartments")" asp-controller="Lookups" asp-action="Index" asp-route-kind="subdepartments">Sub-departments</a></li>
+                    <li class="nav-item"><a class="@L("designations")" asp-controller="Lookups" asp-action="Index" asp-route-kind="designations">Designations</a></li>
+                    <li class="nav-item"><a class="@L("leavetypes")" asp-controller="Lookups" asp-action="Index" asp-route-kind="leavetypes">Leave types</a></li>
                     <li class="nav-item">
                         <a class="nav-link" asp-controller="Home" asp-action="Index">← Home dashboard</a>
                     </li>

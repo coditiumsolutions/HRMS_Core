@@ -43,7 +43,7 @@
                 <small class="form-text text-muted">Enter the Employee ID (e.g., EMP001)</small>
                 @if (ViewData.ModelState["EmployeeId"]?.Errors?.Count > 0)
                 {
-                    <span class="text-danger">@ViewData.ModelState["EmployeeId"].Errors[0].ErrorMessage</span>
+                    <span class="text-danger">@ViewData.ModelState["EmployeeId"]!.Errors[0].ErrorMessage</span>
                 }
             </div>
             <div class="form-group mb-3">
@@ -59,7 +59,7 @@
                 <partial name="_PayrollMonthSelect" />
                 @if (ViewData.ModelState["Month"]?.Errors?.Count > 0)
                 {
-                    <span class="text-danger">@ViewData.ModelState["Month"].Errors[0].ErrorMessage</span>
+                    <span class="text-danger">@ViewData.ModelState["Month"]!.Errors[0].ErrorMessage</span>
                 }
             </div>
             <div class="form-group mb-3">
@@ -70,7 +70,7 @@
                 <input id="year" name="year" class="form-control" type="number" min="2000" max="2100" value="@selectedYear" required />
                 @if (ViewData.ModelState["Year"]?.Errors?.Count > 0)
                 {
-                    <span class="text-danger">@ViewData.ModelState["Year"].Errors[0].ErrorMessage</span>
+                    <span class="text-danger">@ViewData.ModelState["Year"]!.Errors[0].ErrorMessage</span>
                 }
             </div>
             <div class="form-group mb-3">

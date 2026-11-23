@@ -106,6 +106,13 @@ public class HomeController : Controller
         return Ok(results);
     }
 
+    /// <summary>Shown when a signed-in user lacks the role an area needs (cookie AccessDeniedPath).</summary>
+    public IActionResult AccessDenied()
+    {
+        Response.StatusCode = StatusCodes.Status403Forbidden;
+        return View();
+    }
+
     public IActionResult Privacy()
     {
         ViewData["Module"] = "Home";
@@ -145,7 +152,7 @@ public class HomeController : Controller
         try
         {
             var user = await _context.AppUsers.AsNoTracking()
-                .FirstOrDefaultAsync(u => u.Username.ToLower() == name.ToLower());
+                .FirstOrDefaultAsync(u => u.Username.ToLower() == name.ToLower() && u.IsActive);
 
             if (user == null)
             {

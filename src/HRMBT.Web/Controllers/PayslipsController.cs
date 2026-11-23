@@ -51,7 +51,7 @@ namespace HRMBT.Web.Controllers
 
             if (!string.IsNullOrWhiteSpace(department))
             {
-                query = query.Where(p => p.Employee != null && p.Employee.Department == department);
+                query = query.Where(p => p.Employee != null && p.Employee.DepartmentInfo!.DepartmentName == department);
             }
 
             if (employeeId.HasValue && employeeId.Value > 0)
@@ -82,8 +82,8 @@ namespace HRMBT.Web.Controllers
             var paginated = await PaginatedList<Payslip>.CreateAsync(query, page, pageSize);
 
             ViewBag.Departments = await _context.Employees
-                .Where(e => e.Department != null && e.Department != "")
-                .Select(e => e.Department!)
+                .Where(e => e.DepartmentInfo!.DepartmentName != null && e.DepartmentInfo!.DepartmentName != "")
+                .Select(e => e.DepartmentInfo!.DepartmentName!)
                 .Distinct()
                 .OrderBy(d => d)
                 .ToListAsync();
@@ -95,8 +95,8 @@ namespace HRMBT.Web.Controllers
                     Uid = e.uid,
                     EmployeeID = e.EmployeeID,
                     EmployeeName = e.EmployeeName,
-                    Department = e.Department,
-                    Designation = e.Designation,
+                    Department = e.DepartmentInfo!.DepartmentName,
+                    Designation = e.DesignationInfo!.Name,
                     BasicSalary = e.BasicSalary ?? 0m
                 })
                 .ToListAsync();
@@ -327,7 +327,7 @@ namespace HRMBT.Web.Controllers
 
             if (!string.IsNullOrWhiteSpace(department))
             {
-                query = query.Where(e => e.Department == department);
+                query = query.Where(e => e.DepartmentInfo!.DepartmentName == department);
             }
 
             var list = await query
@@ -337,8 +337,8 @@ namespace HRMBT.Web.Controllers
                     id = e.uid,
                     employeeId = e.EmployeeID,
                     name = e.EmployeeName,
-                    department = e.Department,
-                    designation = e.Designation,
+                    department = e.DepartmentInfo!.DepartmentName,
+                    designation = e.DesignationInfo!.Name,
                     status = e.EmployeeStatus
                 })
                 .ToListAsync();
@@ -374,8 +374,8 @@ namespace HRMBT.Web.Controllers
         private async Task PopulateLookups()
         {
             ViewBag.Departments = await _context.Employees
-                .Where(e => e.Department != null && e.Department != "")
-                .Select(e => e.Department!)
+                .Where(e => e.DepartmentInfo!.DepartmentName != null && e.DepartmentInfo!.DepartmentName != "")
+                .Select(e => e.DepartmentInfo!.DepartmentName!)
                 .Distinct()
                 .OrderBy(d => d)
                 .ToListAsync();
@@ -387,8 +387,8 @@ namespace HRMBT.Web.Controllers
                     Uid = e.uid,
                     EmployeeID = e.EmployeeID,
                     EmployeeName = e.EmployeeName,
-                    Department = e.Department,
-                    Designation = e.Designation,
+                    Department = e.DepartmentInfo!.DepartmentName,
+                    Designation = e.DesignationInfo!.Name,
                     BasicSalary = e.BasicSalary ?? 0m
                 })
                 .ToListAsync();

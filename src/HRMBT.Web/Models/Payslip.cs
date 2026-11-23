@@ -45,5 +45,7 @@ namespace HRMBT.Web.Models
 
         [ValidateNever]
         public ICollection<PayslipDetail> PayslipDetails { get; set; } = new List<PayslipDetail>();
+            /// <summary>Concurrency token (S15).</summary>
+        public byte[]? RowVersion { get; set; }
     }
 }

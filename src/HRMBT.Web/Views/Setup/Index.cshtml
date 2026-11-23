@@ -115,7 +115,7 @@
 <div class="setup-home">
     <div class="setup-intro">
         <h1><i class="bi bi-gear-wide-connected me-2" style="color:#d4af37;"></i>System setup</h1>
-        <p>Manage application users (login accounts) and configuration values.</p>
+        <p>Manage login accounts, configuration values and the HR lists: projects, departments, sub-departments, designations and leave types.</p>
     </div>
 
     <div class="row g-3">
@@ -154,6 +154,106 @@
                     <div class="setup-tile-actions">
                         <a class="btn btn-sm btn-grid-edit" asp-action="Config">
                             <i class="bi bi-box-arrow-up-right me-1"></i>Open config
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="setup-tile">
+                <div class="setup-tile-header">
+                    <span class="setup-tile-icon" aria-hidden="true"><i class="bi bi-diagram-3"></i></span>
+                    <span>Projects</span>
+                </div>
+                <div class="setup-tile-body">
+                    <div class="setup-tile-meta">
+                        <span><i class="bi bi-list-ul"></i>HR-managed list</span>
+                        <span><i class="bi bi-database"></i>dbo.Projects</span>
+                    </div>
+                    <p>The HR-managed project list. Add, rename, reorder or deactivate projects; no project name or count is built into the system.</p>
+                    <div class="setup-tile-actions">
+                        <a class="btn btn-sm btn-grid-edit" asp-controller="Lookups" asp-action="Index" asp-route-kind="projects">
+                            <i class="bi bi-box-arrow-up-right me-1"></i>Open projects
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="setup-tile">
+                <div class="setup-tile-header">
+                    <span class="setup-tile-icon" aria-hidden="true"><i class="bi bi-building"></i></span>
+                    <span>Departments</span>
+                </div>
+                <div class="setup-tile-body">
+                    <div class="setup-tile-meta">
+                        <span><i class="bi bi-list-ul"></i>HR-managed list</span>
+                        <span><i class="bi bi-database"></i>dbo.Departments</span>
+                    </div>
+                    <p>Main departments shared by all projects (Administration, Operations, Security...).</p>
+                    <div class="setup-tile-actions">
+                        <a class="btn btn-sm btn-grid-edit" asp-controller="Lookups" asp-action="Index" asp-route-kind="departments">
+                            <i class="bi bi-box-arrow-up-right me-1"></i>Open departments
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="setup-tile">
+                <div class="setup-tile-header">
+                    <span class="setup-tile-icon" aria-hidden="true"><i class="bi bi-diagram-2"></i></span>
+                    <span>Sub-departments</span>
+                </div>
+                <div class="setup-tile-body">
+                    <div class="setup-tile-meta">
+                        <span><i class="bi bi-list-ul"></i>HR-managed list</span>
+                        <span><i class="bi bi-database"></i>dbo.SubDepartments</span>
+                    </div>
+                    <p>Optional detail under a department, such as Mess under Administration. Information only.</p>
+                    <div class="setup-tile-actions">
+                        <a class="btn btn-sm btn-grid-edit" asp-controller="Lookups" asp-action="Index" asp-route-kind="subdepartments">
+                            <i class="bi bi-box-arrow-up-right me-1"></i>Open sub-departments
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="setup-tile">
+                <div class="setup-tile-header">
+                    <span class="setup-tile-icon" aria-hidden="true"><i class="bi bi-award"></i></span>
+                    <span>Designations</span>
+                </div>
+                <div class="setup-tile-body">
+                    <div class="setup-tile-meta">
+                        <span><i class="bi bi-list-ul"></i>HR-managed list</span>
+                        <span><i class="bi bi-database"></i>dbo.Designations</span>
+                    </div>
+                    <p>Job titles with a rank that orders employee lists.</p>
+                    <div class="setup-tile-actions">
+                        <a class="btn btn-sm btn-grid-edit" asp-controller="Lookups" asp-action="Index" asp-route-kind="designations">
+                            <i class="bi bi-box-arrow-up-right me-1"></i>Open designations
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="setup-tile">
+                <div class="setup-tile-header">
+                    <span class="setup-tile-icon" aria-hidden="true"><i class="bi bi-calendar-check"></i></span>
+                    <span>Leave types</span>
+                </div>
+                <div class="setup-tile-body">
+                    <div class="setup-tile-meta">
+                        <span><i class="bi bi-list-ul"></i>HR-managed list</span>
+                        <span><i class="bi bi-database"></i>dbo.LeaveTypes</span>
+                    </div>
+                    <p>Leave types used by leave requests and quotas.</p>
+                    <div class="setup-tile-actions">
+                        <a class="btn btn-sm btn-grid-edit" asp-controller="Lookups" asp-action="Index" asp-route-kind="leavetypes">
+                            <i class="bi bi-box-arrow-up-right me-1"></i>Open leave types
                         </a>
                     </div>
                 </div>

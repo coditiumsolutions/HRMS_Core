@@ -50,8 +50,9 @@
         </div>
 
         <form asp-action="Edit" method="post" id="employeeCreateForm" data-tab-storage-key="hrms.employeeEdit.activeTab">
+            <input type="hidden" asp-for="RowVersion" />
             <input type="hidden" asp-for="uid" />
-            <input type="hidden" asp-for="ModifiedOn" />
+            
 
             <div asp-validation-summary="All" class="mb-4" role="alert"></div>
 
@@ -156,48 +157,7 @@
                                         <p class="emp-section-sub">Department, role, project assignment, and employment status.</p>
                                         <div class="table-responsive emp-table-wrap">
                                             <table class="table emp-form-table mb-0">
-                                                <tbody>
-                                                    <tr class="emp-form-row">
-                                                        <th scope="row" class="emp-label-cell"><label asp-for="Department" class="form-label mb-0"></label></th>
-                                                        <td class="emp-field-cell">
-                                                            <input asp-for="Department" class="form-control" placeholder="Department name" />
-                                                            <span asp-validation-for="Department" class="field-validation-error"></span>
-                                                        </td>
-                                                        <th scope="row" class="emp-label-cell"><label asp-for="Designation" class="form-label mb-0"></label></th>
-                                                        <td class="emp-field-cell">
-                                                            <input asp-for="Designation" class="form-control" placeholder="Job title / designation" />
-                                                            <span asp-validation-for="Designation" class="field-validation-error"></span>
-                                                        </td>
-                                                    </tr>
-                                                    <tr class="emp-form-row">
-                                                        <th scope="row" class="emp-label-cell"><label asp-for="Project" class="form-label mb-0"></label></th>
-                                                        <td class="emp-field-cell">
-                                                            <select asp-for="Project" class="form-select">
-                                                                <option value="">— Select Project —</option>
-                                                                @if (ViewBag.ProjectOptions is IEnumerable<string> projectOptions)
-                                                                {
-                                                                    foreach (var project in projectOptions)
-                                                                    {
-                                                                        <option value="@project">@project</option>
-                                                                    }
-                                                                }
-                                                            </select>
-                                                            <span asp-validation-for="Project" class="field-validation-error"></span>
-                                                        </td>
-                                                        <th scope="row" class="emp-label-cell"><label asp-for="DateOfJoining" class="form-label mb-0"></label></th>
-                                                        <td class="emp-field-cell">
-                                                            <input asp-for="DateOfJoining" type="date" class="form-control" value="@(Model.DateOfJoining?.ToString("yyyy-MM-dd"))" />
-                                                            <span asp-validation-for="DateOfJoining" class="field-validation-error"></span>
-                                                        </td>
-                                                    </tr>
-                                                    <tr class="emp-form-row">
-                                                        <th scope="row" class="emp-label-cell"><label asp-for="EmployeeStatus" class="form-label mb-0"></label></th>
-                                                        <td class="emp-field-cell" colspan="3">
-                                                            <input asp-for="EmployeeStatus" class="form-control emp-field-narrow" placeholder="Active, Probation, etc." />
-                                                            <span asp-validation-for="EmployeeStatus" class="field-validation-error"></span>
-                                                        </td>
-                                                    </tr>
-                                                </tbody>
+                                                <partial name="_EmployeeOrgFields" model="Model" />
                                             </table>
                                         </div>
                                     </div>

@@ -9,8 +9,6 @@ namespace HRMBT.Web.Controllers
 {
     public class TaxController : Controller
     {
-        private const string TaxSlabsConfigKey = "TaxSlabs";
-        private const string CurrentTaxYearConfigKey = "CurrentTaxYear";
 
         private readonly ApplicationDbContext _context;
 
@@ -35,47 +33,36 @@ namespace HRMBT.Web.Controllers
             return string.Equals(key.Trim(), match, StringComparison.OrdinalIgnoreCase);
         }
 
-        /// <summary>Tax years/slabs labels from dbo.Configuration (<c>ConfigKey = TaxSlabs</c>), comma-separated <c>ConfigValue</c>.</summary>
+        /// <summary>
+        /// Tax year labels ("2025-2026", July to June). No Configuration list any more (T6): the years that already have slabs,
+        /// plus the current tax year and the next one so a new year can be started.
+        /// </summary>
         private async Task<List<string>> GetTaxYearsFromConfigurationAsync()
         {
-            var rows = await _context.HrConfigurations
-                .AsNoTracking()
-                .Where(c => c.ConfigKey != null && c.ConfigValue != null)
+            var labels = await _context.TaxRules.AsNoTracking()
+                .Select(r => r.TaxYear)
+                .Distinct()
                 .ToListAsync();
-
-            return rows
-                .Where(c => ConfigKeyMatches(c.ConfigKey, TaxSlabsConfigKey))
-                .SelectMany(c => SplitConfigCsv(c.ConfigValue))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(v => v, StringComparer.OrdinalIgnoreCase)
+            var starts = labels
+                .Select(l => int.TryParse(l.Length >= 4 ? l.Substring(0, 4) : "", out var y) ? y : 0)
                 .ToList();
+
+            var current = CurrentTaxYearStart(DateTime.Today);
+            var set = new HashSet<int>(starts) { current, current + 1 };
+            return set.Where(y => y > 0).OrderBy(y => y).Select(y => $"{y}-{y + 1}").ToList();
         }
 
-        /// <summary>
-        /// Canonical current tax year label from dbo.Configuration (ConfigKey CurrentTaxYear).
-        /// (<c>ConfigValue</c> single value or comma-separated; first token wins). Used only as the CREATE form default when that value is also listed under <see cref="TaxSlabsConfigKey"/>.
-        /// </summary>
-        private async Task<string?> GetConfiguredCurrentTaxYearAsync()
+        /// <summary>July to June: 2026-03 belongs to 2025-2026, 2026-07 to 2026-2027.</summary>
+        private static int CurrentTaxYearStart(DateTime date) => date.Month >= 7 ? date.Year : date.Year - 1;
+
+        /// <summary>Current tax year label, derived from today's date (default of the create form).</summary>
+        private Task<string?> GetConfiguredCurrentTaxYearAsync()
         {
-            var rows = await _context.HrConfigurations
-                .AsNoTracking()
-                .Where(c => c.ConfigKey != null && c.ConfigValue != null)
-                .OrderBy(c => c.UID)
-                .ToListAsync();
-
-            foreach (var row in rows.Where(c => ConfigKeyMatches(c.ConfigKey, CurrentTaxYearConfigKey)))
-            {
-                foreach (var token in SplitConfigCsv(row.ConfigValue))
-                {
-                    if (!string.IsNullOrWhiteSpace(token))
-                        return token.Trim();
-                }
-            }
-
-            return null;
+            var y = CurrentTaxYearStart(DateTime.Today);
+            return Task.FromResult<string?>($"{y}-{y + 1}");
         }
 
-        /// <summary>Dropdown choices: only <see cref="TaxSlabsConfigKey"/> CSV, plus any extra years (e.g. existing slab when editing).</summary>
+        /// <summary>Dropdown choices: only the list built by GetTaxYearsFromConfigurationAsync, plus any extra years (e.g. existing slab when editing).</summary>
         private static List<string> BuildTaxYearChoicesForForm(IEnumerable<string> taxSlabYearsFromConfig, IEnumerable<string>? includeAdditional)
         {
             var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -238,7 +225,7 @@ namespace HRMBT.Web.Controllers
 
             if (!AllowedTaxYearsContains(allowed, taxRule.TaxYear))
                 ModelState.AddModelError(nameof(taxRule.TaxYear),
-                    $"Pick a tax year from the list. Values come from dbo.Configuration ({TaxSlabsConfigKey}, comma-separated ConfigValue).");
+                    $"Pick a tax year from the list. Years that already have slabs, the current tax year and the next one are offered.");
 
             if (ModelState.IsValid)
             {
@@ -282,7 +269,7 @@ namespace HRMBT.Web.Controllers
 
             if (!AllowedTaxYearsContains(allowed, taxRule.TaxYear))
                 ModelState.AddModelError(nameof(taxRule.TaxYear),
-                    $"Pick a tax year from the list ({TaxSlabsConfigKey}), or keep this slab's current year.");
+                    $"Pick a tax year from the list, or keep this slab's current year.");
 
             if (ModelState.IsValid)
             {

@@ -58,7 +58,7 @@
                             @{
                                 int currentYear = DateTime.Now.Year;
                                 int previousYear = currentYear - 1;
-                                string selectedYear = ViewBag.Year?.ToString();
+                                string? selectedYear = ViewBag.Year?.ToString();
                             }
                             <option value="@previousYear" selected="@(selectedYear != null && selectedYear == previousYear.ToString())">@previousYear</option>
                             <option value="@currentYear" selected="@(selectedYear == null || selectedYear == currentYear.ToString())">@currentYear</option>

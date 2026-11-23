@@ -27,16 +27,30 @@ namespace HRMBT.Web.Services
             var successfulRows = 0;
             var failedRows = 0;
 
+            // T3: the same file cannot be imported twice (a failed import can be retried)
+            var fileHash = await ComputeFileHashAsync(csvFile);
+            var already = await _context.AttendanceUploadLogs
+                .Where(l => l.FileHash == fileHash && l.Status != "Failed")
+                .Select(l => new { l.UploadDate })
+                .FirstOrDefaultAsync();
+            if (already != null)
+            {
+                result.ErrorMessages = new List<string> { $"This file was already imported on {already.UploadDate:yyyy-MM-dd HH:mm}." };
+                return result;
+            }
+
             // Create upload log
             var uploadLog = new AttendanceUploadLog
             {
                 UploadDate = DateTime.Now,
                 UploadedBy = "System", // TODO: Get from current user
                 FileName = csvFile.FileName,
+                FileHash = fileHash,
                 TotalRows = 0,
                 SuccessCount = 0,
                 FailureCount = 0,
-                ErrorDetails = ""
+                ErrorDetails = "",
+                Status = "Processing"
             };
 
             _context.AttendanceUploadLogs.Add(uploadLog);
@@ -149,15 +163,19 @@ namespace HRMBT.Web.Services
                         }
 
                         // Check for duplicate (one record per employee per date)
+                        var empRow = await _context.Employees.FirstOrDefaultAsync(e => e.EmployeeID == employeeID);
+                        if (empRow == null)
+                        {
+                            failedRows++;
+                            errorMessages.Add($"Row {rowNumber}: Employee '{employeeID}' not found.");
+                            continue;
+                        }
                         var existing = await _context.Attendances
-                            .FirstOrDefaultAsync(a => a.EmployeeID == employeeID && 
-                                                      a.AttendanceDate.Date == attendanceDate.Date);
+                            .FirstOrDefaultAsync(a => a.EmployeeUid == empRow.uid && a.AttendanceDate == attendanceDate.Date);
 
                         if (existing != null)
                         {
                             // Update existing record
-                            existing.EmployeeName = employeeName ?? string.Empty;
-                            existing.DepartmentName = departmentName ?? string.Empty;
                             existing.TimeIn = timeIn;
                             existing.TimeOut = timeOut;
                             existing.Status = status;
@@ -169,9 +187,7 @@ namespace HRMBT.Web.Services
                             // Create new record
                             var attendance = new Attendance
                             {
-                                EmployeeID = employeeID,
-                                EmployeeName = employeeName ?? string.Empty,
-                                DepartmentName = departmentName ?? string.Empty,
+                                EmployeeUid = empRow.uid,
                                 AttendanceDate = attendanceDate,
                                 TimeIn = timeIn,
                                 TimeOut = timeOut,
@@ -190,6 +206,7 @@ namespace HRMBT.Web.Services
 
                 // Update upload log
                 uploadLog.TotalRows = result.TotalRows;
+                uploadLog.Status = failedRows == 0 ? "Completed" : "CompletedWithErrors";
                 uploadLog.SuccessCount = successfulRows;
                 uploadLog.FailureCount = failedRows;
                 uploadLog.ErrorDetails = string.Join("; ", errorMessages);
@@ -205,6 +222,7 @@ namespace HRMBT.Web.Services
             {
                 errorMessages.Add($"Error processing CSV: {ex.Message}");
                 uploadLog.ErrorDetails = string.Join("; ", errorMessages);
+                uploadLog.Status = "Failed";
                 uploadLog.FailureCount = failedRows;
                 _context.AttendanceUploadLogs.Update(uploadLog);
                 await _context.SaveChangesAsync();
@@ -225,6 +243,18 @@ namespace HRMBT.Web.Services
             var updatedRows = 0;
             var insertedRows = 0;
 
+            // T3: the same file cannot be imported twice (a failed import can be retried)
+            var fileHash = await ComputeFileHashAsync(excelFile);
+            var already = await _context.AttendanceUploadLogs
+                .Where(l => l.FileHash == fileHash && l.Status != "Failed")
+                .Select(l => new { l.UploadDate })
+                .FirstOrDefaultAsync();
+            if (already != null)
+            {
+                result.ErrorMessages = new List<string> { $"This file was already imported on {already.UploadDate:yyyy-MM-dd HH:mm}." };
+                return result;
+            }
+
             // Create upload log (optional - continue if table doesn't exist)
             AttendanceUploadLog? uploadLog = null;
             try
@@ -234,10 +264,12 @@ namespace HRMBT.Web.Services
                     UploadDate = DateTime.Now,
                     UploadedBy = "System", // TODO: Get from current user
                     FileName = excelFile.FileName,
+                    FileHash = fileHash,
                     TotalRows = 0,
                     SuccessCount = 0,
                     FailureCount = 0,
-                    ErrorDetails = ""
+                    ErrorDetails = "",
+                    Status = "Processing"
                 };
 
                 _context.AttendanceUploadLogs.Add(uploadLog);
@@ -531,15 +563,19 @@ namespace HRMBT.Web.Services
                                 }
 
                                 // Upsert logic: Check if record exists for same EmployeeID and AttendanceDate
-                                var existing = await _context.Attendances
-                                    .FirstOrDefaultAsync(a => a.EmployeeID == employeeID && 
-                                                              a.AttendanceDate.Date == attendanceDate.Date);
+                                var empRow = await _context.Employees.FirstOrDefaultAsync(e => e.EmployeeID == employeeID);
+                        if (empRow == null)
+                        {
+                            failedRows++;
+                            errorMessages.Add($"Row {row}: Employee '{employeeID}' not found.");
+                            continue;
+                        }
+                        var existing = await _context.Attendances
+                            .FirstOrDefaultAsync(a => a.EmployeeUid == empRow.uid && a.AttendanceDate == attendanceDate.Date);
 
                                 if (existing != null)
                                 {
                                     // Update existing record
-                                    existing.EmployeeName = employeeName;
-                                    existing.DepartmentName = department;
                                     existing.TimeIn = timeIn;
                                     existing.TimeOut = timeOut;
                                     existing.Status = status;
@@ -552,9 +588,7 @@ namespace HRMBT.Web.Services
                                     // Insert new record
                                     var attendance = new Attendance
                                     {
-                                        EmployeeID = employeeID,
-                                        EmployeeName = employeeName,
-                                        DepartmentName = department,
+                                        EmployeeUid = empRow.uid,
                                         AttendanceDate = attendanceDate,
                                         TimeIn = timeIn,
                                         TimeOut = timeOut,
@@ -584,7 +618,8 @@ namespace HRMBT.Web.Services
                             try
                             {
                                 uploadLog.TotalRows = result.TotalRows;
-                                uploadLog.SuccessCount = successfulRows;
+                                uploadLog.Status = failedRows == 0 ? "Completed" : "CompletedWithErrors";
+                uploadLog.SuccessCount = successfulRows;
                                 uploadLog.FailureCount = failedRows;
                                 uploadLog.ErrorDetails = string.Join("; ", errorMessages.Take(50)); // Limit error details
                                 _context.AttendanceUploadLogs.Update(uploadLog);
@@ -619,7 +654,8 @@ namespace HRMBT.Web.Services
                     try
                     {
                         uploadLog.ErrorDetails = string.Join("; ", errorMessages.Take(50));
-                        uploadLog.FailureCount = failedRows;
+                        uploadLog.Status = "Failed";
+                uploadLog.FailureCount = failedRows;
                         _context.AttendanceUploadLogs.Update(uploadLog);
                         await _context.SaveChangesAsync();
                     }
@@ -636,12 +672,19 @@ namespace HRMBT.Web.Services
             return result;
         }
 
+        private static async Task<string> ComputeFileHashAsync(IFormFile file)
+        {
+            using var stream = file.OpenReadStream();
+            var hash = await System.Security.Cryptography.SHA256.HashDataAsync(stream);
+            return Convert.ToHexString(hash).ToLowerInvariant();
+        }
+
         public List<Attendance> GetMonthlyReport(int month, int year)
         {
             return _context.Attendances
                 .Where(a => a.AttendanceDate.Month == month && a.AttendanceDate.Year == year)
                 .OrderBy(a => a.AttendanceDate)
-                .ThenBy(a => a.EmployeeID)
+                .ThenBy(a => a.Employee!.EmployeeID)
                 .ToList();
         }
 
@@ -651,7 +694,7 @@ namespace HRMBT.Web.Services
 
             if (!string.IsNullOrEmpty(department))
             {
-                query = query.Where(a => a.DepartmentName == department);
+                query = query.Where(a => a.Employee!.DepartmentInfo!.DepartmentName == department);
             }
 
             if (startDate.HasValue)
@@ -666,7 +709,7 @@ namespace HRMBT.Web.Services
 
             return await query
                 .OrderBy(a => a.AttendanceDate)
-                .ThenBy(a => a.EmployeeID)
+                .ThenBy(a => a.Employee!.EmployeeID)
                 .ToListAsync();
         }
 
@@ -679,8 +722,7 @@ namespace HRMBT.Web.Services
         public async Task<Attendance?> GetAttendanceByIDAndDateAsync(string employeeID, DateTime date)
         {
             return await _context.Attendances
-                .FirstOrDefaultAsync(a => a.EmployeeID == employeeID && 
-                                         a.AttendanceDate.Date == date.Date);
+                .FirstOrDefaultAsync(a => a.Employee!.EmployeeID == employeeID && a.AttendanceDate == date.Date);
         }
 
         public async Task CreateAttendanceAsync(Attendance attendance)
@@ -691,7 +733,25 @@ namespace HRMBT.Web.Services
 
         public async Task UpdateAttendanceAsync(Attendance attendance)
         {
-            _context.Attendances.Update(attendance);
+            // The edit form posts the legacy shape (employee code, date, TimeIn/TimeOut, status, comments) and not the
+            // stored columns, so update the existing row instead of overwriting every column with defaults.
+            var existing = await _context.Attendances.FirstOrDefaultAsync(a => a.AttendanceID == attendance.AttendanceID);
+            if (existing == null)
+                throw new InvalidOperationException("Attendance record not found.");
+
+            var code = attendance.EmployeeID?.Trim();
+            if (!string.IsNullOrEmpty(code) && !string.Equals(code, existing.Employee?.EmployeeID, StringComparison.OrdinalIgnoreCase))
+            {
+                var emp = await _context.Employees.FirstOrDefaultAsync(e => e.EmployeeID == code)
+                    ?? throw new InvalidOperationException($"Employee '{code}' not found.");
+                existing.EmployeeUid = emp.uid;
+            }
+
+            existing.AttendanceDate = attendance.AttendanceDate.Date;
+            existing.TimeIn = attendance.TimeIn;
+            existing.TimeOut = attendance.TimeOut;
+            existing.Status = attendance.Status;
+            existing.Comments = attendance.Comments;
             await _context.SaveChangesAsync();
         }
 

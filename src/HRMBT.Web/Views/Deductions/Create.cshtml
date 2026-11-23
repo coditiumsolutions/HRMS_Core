@@ -140,6 +140,7 @@
                 }
 
                 <form asp-action="Create" method="post" id="deductionCreateForm">
+                    <input type="hidden" asp-for="RequestId" value="@(Model?.RequestId ?? Guid.NewGuid())" />
                     @Html.AntiForgeryToken()
                     <input type="hidden" asp-for="EmployeeId" id="EmployeeId" />
 

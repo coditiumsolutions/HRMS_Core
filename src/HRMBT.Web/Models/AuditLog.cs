@@ -9,7 +9,7 @@ public class AuditLog
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    public int LogId { get; set; }
+    public long LogId { get; set; }
 
     [Required]
     [StringLength(128)]

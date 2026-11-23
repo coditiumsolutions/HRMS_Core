@@ -58,5 +58,14 @@ public class AttendanceUploadLog
     [Display(Name = "Error Details")]
     [Column(TypeName = "nvarchar(max)")]
     public string? ErrorDetails { get; set; }
-}
 
+    [StringLength(20)]
+    public string Status { get; set; } = "Completed";
+
+    [Column(TypeName = "nvarchar(max)")]
+    public string? Message { get; set; }
+
+    /// <summary>SHA-256 of the uploaded file (T3).</summary>
+    [StringLength(64)]
+    public string? FileHash { get; set; }
+}

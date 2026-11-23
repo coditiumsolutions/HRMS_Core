@@ -1,5 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
 namespace HRMBT.Web.Models;
 
@@ -34,14 +35,6 @@ public class Employee
     [StringLength(20)]
     public string? MobileNo { get; set; }
 
-    [Display(Name = "Department")]
-    [StringLength(100)]
-    public string? Department { get; set; }
-
-    [Display(Name = "Designation")]
-    [StringLength(100)]
-    public string? Designation { get; set; }
-
     [Display(Name = "Date of Joining")]
     [DataType(DataType.Date)]
     public DateTime? DateOfJoining { get; set; }
@@ -59,10 +52,6 @@ public class Employee
 
     [Display(Name = "Details")]
     public string? Details { get; set; }
-
-    [Display(Name = "Project")]
-    [StringLength(100)]
-    public string? Project { get; set; }
 
     [Display(Name = "Carry Forward Leaves")]
     public double? CarryForwardLeaves { get; set; }
@@ -98,4 +87,52 @@ public class Employee
     [Display(Name = "Gen Status")]
     [StringLength(50)]
     public string? GenStatus { get; set; }
+    // ---- Organisation (db_changes.md: Employee -> Project / Department / SubDepartment / Designation) ----
+    public int ProjectId { get; set; }
+    public int DepartmentId { get; set; }
+    public int? SubDepartmentId { get; set; }
+    public int? DesignationId { get; set; }
+
+    [ValidateNever] public global::HRMBT.Web.Models.Project? ProjectInfo { get; set; }
+    [ValidateNever] public global::HRMBT.Web.Models.Department? DepartmentInfo { get; set; }
+    [ValidateNever] public global::HRMBT.Web.Models.SubDepartment? SubDepartmentInfo { get; set; }
+    [ValidateNever] public global::HRMBT.Web.Models.Designation? DesignationInfo { get; set; }
+
+    // Read-only display names, so views keep using Model.Department / .Designation / .Project.
+    // Inside LINQ queries use the navigation (e.DepartmentInfo!.DepartmentName); these cannot be translated to SQL.
+    [NotMapped] [Display(Name = "Project")] public string? Project => ProjectInfo?.Name;
+    [NotMapped] [Display(Name = "Department")] public string? Department => DepartmentInfo?.DepartmentName;
+    [NotMapped] [Display(Name = "Sub-department")] public string? SubDepartment => SubDepartmentInfo?.Name;
+    [NotMapped] [Display(Name = "Designation")] public string? Designation => DesignationInfo?.Name;
+
+    [Display(Name = "Date of Leaving")]
+    [DataType(DataType.Date)]
+    public DateTime? DateOfLeaving { get; set; }
+
+    [Display(Name = "Date of Return")]
+    [DataType(DataType.Date)]
+    public DateTime? DateOfReturn { get; set; }
+
+    [StringLength(10)]
+    [Display(Name = "Pay basis")]
+    public string PayBasis { get; set; } = "Monthly";
+
+    [Display(Name = "Hourly rate")]
+    public decimal? HourlyRate { get; set; }
+
+    /// <summary>NULL = follow Projects.HasLeaveManagement.</summary>
+    [Display(Name = "Leave managed (override)")]
+    public bool? IsLeaveManagedOverride { get; set; }
+
+    [StringLength(1000)]
+    [Display(Name = "Notes")]
+    public string? Notes { get; set; }
+
+    public DateTime CreatedAt { get; set; }
+
+    [StringLength(100)]
+    public string? CreatedBy { get; set; }
+
+    /// <summary>Concurrency token (S15): two people editing the same row can no longer overwrite each other silently.</summary>
+    public byte[]? RowVersion { get; set; }
 }

@@ -1,0 +1,102 @@
+@model HRMBT.Web.Models.Employee
+@* Organisation fields shared by Employee Create and Edit: project, department, optional sub-department, designation, dates, status. *@
+@{
+    var projects = ViewBag.ProjectOptions as IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? Enumerable.Empty<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>();
+    var departments = ViewBag.DepartmentOptions as IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? Enumerable.Empty<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>();
+    var designations = ViewBag.DesignationOptions as IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? Enumerable.Empty<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>();
+    var subDepartments = ViewBag.SubDepartmentOptions as IEnumerable<(int Id, int DepartmentId, string Name)> ?? Enumerable.Empty<(int Id, int DepartmentId, string Name)>();
+    var statuses = ViewBag.EmployeeStatusOptions as IEnumerable<string> ?? Enumerable.Empty<string>();
+}
+<tbody>
+    <tr class="emp-form-row">
+        <th scope="row" class="emp-label-cell"><label asp-for="ProjectId" class="form-label mb-0">Project</label></th>
+        <td class="emp-field-cell">
+            <select asp-for="ProjectId" class="form-select" asp-items="projects">
+                <option value="">— Select Project —</option>
+            </select>
+            <span asp-validation-for="ProjectId" class="field-validation-error"></span>
+        </td>
+        <th scope="row" class="emp-label-cell"><label asp-for="DepartmentId" class="form-label mb-0">Department</label></th>
+        <td class="emp-field-cell">
+            <select asp-for="DepartmentId" id="orgDepartment" class="form-select" asp-items="departments">
+                <option value="">— Select Department —</option>
+            </select>
+            <span asp-validation-for="DepartmentId" class="field-validation-error"></span>
+        </td>
+    </tr>
+    <tr class="emp-form-row">
+        <th scope="row" class="emp-label-cell"><label asp-for="SubDepartmentId" class="form-label mb-0">Sub-department</label></th>
+        <td class="emp-field-cell">
+            <select asp-for="SubDepartmentId" id="orgSubDepartment" class="form-select">
+                <option value="">— None —</option>
+                @foreach (var sd in subDepartments)
+                {
+                    <option value="@sd.Id" data-dept="@sd.DepartmentId" selected="@(Model.SubDepartmentId == sd.Id)">@sd.Name</option>
+                }
+            </select>
+            <span class="text-muted small">Optional detail (for example Mess under Administration).</span>
+        </td>
+        <th scope="row" class="emp-label-cell"><label asp-for="DesignationId" class="form-label mb-0">Designation</label></th>
+        <td class="emp-field-cell">
+            <select asp-for="DesignationId" class="form-select" asp-items="designations">
+                <option value="">— Select Designation —</option>
+            </select>
+            <span asp-validation-for="DesignationId" class="field-validation-error"></span>
+        </td>
+    </tr>
+    <tr class="emp-form-row">
+        <th scope="row" class="emp-label-cell"><label asp-for="DateOfJoining" class="form-label mb-0"></label></th>
+        <td class="emp-field-cell">
+            <input asp-for="DateOfJoining" type="date" class="form-control" value="@(Model.DateOfJoining?.ToString("yyyy-MM-dd"))" />
+            <span asp-validation-for="DateOfJoining" class="field-validation-error"></span>
+        </td>
+        <th scope="row" class="emp-label-cell"><label asp-for="EmployeeStatus" class="form-label mb-0"></label></th>
+        <td class="emp-field-cell">
+            <select asp-for="EmployeeStatus" class="form-select emp-field-narrow">
+                @foreach (var status in statuses)
+                {
+                    <option value="@status" selected="@(string.Equals(Model.EmployeeStatus, status, StringComparison.OrdinalIgnoreCase))">@status</option>
+                }
+            </select>
+            <span asp-validation-for="EmployeeStatus" class="field-validation-error"></span>
+        </td>
+    </tr>
+    <tr class="emp-form-row">
+        <th scope="row" class="emp-label-cell"><label asp-for="DateOfLeaving" class="form-label mb-0"></label></th>
+        <td class="emp-field-cell">
+            <input asp-for="DateOfLeaving" type="date" class="form-control" value="@(Model.DateOfLeaving?.ToString("yyyy-MM-dd"))" />
+            <span asp-validation-for="DateOfLeaving" class="field-validation-error"></span>
+        </td>
+        <th scope="row" class="emp-label-cell"><label asp-for="DateOfReturn" class="form-label mb-0"></label></th>
+        <td class="emp-field-cell">
+            <input asp-for="DateOfReturn" type="date" class="form-control" value="@(Model.DateOfReturn?.ToString("yyyy-MM-dd"))" />
+            <span asp-validation-for="DateOfReturn" class="field-validation-error"></span>
+        </td>
+    </tr>
+    <tr class="emp-form-row">
+        <th scope="row" class="emp-label-cell"><label asp-for="Notes" class="form-label mb-0"></label></th>
+        <td class="emp-field-cell" colspan="3">
+            <textarea asp-for="Notes" class="form-control" rows="2" maxlength="1000" placeholder="Short note for HR (context only)"></textarea>
+            <span asp-validation-for="Notes" class="field-validation-error"></span>
+        </td>
+    </tr>
+</tbody>
+<script>
+    (function () {
+        var dept = document.getElementById('orgDepartment');
+        var sub = document.getElementById('orgSubDepartment');
+        if (!dept || !sub) return;
+        function filter() {
+            var d = dept.value;
+            Array.prototype.forEach.call(sub.options, function (o) {
+                if (!o.value) return;
+                var show = o.getAttribute('data-dept') === d;
+                o.hidden = !show;
+                o.disabled = !show;
+                if (!show && o.selected) sub.value = '';
+            });
+        }
+        dept.addEventListener('change', filter);
+        filter();
+    })();
+</script>

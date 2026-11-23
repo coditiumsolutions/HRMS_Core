@@ -32,56 +32,36 @@ namespace HRMBT.Web.Controllers
         private static bool ConfigKeyMatches(string? key, string match) =>
             !string.IsNullOrWhiteSpace(key) && string.Equals(key.Trim(), match, StringComparison.OrdinalIgnoreCase);
 
-        /// <summary>Types from dbo.Configuration (ConfigKey LeaveTypes, CSV) or LeaveQuota.</summary>
+        /// <summary>Active leave type names from dbo.LeaveTypes.</summary>
         private async Task<List<string>> GetLeaveTypeNamesAsync()
         {
-            var rows = await _context.HrConfigurations.AsNoTracking()
-                .Where(c => c.ConfigKey != null && c.ConfigValue != null)
+            return await _context.LeaveTypes.AsNoTracking()
+                .Where(t => t.IsActive)
+                .OrderBy(t => t.SortOrder).ThenBy(t => t.Name)
+                .Select(t => t.Name)
                 .ToListAsync();
-
-            var fromConfig = rows
-                .Where(c => ConfigKeyMatches(c.ConfigKey, LeaveTypesConfigKey))
-                .SelectMany(c => SplitConfigCsv(c.ConfigValue))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(v => v, StringComparer.OrdinalIgnoreCase)
-                .ToList();
-
-            if (fromConfig.Count > 0)
-                return fromConfig;
-
-            var yearStr = DateTime.Now.Year.ToString();
-            var typesForYear = await _context.LeaveQuotas.AsNoTracking()
-                .Where(lq => lq.Year == yearStr)
-                .Select(lq => lq.LeaveTypeName)
-                .Where(n => n != null && n != "")
-                .Distinct()
-                .OrderBy(lt => lt)
-                .ToListAsync();
-
-            if (typesForYear.Count > 0)
-                return typesForYear!;
-
-            return await _context.LeaveQuotas.AsNoTracking()
-                .Select(lq => lq.LeaveTypeName)
-                .Where(n => n != null && n != "")
-                .Distinct()
-                .OrderBy(lt => lt)
-                .ToListAsync()!;
         }
 
-        /// <summary>Department names from <c>dbo.Configuration</c> where <c>ConfigKey</c> is Department (comma-separated <c>ConfigValue</c>).</summary>
+        /// <summary>Resolves a leave type name to its LeaveTypes.Id (null when there is no such type).</summary>
+        private async Task<int?> ResolveLeaveTypeIdAsync(string? name)
+        {
+            var n = name?.Trim();
+            if (string.IsNullOrEmpty(n)) return null;
+            var id = await _context.LeaveTypes.AsNoTracking()
+                .Where(t => t.Name == n)
+                .Select(t => (int?)t.Id)
+                .FirstOrDefaultAsync();
+            return id;
+        }
+
+        /// <summary>Department names from dbo.Departments.</summary>
         private async Task<List<string>> GetDepartmentsFromConfigurationAsync()
         {
-            var rows = await _context.HrConfigurations.AsNoTracking()
-                .Where(c => c.ConfigKey != null && c.ConfigValue != null)
+            return await _context.Departments.AsNoTracking()
+                .Where(d => d.DepartmentName != null && d.IsActive)
+                .OrderBy(d => d.DepartmentName)
+                .Select(d => d.DepartmentName!)
                 .ToListAsync();
-
-            return rows
-                .Where(c => ConfigKeyMatches(c.ConfigKey, DepartmentConfigKey))
-                .SelectMany(c => SplitConfigCsv(c.ConfigValue))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(d => d, StringComparer.OrdinalIgnoreCase)
-                .ToList();
         }
 
         private static bool LeaveRequestOverlapsCalendarYear(DateTime fromDate, DateTime toDate, int year)
@@ -107,7 +87,7 @@ namespace HRMBT.Web.Controllers
             if (string.IsNullOrWhiteSpace(status)) return false;
             var s = status.Trim();
             return string.Equals(s, "Approved", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(s, "Applied", StringComparison.OrdinalIgnoreCase);
+                || string.Equals(s, "Pending", StringComparison.OrdinalIgnoreCase);
         }
 
         // GET: LMS — lists dbo.LeaveRequests joined with Employee for display.
@@ -137,7 +117,7 @@ namespace HRMBT.Web.Controllers
                 query = query.Where(x => x.lr.Status == status);
 
             if (!string.IsNullOrEmpty(leaveType))
-                query = query.Where(x => x.lr.LeaveType == leaveType);
+                query = query.Where(x => x.lr.LeaveTypeInfo!.Name == leaveType);
 
             var rows = await query
                 .OrderByDescending(x => x.lr.FromDate)
@@ -148,7 +128,7 @@ namespace HRMBT.Web.Controllers
                     EmployeeUid = x.lr.EmployeeId,
                     EmployeeCode = x.e != null ? x.e.EmployeeID : "?",
                     EmployeeName = x.e != null ? x.e.EmployeeName : null,
-                    LeaveType = x.lr.LeaveType,
+                    LeaveType = x.lr.LeaveTypeInfo!.Name,
                     FromDate = x.lr.FromDate,
                     ToDate = x.lr.ToDate,
                     Status = x.lr.Status
@@ -169,7 +149,7 @@ namespace HRMBT.Web.Controllers
             ViewData["Module"] = "LMS";
             var rows = await _context.LeaveQuotas.AsNoTracking()
                 .OrderByDescending(lq => lq.Year)
-                .ThenBy(lq => lq.LeaveTypeName)
+                .ThenBy(lq => lq.LeaveTypeInfo!.Name)
                 .ToListAsync();
             return View(rows);
         }
@@ -309,7 +289,7 @@ namespace HRMBT.Web.Controllers
             var activeEmployees = await _context.Employees.AsNoTracking()
                 .Where(e => e.EmployeeStatus == "Active")
                 .OrderBy(e => e.EmployeeName)
-                .Select(e => new { e.uid, e.EmployeeID, e.EmployeeName, e.Department })
+                .Select(e => new { e.uid, e.EmployeeID, e.EmployeeName, Department = e.DepartmentInfo!.DepartmentName })
                 .ToListAsync();
 
             var allActive = activeEmployees;
@@ -426,11 +406,12 @@ namespace HRMBT.Web.Controllers
                 .Select(lq => lq.Year)
                 .Where(y => y != null && y != "")
                 .ToListAsync();
-            var fromLeaves = await _context.EmployeeLeaves.AsNoTracking()
-                .Select(el => el.Year)
-                .Where(y => y != null && y != "")
+            var fromLeaves = (await _context.LeaveRequests.AsNoTracking()
+                .Select(lr => lr.FromDate.Year)
                 .Distinct()
-                .ToListAsync();
+                .ToListAsync())
+                .Select(y => y.ToString())
+                .ToList();
 
             var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var y in fromQuota)
@@ -476,13 +457,13 @@ namespace HRMBT.Web.Controllers
 
             ViewBag.Employees = await BuildEmployeeUidSelectListAsync();
             ViewBag.LeaveTypes = await BuildLeaveTypesSelectList();
-            ViewBag.Statuses = new SelectList(new[] { "Applied", "Approved", "Rejected", "Cancelled" }, "Applied");
+            ViewBag.Statuses = new SelectList(new[] { "Pending", "Approved", "Rejected", "Cancelled" }, "Pending");
 
             var model = new LeaveRequest
             {
                 FromDate = DateTime.Today,
                 ToDate = DateTime.Today,
-                Status = "Applied"
+                Status = "Pending"
             };
 
             return View(model);
@@ -502,19 +483,36 @@ namespace HRMBT.Web.Controllers
                 ModelState.AddModelError(nameof(LeaveRequest.ToDate), "To date must be on or after the from date.");
 
             if (string.IsNullOrWhiteSpace(model.Status))
-                model.Status = "Applied";
+                model.Status = "Pending";
+
+            var leaveTypeId = await ResolveLeaveTypeIdAsync(model.LeaveType);
+            if (leaveTypeId == null)
+                ModelState.AddModelError(nameof(LeaveRequest.LeaveType), "Please select a valid leave type.");
 
             if (ModelState.IsValid)
             {
-                _context.Add(model);
-                await _context.SaveChangesAsync();
-                TempData["SuccessMessage"] = "Leave request saved to LeaveRequests.";
-                return RedirectToAction(nameof(Index));
+                model.LeaveTypeId = leaveTypeId!.Value;
+                model.FromDate = model.FromDate.Date;
+                model.ToDate = model.ToDate.Date;
+                model.TotalDays = (model.ToDate - model.FromDate).Days + 1;   // calendar days; weekly offs/holidays excluded once schedules exist (B5)
+                model.CreatedBy = User.Identity?.Name;
+                try
+                {
+                    _context.Add(model);
+                    await _context.SaveChangesAsync();
+                    TempData["SuccessMessage"] = "Leave request saved to LeaveRequests.";
+                    return RedirectToAction(nameof(Index));
+                }
+                catch (DbUpdateException)
+                {
+                    _context.Entry(model).State = EntityState.Detached;
+                    ModelState.AddModelError(string.Empty, "An identical open leave request already exists for this employee, dates and leave type.");
+                }
             }
 
             ViewBag.Employees = await BuildEmployeeUidSelectListAsync(model.EmployeeId);
             ViewBag.LeaveTypes = await BuildLeaveTypesSelectList(model.LeaveType);
-            ViewBag.Statuses = new SelectList(new[] { "Applied", "Approved", "Rejected", "Cancelled" }, model.Status);
+            ViewBag.Statuses = new SelectList(new[] { "Pending", "Approved", "Rejected", "Cancelled" }, model.Status);
 
             return View(model);
         }
@@ -530,7 +528,7 @@ namespace HRMBT.Web.Controllers
 
             ViewBag.Employees = await BuildEmployeeUidSelectListAsync(leaveRequest.EmployeeId);
             ViewBag.LeaveTypes = await BuildLeaveTypesSelectList(leaveRequest.LeaveType);
-            ViewBag.Statuses = new SelectList(new[] { "Applied", "Approved", "Rejected", "Cancelled" }, leaveRequest.Status);
+            ViewBag.Statuses = new SelectList(new[] { "Pending", "Approved", "Rejected", "Cancelled" }, leaveRequest.Status);
 
             return View(leaveRequest);
         }
@@ -538,7 +536,7 @@ namespace HRMBT.Web.Controllers
         // POST: LMS/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,EmployeeId,LeaveType,FromDate,ToDate,Status")] LeaveRequest model)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,EmployeeId,LeaveType,FromDate,ToDate,Status,RowVersion")] LeaveRequest model)
         {
             ViewData["Module"] = "LMS";
             if (id != model.Id) return NotFound();
@@ -549,11 +547,28 @@ namespace HRMBT.Web.Controllers
             if (model.ToDate.Date < model.FromDate.Date)
                 ModelState.AddModelError(nameof(LeaveRequest.ToDate), "To date must be on or after the from date.");
 
+            var leaveTypeId = await ResolveLeaveTypeIdAsync(model.LeaveType);
+            if (leaveTypeId == null)
+                ModelState.AddModelError(nameof(LeaveRequest.LeaveType), "Please select a valid leave type.");
+
             if (ModelState.IsValid)
             {
                 try
                 {
-                    _context.Update(model);
+                    var existing = await _context.LeaveRequests.FirstOrDefaultAsync(l => l.Id == model.Id);
+                    if (existing == null) return NotFound();
+                    if (model.RowVersion != null)
+                        _context.Entry(existing).Property(l => l.RowVersion).OriginalValue = model.RowVersion;   // S15
+
+                    existing.EmployeeId = model.EmployeeId;
+                    existing.LeaveTypeId = leaveTypeId!.Value;
+                    existing.FromDate = model.FromDate.Date;
+                    existing.ToDate = model.ToDate.Date;
+                    existing.Status = string.IsNullOrWhiteSpace(model.Status) ? existing.Status : model.Status;
+                    if (!existing.IsHalfDay)
+                        existing.TotalDays = (existing.ToDate - existing.FromDate).Days + 1;
+                    existing.ModifiedAt = DateTime.Now;
+                    existing.ModifiedBy = User.Identity?.Name;
                     await _context.SaveChangesAsync();
                     TempData["SuccessMessage"] = "Leave request updated successfully.";
                     return RedirectToAction(nameof(Index));
@@ -562,13 +577,17 @@ namespace HRMBT.Web.Controllers
                 {
                     if (!LeaveRequestExists(model.Id))
                         return NotFound();
-                    throw;
+                    ModelState.AddModelError(string.Empty, "This leave request was changed by someone else while you were editing. Reload the page and apply your changes again.");
+                }
+                catch (DbUpdateException)
+                {
+                    ModelState.AddModelError(string.Empty, "An identical open leave request already exists for this employee, dates and leave type.");
                 }
             }
 
             ViewBag.Employees = await BuildEmployeeUidSelectListAsync(model.EmployeeId);
             ViewBag.LeaveTypes = await BuildLeaveTypesSelectList(model.LeaveType);
-            ViewBag.Statuses = new SelectList(new[] { "Applied", "Approved", "Rejected", "Cancelled" }, model.Status);
+            ViewBag.Statuses = new SelectList(new[] { "Pending", "Approved", "Rejected", "Cancelled" }, model.Status);
 
             return View(model);
         }
@@ -627,8 +646,16 @@ namespace HRMBT.Web.Controllers
             if (string.IsNullOrWhiteSpace(model.LeaveTypeName) || string.IsNullOrWhiteSpace(model.Year))
                 return;
 
+            var typeId = await ResolveLeaveTypeIdAsync(model.LeaveTypeName);
+            if (typeId == null)
+            {
+                ModelState.AddModelError(nameof(Models.LeaveQuota.LeaveTypeName), "Please select a valid leave type.");
+                return;
+            }
+            model.LeaveTypeId = typeId.Value;
+
             var duplicate = await _context.LeaveQuotas.AsNoTracking().AnyAsync(lq =>
-                lq.LeaveTypeName == model.LeaveTypeName
+                lq.LeaveTypeId == model.LeaveTypeId
                 && lq.Year == model.Year
                 && (!excludeUid.HasValue || lq.UID != excludeUid.Value));
 

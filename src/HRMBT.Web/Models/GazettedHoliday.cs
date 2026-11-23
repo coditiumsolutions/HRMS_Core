@@ -38,5 +38,10 @@ public class GazettedHoliday
     [StringLength(255)]
     [Column("Description")]
     public string? Description { get; set; }
-}
 
+    [Display(Name = "Project")]
+    public int? ProjectId { get; set; }
+
+    [Display(Name = "Optional holiday")]
+    public bool IsOptional { get; set; }
+}

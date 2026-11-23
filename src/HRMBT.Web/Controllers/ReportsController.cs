@@ -51,7 +51,11 @@ public class ReportsController : Controller
         GetConfigValuesAsync("AllowanceName", "AllowanceNames");
 
     private Task<List<string>> GetDepartmentsFromConfigurationAsync() =>
-        GetConfigValuesAsync("Department");
+        _context.Departments.AsNoTracking()
+            .Where(d => d.IsActive && d.DepartmentName != null)
+            .OrderBy(d => d.SortOrder).ThenBy(d => d.DepartmentName)
+            .Select(d => d.DepartmentName!)
+            .ToListAsync();
 
     private Task<List<string>> GetDeductionTypesFromConfigurationAsync() =>
         GetConfigValuesAsync("DeductionType", "DeductionTypes");
@@ -89,8 +93,8 @@ public class ReportsController : Controller
 
         var departments = await _context.Employees
             .AsNoTracking()
-            .Where(e => e.Department != null && e.Department != "")
-            .Select(e => e.Department!)
+            .Where(e => e.DepartmentInfo!.DepartmentName != null && e.DepartmentInfo!.DepartmentName != "")
+            .Select(e => e.DepartmentInfo!.DepartmentName!)
             .Distinct()
             .OrderBy(d => d)
             .ToListAsync();
@@ -117,7 +121,7 @@ public class ReportsController : Controller
             .Where(p => p.Month == monthFilter && p.Year == year!.Value);
 
         if (!string.IsNullOrWhiteSpace(departmentFilter))
-            query = query.Where(p => p.Employee != null && p.Employee.Department == departmentFilter);
+            query = query.Where(p => p.Employee != null && p.Employee.DepartmentInfo!.DepartmentName == departmentFilter);
 
         var rows = await query
             .Select(p => new
@@ -152,13 +156,13 @@ public class ReportsController : Controller
 
         var employeeQuery = _context.Employees
             .AsNoTracking()
-            .Where(e => e.Department != null && e.Department != "");
+            .Where(e => e.DepartmentInfo!.DepartmentName != null && e.DepartmentInfo!.DepartmentName != "");
 
         if (!string.IsNullOrWhiteSpace(departmentFilter))
-            employeeQuery = employeeQuery.Where(e => e.Department == departmentFilter);
+            employeeQuery = employeeQuery.Where(e => e.DepartmentInfo!.DepartmentName == departmentFilter);
 
         var employeeCounts = await employeeQuery
-            .GroupBy(e => e.Department!)
+            .GroupBy(e => e.DepartmentInfo!.DepartmentName!)
             .Select(g => new { Department = g.Key, EmployeeCount = g.Count() })
             .ToListAsync();
 
@@ -204,7 +208,7 @@ public class ReportsController : Controller
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(departmentFilter))
-            query = query.Where(a => a.Employee != null && a.Employee.Department == departmentFilter);
+            query = query.Where(a => a.Employee != null && a.Employee.DepartmentInfo!.DepartmentName == departmentFilter);
 
         if (!string.IsNullOrWhiteSpace(allowanceTypeFilter))
             query = query.Where(a => a.AllowanceType == allowanceTypeFilter);
@@ -272,7 +276,7 @@ public class ReportsController : Controller
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(departmentFilter))
-            query = query.Where(d => d.Employee != null && d.Employee.Department == departmentFilter);
+            query = query.Where(d => d.Employee != null && d.Employee.DepartmentInfo!.DepartmentName == departmentFilter);
 
         if (!string.IsNullOrWhiteSpace(deductionTypeFilter))
             query = query.Where(d => d.DeductionType == deductionTypeFilter);

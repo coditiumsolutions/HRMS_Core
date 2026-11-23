@@ -142,14 +142,28 @@ public class SetupController : Controller
         }
 
         var actor = User.Identity?.Name ?? "Setup";
-        var now = DateTime.Now.ToString("yyyy-MM-dd HH:mm");
+        var now = DateTime.Now;
+
+        var (employeeUid, employeeError) = await ResolveEmployeeUidAsync(model.EmployeeId, null);
+        if (employeeError != null)
+        {
+            ModelState.AddModelError(nameof(model.EmployeeId), employeeError);
+            return View(model);
+        }
+        var roleError = ValidateRole(model.Role);
+        if (roleError != null)
+        {
+            ModelState.AddModelError(nameof(model.Role), roleError);
+            return View(model);
+        }
 
         var user = new AppUser
         {
             Username = model.Username.Trim(),
-            EmployeeId = string.IsNullOrWhiteSpace(model.EmployeeId) ? null : model.EmployeeId.Trim(),
+            EmployeeUid = employeeUid,
             Role = string.IsNullOrWhiteSpace(model.Role) ? null : model.Role.Trim(),
             PasswordHash = LoginPasswordHasher.Hash(model.Password!),
+            IsActive = true,
             CreatedBy = actor,
             CreatedOn = now,
             History = null
@@ -199,9 +213,24 @@ public class SetupController : Controller
             return View(model);
         }
 
+        var (employeeUid, employeeError) = await ResolveEmployeeUidAsync(model.EmployeeId, id);
+        if (employeeError != null)
+        {
+            ModelState.AddModelError(nameof(model.EmployeeId), employeeError);
+            return View(model);
+        }
+        var roleError = ValidateRole(model.Role);
+        if (roleError != null)
+        {
+            ModelState.AddModelError(nameof(model.Role), roleError);
+            return View(model);
+        }
+
         user.Username = model.Username.Trim();
-        user.EmployeeId = string.IsNullOrWhiteSpace(model.EmployeeId) ? null : model.EmployeeId.Trim();
+        user.EmployeeUid = employeeUid;
         user.Role = string.IsNullOrWhiteSpace(model.Role) ? null : model.Role.Trim();
+        user.ModifiedAt = DateTime.Now;
+        user.ModifiedBy = User.Identity?.Name ?? "Setup";
 
         if (!string.IsNullOrEmpty(model.Password))
             user.PasswordHash = LoginPasswordHasher.Hash(model.Password);
@@ -233,10 +262,44 @@ public class SetupController : Controller
             return NotFound();
 
         var name = user.Username;
-        _context.AppUsers.Remove(user);
+        if (string.Equals(name, User.Identity?.Name, StringComparison.OrdinalIgnoreCase))
+        {
+            TempData["ErrorMessage"] = "You cannot disable the account you are signed in with.";
+            return RedirectToAction(nameof(Users));
+        }
+
+        // Logins are never deleted (db_standards S6/S14): disabling keeps the history and blocks sign-in.
+        user.IsActive = false;
+        user.ModifiedAt = DateTime.Now;
+        user.ModifiedBy = User.Identity?.Name ?? "Setup";
         await _context.SaveChangesAsync();
-        TempData["SuccessMessage"] = $"User \"{name}\" was deleted.";
+        TempData["SuccessMessage"] = $"User \"{name}\" was disabled. The account is kept and can no longer sign in.";
         return RedirectToAction(nameof(Users));
+    }
+
+    /// <summary>Maps the employee code typed in the form (Employee.EmployeeID) to Employee.uid. Blank = no employee.</summary>
+    private async Task<(int? Uid, string? Error)> ResolveEmployeeUidAsync(string? code, int? userId)
+    {
+        var c = code?.Trim();
+        if (string.IsNullOrEmpty(c)) return (null, null);
+
+        var uid = await _context.Employees.AsNoTracking()
+            .Where(e => e.EmployeeID == c)
+            .Select(e => (int?)e.uid)
+            .FirstOrDefaultAsync();
+        if (uid == null) return (null, $"No employee with ID \"{c}\".");
+
+        var taken = await _context.AppUsers.AsNoTracking()
+            .AnyAsync(u => u.EmployeeUid == uid && (userId == null || u.Uid != userId));
+        if (taken) return (null, "This employee already has a login.");
+        return (uid, null);
+    }
+
+    private static string? ValidateRole(string? role)
+    {
+        var r = role?.Trim();
+        if (string.IsNullOrEmpty(r)) return null;
+        return r is "Admin" or "HR" ? null : "Role must be Admin or HR (or left blank).";
     }
 
     private void ValidatePasswordForCreate(SetupUserFormVm model)

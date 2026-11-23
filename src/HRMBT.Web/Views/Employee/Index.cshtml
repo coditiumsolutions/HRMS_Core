@@ -231,7 +231,7 @@
                                             <div class="emp-name">@item.EmployeeName</div>
                                             <div class="emp-meta">@(string.IsNullOrWhiteSpace(item.Designation) ? "—" : item.Designation)</div>
                                         </td>
-                                        <td>@item.Department</td>
+                                        <td>@item.Department@if (!string.IsNullOrWhiteSpace(item.SubDepartment)) { <div class="text-muted small">@item.SubDepartment</div> }</td>
                                         <td>@(string.IsNullOrWhiteSpace(item.Project) ? "—" : item.Project)</td>
                                         <td>
                                             <span class="status-pill @StatusClass(item.EmployeeStatus)">

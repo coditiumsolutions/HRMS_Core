@@ -57,8 +57,8 @@ namespace HRMBT.Web.Controllers
             ViewBag.RequiresPeriodFilter = !hasPeriodFilter;
 
             var departments = await _context.Employees
-                .Where(e => e.Department != null && e.Department != "")
-                .Select(e => e.Department)
+                .Where(e => e.DepartmentInfo!.DepartmentName != null && e.DepartmentInfo!.DepartmentName != "")
+                .Select(e => e.DepartmentInfo!.DepartmentName)
                 .Distinct()
                 .OrderBy(d => d)
                 .ToListAsync();
@@ -90,7 +90,7 @@ namespace HRMBT.Web.Controllers
 
             if (!string.IsNullOrWhiteSpace(departmentFilter))
             {
-                query = query.Where(p => p.Employee != null && p.Employee.Department == departmentFilter);
+                query = query.Where(p => p.Employee != null && p.Employee.DepartmentInfo!.DepartmentName == departmentFilter);
             }
 
             query = query.OrderByPeriodDescending();
@@ -107,8 +107,8 @@ namespace HRMBT.Web.Controllers
             
             // Get distinct departments for dropdown
             var departments = await _context.Employees
-                .Where(e => e.Department != null && e.Department != "")
-                .Select(e => e.Department)
+                .Where(e => e.DepartmentInfo!.DepartmentName != null && e.DepartmentInfo!.DepartmentName != "")
+                .Select(e => e.DepartmentInfo!.DepartmentName)
                 .Distinct()
                 .OrderBy(d => d)
                 .ToListAsync();
@@ -150,8 +150,8 @@ namespace HRMBT.Web.Controllers
 
             // Get distinct departments for dropdown (in case of validation error)
             var departments = await _context.Employees
-                .Where(e => e.Department != null && e.Department != "")
-                .Select(e => e.Department)
+                .Where(e => e.DepartmentInfo!.DepartmentName != null && e.DepartmentInfo!.DepartmentName != "")
+                .Select(e => e.DepartmentInfo!.DepartmentName)
                 .Distinct()
                 .OrderBy(d => d)
                 .ToListAsync();
@@ -162,7 +162,7 @@ namespace HRMBT.Web.Controllers
             
             if (!string.IsNullOrWhiteSpace(model.Department))
             {
-                query = query.Where(e => e.Department != null && e.Department == model.Department);
+                query = query.Where(e => e.DepartmentInfo!.DepartmentName != null && e.DepartmentInfo!.DepartmentName == model.Department);
             }
 
             var employees = await query.ToListAsync();
@@ -465,7 +465,7 @@ namespace HRMBT.Web.Controllers
             // Filter by department if provided
             if (!string.IsNullOrWhiteSpace(department))
             {
-                query = query.Where(e => e.Department != null && e.Department == department);
+                query = query.Where(e => e.DepartmentInfo!.DepartmentName != null && e.DepartmentInfo!.DepartmentName == department);
             }
 
             // Apply ordering before pagination
@@ -478,8 +478,8 @@ namespace HRMBT.Web.Controllers
 
             // Get distinct departments for dropdown
             var departments = await _context.Employees
-                .Where(e => e.Department != null && e.Department != "")
-                .Select(e => e.Department)
+                .Where(e => e.DepartmentInfo!.DepartmentName != null && e.DepartmentInfo!.DepartmentName != "")
+                .Select(e => e.DepartmentInfo!.DepartmentName)
                 .Distinct()
                 .OrderBy(d => d)
                 .ToListAsync();
@@ -656,8 +656,8 @@ namespace HRMBT.Web.Controllers
 
             // Get all departments for dropdown
             var departments = await _context.Employees
-                .Where(e => e.Department != null && e.Department != "")
-                .Select(e => e.Department)
+                .Where(e => e.DepartmentInfo!.DepartmentName != null && e.DepartmentInfo!.DepartmentName != "")
+                .Select(e => e.DepartmentInfo!.DepartmentName)
                 .Distinct()
                 .OrderBy(d => d)
                 .ToListAsync();
@@ -675,7 +675,7 @@ namespace HRMBT.Web.Controllers
                 // Filter by department if provided
                 if (!string.IsNullOrWhiteSpace(department))
                 {
-                    employeeQuery = employeeQuery.Where(e => e.Department != null && e.Department == department);
+                    employeeQuery = employeeQuery.Where(e => e.DepartmentInfo!.DepartmentName != null && e.DepartmentInfo!.DepartmentName == department);
                 }
 
                 // Get payslip IDs for the selected month/year grouped by employee

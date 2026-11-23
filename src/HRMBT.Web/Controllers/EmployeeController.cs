@@ -44,17 +44,17 @@ public class EmployeeController : Controller
             // Apply filters only if they have values
             if (!string.IsNullOrEmpty(department))
             {
-                query = query.Where(e => e.Department == department);
+                query = query.Where(e => e.DepartmentInfo!.DepartmentName == department);
             }
 
             if (!string.IsNullOrEmpty(designation))
             {
-                query = query.Where(e => e.Designation == designation);
+                query = query.Where(e => e.DesignationInfo!.Name == designation);
             }
 
             if (!string.IsNullOrEmpty(projectFilter))
             {
-                query = query.Where(e => e.Project == projectFilter);
+                query = query.Where(e => e.ProjectInfo!.Name == projectFilter);
             }
 
             // Single search matches Employee Name OR Employee ID (partial)
@@ -84,9 +84,9 @@ public class EmployeeController : Controller
             query = sortBy?.ToLower() switch
             {
                 "employeename" => sortOrder == "desc" ? query.OrderByDescending(e => e.EmployeeName) : query.OrderBy(e => e.EmployeeName),
-                "department" => sortOrder == "desc" ? query.OrderByDescending(e => e.Department) : query.OrderBy(e => e.Department),
-                "designation" => sortOrder == "desc" ? query.OrderByDescending(e => e.Designation) : query.OrderBy(e => e.Designation),
-                "project" => sortOrder == "desc" ? query.OrderByDescending(e => e.Project) : query.OrderBy(e => e.Project),
+                "department" => sortOrder == "desc" ? query.OrderByDescending(e => e.DepartmentInfo!.DepartmentName) : query.OrderBy(e => e.DepartmentInfo!.DepartmentName),
+                "designation" => sortOrder == "desc" ? query.OrderByDescending(e => e.DesignationInfo!.Name) : query.OrderBy(e => e.DesignationInfo!.Name),
+                "project" => sortOrder == "desc" ? query.OrderByDescending(e => e.ProjectInfo!.Name) : query.OrderBy(e => e.ProjectInfo!.Name),
                 "genstatus" => sortOrder == "desc" ? query.OrderByDescending(e => e.GenStatus) : query.OrderBy(e => e.GenStatus),
                 "basicSalary" => sortOrder == "desc" ? query.OrderByDescending(e => e.BasicSalary) : query.OrderBy(e => e.BasicSalary),
                 "year2024" => sortOrder == "desc" ? query.OrderByDescending(e => e.Year2024) : query.OrderBy(e => e.Year2024),
@@ -102,8 +102,8 @@ public class EmployeeController : Controller
                 .Where(d => d.DepartmentName != null)
                 .OrderBy(d => d.DepartmentName)
                 .ToListAsync();
-            ViewBag.Designations = await _context.Employees.Select(e => e.Designation).Distinct().Where(d => d != null).OrderBy(d => d).ToListAsync();
-            ViewBag.Projects = await GetProjectOptionsAsync();
+            ViewBag.Designations = await _context.Designations.AsNoTracking().Where(d => d.IsActive).OrderBy(d => d.Rank).ThenBy(d => d.Name).Select(d => d.Name).ToListAsync();
+            ViewBag.Projects = await _context.Projects.AsNoTracking().Where(p => p.IsActive).OrderBy(p => p.SortOrder).ThenBy(p => p.Name).Select(p => p.Name).ToListAsync();
             ViewBag.Year2024Options = await _context.Employees.Select(e => e.Year2024).Distinct().Where(y => y != null).OrderBy(y => y).ToListAsync();
             
             // Preserve filter values
@@ -180,9 +180,9 @@ public class EmployeeController : Controller
         var searchTerm = (search ?? employeeName ?? employeeID)?.Trim();
 
         if (!string.IsNullOrEmpty(department))
-            query = query.Where(e => e.Department == department);
+            query = query.Where(e => e.DepartmentInfo!.DepartmentName == department);
         if (!string.IsNullOrEmpty(designation))
-            query = query.Where(e => e.Designation == designation);
+            query = query.Where(e => e.DesignationInfo!.Name == designation);
         if (!string.IsNullOrEmpty(searchTerm))
         {
             query = query.Where(e =>
@@ -197,8 +197,8 @@ public class EmployeeController : Controller
         query = sortBy?.ToLower() switch
         {
             "employeename" => sortOrder == "desc" ? query.OrderByDescending(e => e.EmployeeName) : query.OrderBy(e => e.EmployeeName),
-            "department" => sortOrder == "desc" ? query.OrderByDescending(e => e.Department) : query.OrderBy(e => e.Department),
-            "designation" => sortOrder == "desc" ? query.OrderByDescending(e => e.Designation) : query.OrderBy(e => e.Designation),
+            "department" => sortOrder == "desc" ? query.OrderByDescending(e => e.DepartmentInfo!.DepartmentName) : query.OrderBy(e => e.DepartmentInfo!.DepartmentName),
+            "designation" => sortOrder == "desc" ? query.OrderByDescending(e => e.DesignationInfo!.Name) : query.OrderBy(e => e.DesignationInfo!.Name),
             "basicSalary" => sortOrder == "desc" ? query.OrderByDescending(e => e.BasicSalary) : query.OrderBy(e => e.BasicSalary),
             _ => query.OrderBy(e => e.EmployeeID)
         };
@@ -291,13 +291,13 @@ public class EmployeeController : Controller
     {
         ViewData["Module"] = "Employees";
         await LoadCreateFormOptionsAsync();
-        return View();
+        return View(new Employee { EmployeeStatus = "Active", ApplyTax = "Yes", PayBasis = "Monthly" });
     }
 
     // POST: Employee/Create
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create([Bind("EmployeeID,EmployeeName,FatherName,DOB,CNIC,MobileNo,Department,Designation,DateOfJoining,EmployeeStatus,ModifiedBy,ModifiedOn,Details,Project,CarryForwardLeaves,Year2022,Year2023,AdjustedAjusted,Year2024,CarryForwardLeaves1,Year2023New,BasicSalary,ApplyTax,GenStatus")] Employee employee)
+    public async Task<IActionResult> Create([Bind("EmployeeID,EmployeeName,FatherName,DOB,CNIC,MobileNo,ProjectId,DepartmentId,SubDepartmentId,DesignationId,DateOfJoining,DateOfLeaving,DateOfReturn,EmployeeStatus,ModifiedBy,Details,Notes,CarryForwardLeaves,Year2022,Year2023,AdjustedAjusted,Year2024,CarryForwardLeaves1,Year2023New,BasicSalary,ApplyTax,GenStatus")] Employee employee)
     {
         ViewData["Module"] = "Employees";
         
@@ -312,9 +312,12 @@ public class EmployeeController : Controller
             }
         }
 
+        await ValidateOrganisationAsync(employee);
+
         if (ModelState.IsValid)
         {
-            employee.ModifiedOn = DateTime.Now.ToString();
+            employee.ModifiedOn = DateTime.Now.ToString("yyyy-MM-dd HH:mm");
+            employee.CreatedBy = User.Identity?.Name;
             _context.Add(employee);
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
@@ -338,7 +341,7 @@ public class EmployeeController : Controller
             return NotFound();
         }
 
-        await LoadCreateFormOptionsAsync(employee.Project);
+        await LoadCreateFormOptionsAsync(employee);
         ViewBag.EmployeeDocuments = await _documentService.BuildViewModelAsync(employee.uid, canUpload: true);
         return View(employee);
     }
@@ -346,7 +349,7 @@ public class EmployeeController : Controller
     // POST: Employee/Edit/5
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(int id, [Bind("uid,EmployeeID,EmployeeName,FatherName,DOB,CNIC,MobileNo,Department,Designation,DateOfJoining,EmployeeStatus,ModifiedBy,ModifiedOn,Details,Project,CarryForwardLeaves,Year2022,Year2023,AdjustedAjusted,Year2024,CarryForwardLeaves1,Year2023New,BasicSalary,ApplyTax,GenStatus")] Employee employee)
+    public async Task<IActionResult> Edit(int id, [Bind("RowVersion,uid,EmployeeID,EmployeeName,FatherName,DOB,CNIC,MobileNo,ProjectId,DepartmentId,SubDepartmentId,DesignationId,DateOfJoining,DateOfLeaving,DateOfReturn,EmployeeStatus,ModifiedBy,Details,Notes,CarryForwardLeaves,Year2022,Year2023,AdjustedAjusted,Year2024,CarryForwardLeaves1,Year2023New,BasicSalary,ApplyTax,GenStatus")] Employee employee)
     {
         ViewData["Module"] = "Employees";
         if (id != employee.uid)
@@ -365,29 +368,34 @@ public class EmployeeController : Controller
             }
         }
 
+        await ValidateOrganisationAsync(employee);
+
         if (ModelState.IsValid)
         {
             try
             {
-                employee.ModifiedOn = DateTime.Now.ToString();
-                _context.Update(employee);
+                employee.ModifiedOn = DateTime.Now.ToString("yyyy-MM-dd HH:mm");
+                _context.Attach(employee);
+                foreach (var name in EditablePropertyNames)
+                    _context.Entry(employee).Property(name).IsModified = true;
                 await _context.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
             {
                 if (!EmployeeExists(employee.uid))
-                {
                     return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+
+                // S15: someone else saved this employee after the form was opened
+                ModelState.AddModelError(string.Empty, "This employee was changed by someone else while you were editing. Reload the page and apply your changes again.");
+                _context.Entry(employee).State = EntityState.Detached;
+                await LoadCreateFormOptionsAsync(employee);
+                ViewBag.EmployeeDocuments = await _documentService.BuildViewModelAsync(employee.uid, canUpload: true);
+                return View(employee);
             }
             return RedirectToAction(nameof(Index));
         }
 
-        await LoadCreateFormOptionsAsync(employee.Project);
+        await LoadCreateFormOptionsAsync(employee);
         ViewBag.EmployeeDocuments = await _documentService.BuildViewModelAsync(employee.uid, canUpload: true);
         return View(employee);
     }
@@ -427,101 +435,78 @@ public class EmployeeController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    private async Task<List<string>> GetProjectOptionsAsync(string? selected = null)
+    /// <summary>Properties the Employee edit form posts; everything else on the row is left as it is.</summary>
+    private static readonly string[] EditablePropertyNames =
     {
-        var configRows = await _context.HrConfigurations
-            .AsNoTracking()
-            .Where(c => c.ConfigKey != null && c.ConfigValue != null)
-            .ToListAsync();
+        nameof(Employee.EmployeeID), nameof(Employee.EmployeeName), nameof(Employee.FatherName), nameof(Employee.DOB),
+        nameof(Employee.CNIC), nameof(Employee.MobileNo), nameof(Employee.ProjectId), nameof(Employee.DepartmentId),
+        nameof(Employee.SubDepartmentId), nameof(Employee.DesignationId), nameof(Employee.DateOfJoining),
+        nameof(Employee.DateOfLeaving), nameof(Employee.DateOfReturn), nameof(Employee.EmployeeStatus),
+        nameof(Employee.ModifiedBy), nameof(Employee.ModifiedOn), nameof(Employee.Details), nameof(Employee.Notes),
+        nameof(Employee.CarryForwardLeaves), nameof(Employee.Year2022), nameof(Employee.Year2023),
+        nameof(Employee.AdjustedAjusted), nameof(Employee.Year2024), nameof(Employee.CarryForwardLeaves1),
+        nameof(Employee.Year2023New), nameof(Employee.BasicSalary), nameof(Employee.ApplyTax), nameof(Employee.GenStatus)
+    };
 
-        static IEnumerable<string> SplitCsv(string? csv)
-        {
-            if (string.IsNullOrWhiteSpace(csv)) yield break;
-            foreach (var item in csv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            {
-                if (!string.IsNullOrWhiteSpace(item))
-                    yield return item;
-            }
-        }
+    private static readonly string[] EmployeeStatusValues = { "Active", "Inactive", "Resigned", "Terminated" };
 
-        var projects = configRows
-            .Where(c => c.ConfigKey != null &&
-                        (string.Equals(c.ConfigKey.Trim(), "Project", StringComparison.OrdinalIgnoreCase)
-                         || string.Equals(c.ConfigKey.Trim(), "Projects", StringComparison.OrdinalIgnoreCase)))
-            .SelectMany(c => SplitCsv(c.ConfigValue))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(v => v)
-            .ToList();
+    /// <summary>Project and department are required; a sub-department must belong to the chosen department; leaving/return dates must be in order.</summary>
+    private async Task ValidateOrganisationAsync(Employee employee)
+    {
+        if (employee.ProjectId <= 0)
+            ModelState.AddModelError(nameof(Employee.ProjectId), "Please select a project.");
+        else if (!await _context.Projects.AnyAsync(p => p.Id == employee.ProjectId))
+            ModelState.AddModelError(nameof(Employee.ProjectId), "Unknown project.");
 
-        if (projects.Count == 0)
-        {
-            projects = await _context.Employees
-                .AsNoTracking()
-                .Where(e => e.Project != null && e.Project != "")
-                .Select(e => e.Project!)
-                .Distinct()
-                .OrderBy(p => p)
-                .ToListAsync();
-        }
+        if (employee.DepartmentId <= 0)
+            ModelState.AddModelError(nameof(Employee.DepartmentId), "Please select a department.");
+        else if (!await _context.Departments.AnyAsync(d => d.DepartmentID == employee.DepartmentId))
+            ModelState.AddModelError(nameof(Employee.DepartmentId), "Unknown department.");
 
-        if (!string.IsNullOrWhiteSpace(selected)
-            && !projects.Any(p => string.Equals(p, selected, StringComparison.OrdinalIgnoreCase)))
-        {
-            projects.Add(selected.Trim());
-            projects = projects.OrderBy(p => p, StringComparer.OrdinalIgnoreCase).ToList();
-        }
+        if (employee.SubDepartmentId.HasValue &&
+            !await _context.SubDepartments.AnyAsync(s => s.Id == employee.SubDepartmentId && s.DepartmentId == employee.DepartmentId))
+            ModelState.AddModelError(nameof(Employee.SubDepartmentId), "The sub-department does not belong to the selected department.");
 
-        return projects;
+        if (employee.DesignationId.HasValue && !await _context.Designations.AnyAsync(d => d.Id == employee.DesignationId))
+            ModelState.AddModelError(nameof(Employee.DesignationId), "Unknown designation.");
+
+        if (!EmployeeStatusValues.Contains(employee.EmployeeStatus ?? ""))
+            ModelState.AddModelError(nameof(Employee.EmployeeStatus), "Status must be Active, Inactive, Resigned or Terminated.");
+
+        if (employee.DateOfLeaving.HasValue && employee.DateOfJoining.HasValue && employee.DateOfLeaving < employee.DateOfJoining)
+            ModelState.AddModelError(nameof(Employee.DateOfLeaving), "Date of leaving cannot be before the date of joining.");
+        if (employee.DateOfReturn.HasValue && (!employee.DateOfLeaving.HasValue || employee.DateOfReturn <= employee.DateOfLeaving))
+            ModelState.AddModelError(nameof(Employee.DateOfReturn), "Date of return needs a date of leaving and must be after it.");
     }
 
-    private async Task LoadCreateFormOptionsAsync(string? selectedProject = null)
+    private async Task LoadCreateFormOptionsAsync(Employee? current = null)
     {
-        var configRows = await _context.HrConfigurations
-            .AsNoTracking()
-            .Where(c => c.ConfigKey != null && c.ConfigValue != null)
+        ViewBag.ProjectOptions = await _context.Projects.AsNoTracking()
+            .Where(p => p.IsActive || (current != null && p.Id == current.ProjectId))
+            .OrderBy(p => p.SortOrder).ThenBy(p => p.Name)
+            .Select(p => new SelectListItem { Value = p.Id.ToString(), Text = p.Name })
             .ToListAsync();
 
-        static IEnumerable<string> SplitCsv(string? csv)
-        {
-            if (string.IsNullOrWhiteSpace(csv)) yield break;
-            foreach (var item in csv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            {
-                if (!string.IsNullOrWhiteSpace(item))
-                    yield return item;
-            }
-        }
+        ViewBag.DepartmentOptions = await _context.Departments.AsNoTracking()
+            .Where(d => (d.IsActive || (current != null && d.DepartmentID == current.DepartmentId)) && d.DepartmentName != null)
+            .OrderBy(d => d.SortOrder).ThenBy(d => d.DepartmentName)
+            .Select(d => new SelectListItem { Value = d.DepartmentID.ToString(), Text = d.DepartmentName! })
+            .ToListAsync();
 
-        static bool KeyMatches(string? key, params string[] aliases)
-        {
-            if (string.IsNullOrWhiteSpace(key)) return false;
-            return aliases.Any(a => string.Equals(key.Trim(), a, StringComparison.OrdinalIgnoreCase));
-        }
+        var subs = await _context.SubDepartments.AsNoTracking()
+            .Where(s => s.IsActive || (current != null && s.Id == current.SubDepartmentId))
+            .OrderBy(s => s.SortOrder).ThenBy(s => s.Name)
+            .Select(s => new { s.Id, s.DepartmentId, s.Name })
+            .ToListAsync();
+        ViewBag.SubDepartmentOptions = subs.Select(s => (s.Id, s.DepartmentId, s.Name)).ToList();
 
-        var departmentOptions = configRows
-            .Where(c => KeyMatches(c.ConfigKey, "Department", "Departments"))
-            .SelectMany(c => SplitCsv(c.ConfigValue))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(v => v)
-            .ToList();
+        ViewBag.DesignationOptions = await _context.Designations.AsNoTracking()
+            .Where(d => d.IsActive || (current != null && d.Id == current.DesignationId))
+            .OrderBy(d => d.Rank).ThenBy(d => d.Name)
+            .Select(d => new SelectListItem { Value = d.Id.ToString(), Text = d.Name })
+            .ToListAsync();
 
-        var designationOptions = configRows
-            .Where(c => KeyMatches(c.ConfigKey, "Designation", "Designations"))
-            .SelectMany(c => SplitCsv(c.ConfigValue))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(v => v)
-            .ToList();
-
-        var employeeStatusOptions = configRows
-            .Where(c => KeyMatches(c.ConfigKey, "EmployeeStatus"))
-            .SelectMany(c => SplitCsv(c.ConfigValue))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(v => v)
-            .ToList();
-
-        ViewBag.DepartmentOptions = departmentOptions;
-        ViewBag.DesignationOptions = designationOptions;
-        ViewBag.EmployeeStatusOptions = employeeStatusOptions;
-        ViewBag.ProjectOptions = await GetProjectOptionsAsync(selectedProject);
+        ViewBag.EmployeeStatusOptions = EmployeeStatusValues;
     }
 
     private bool EmployeeExists(int id)

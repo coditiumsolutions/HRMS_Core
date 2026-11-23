@@ -1,0 +1,111 @@
+@model HRMBT.Web.Models.ViewModels.LookupFormVm
+@{
+    var isNew = Model.Id == 0;
+    var labels = new Dictionary<string, string>
+    {
+        ["projects"] = "project", ["departments"] = "department", ["subdepartments"] = "sub-department",
+        ["designations"] = "designation", ["leavetypes"] = "leave type"
+    };
+    var what = labels.TryGetValue(Model.Kind, out var w) ? w : "entry";
+    ViewData["Title"] = (isNew ? "Add " : "Edit ") + what;
+    var departments = ViewBag.Departments as List<(int Id, string Name)> ?? new List<(int Id, string Name)>();
+}
+
+@section Styles {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" crossorigin="anonymous" />
+    <link rel="stylesheet" href="~/css/payslips.css" asp-append-version="true" />
+}
+
+<div class="payslip-page py-3">
+    <div class="container-fluid px-3 px-lg-4" style="max-width: 760px;">
+        <form asp-action="@(isNew ? "Create" : "Edit")" method="post">
+            <input type="hidden" asp-for="Kind" />
+            <input type="hidden" asp-for="Id" />
+            <div class="grid-card mb-3">
+                <div class="card-header"><span><i class="bi bi-pencil-square"></i>@ViewData["Title"]</span></div>
+                <div class="card-body">
+                    @if (!ViewData.ModelState.IsValid)
+                    {
+                        <div class="alert alert-danger" role="alert">@Html.ValidationSummary(false, "", new { @class = "mb-0" })</div>
+                    }
+
+                    @if (Model.Kind == "subdepartments")
+                    {
+                        <div class="mb-3">
+                            <label asp-for="DepartmentId" class="form-label fw-semibold"></label>
+                            <select asp-for="DepartmentId" class="form-select">
+                                <option value="">— Select department —</option>
+                                @foreach (var d in departments)
+                                {
+                                    <option value="@d.Id" selected="@(Model.DepartmentId == d.Id)">@d.Name</option>
+                                }
+                            </select>
+                        </div>
+                    }
+
+                    <div class="mb-3">
+                        <label asp-for="Name" class="form-label fw-semibold"></label>
+                        <input asp-for="Name" class="form-control" maxlength="@(Model.Kind == "leavetypes" ? 50 : 100)" autofocus />
+                    </div>
+
+                    @if (Model.Kind == "projects" || Model.Kind == "leavetypes")
+                    {
+                        <div class="mb-3">
+                            <label asp-for="Code" class="form-label fw-semibold">@(Model.Kind == "leavetypes" ? "Code (required, e.g. AL, CL, SL)" : "Code (optional)")</label>
+                            <input asp-for="Code" class="form-control" maxlength="@(Model.Kind == "leavetypes" ? 10 : 20)" style="max-width: 14rem;" />
+                        </div>
+                    }
+
+                    @if (Model.Kind == "designations")
+                    {
+                        <div class="mb-3">
+                            <label asp-for="Rank" class="form-label fw-semibold"></label>
+                            <input asp-for="Rank" type="number" min="0" max="10000" class="form-control" style="max-width: 10rem;" />
+                            <div class="form-text">Lower numbers come first in employee lists. Leave the default (100) until HR provides a ranking.</div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="mb-3">
+                            <label asp-for="SortOrder" class="form-label fw-semibold"></label>
+                            <input asp-for="SortOrder" type="number" class="form-control" style="max-width: 10rem;" />
+                            <div class="form-text">Lower numbers come first in lists and dropdowns; equal numbers sort by name.</div>
+                        </div>
+                    }
+
+                    @if (Model.Kind == "projects")
+                    {
+                        <div class="form-check mb-2">
+                            <input asp-for="HasLeaveManagement" class="form-check-input" />
+                            <label asp-for="HasLeaveManagement" class="form-check-label"></label>
+                            <div class="form-text">Turn off for projects whose staff have no leave management (for example Dastarkhuwans). An individual employee can still override this.</div>
+                        </div>
+                    }
+
+                    @if (Model.Kind == "leavetypes")
+                    {
+                        <div class="form-check mb-2">
+                            <input asp-for="IsPaid" class="form-check-input" />
+                            <label asp-for="IsPaid" class="form-check-label"></label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input asp-for="IsHalfDayAllowed" class="form-check-input" />
+                            <label asp-for="IsHalfDayAllowed" class="form-check-label"></label>
+                        </div>
+                    }
+
+                    <div class="form-check mb-3">
+                        <input asp-for="IsActive" class="form-check-input" />
+                        <label asp-for="IsActive" class="form-check-label"></label>
+                        <div class="form-text">Inactive entries are hidden from new entries; existing records keep them.</div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-sm btn-grid-edit"><i class="bi bi-check2 me-1"></i>Save</button>
+                        <a class="btn btn-sm btn-grid-delete" asp-action="Index" asp-route-kind="@Model.Kind" asp-route-departmentId="@(Model.Kind == "subdepartments" && Model.DepartmentId > 0 ? Model.DepartmentId : (int?)null)">Cancel</a>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>

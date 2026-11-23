@@ -176,7 +176,7 @@ namespace HRMBT.Web.Services.Payroll
                 totalPayrollDeductions = Math.Round(totalPayrollDeductions, 2, MidpointRounding.AwayFromZero);
 
                 // Tax is calculated on BasicSalary as requested.
-                var taxResult = CalculateTax(employee, basic, year);
+                var taxResult = CalculateTax(employee, basic, year, monthNum);
 
                 decimal totalWithheld = totalPayrollDeductions + taxResult.TaxAmount;
                 decimal netSalary = gross - totalWithheld;
@@ -270,12 +270,12 @@ namespace HRMBT.Web.Services.Payroll
         /// Chooses the slab with the greatest MinSalary whose band still contains the salary (proper bracket resolution).
         /// MaxSalary unset or zero is treated as no upper ceiling.
         /// </summary>
-        private (decimal TaxPercentage, decimal TaxAmount) CalculateTax(Employee employee, decimal basicSalary, int payslipYear)
+        private (decimal TaxPercentage, decimal TaxAmount) CalculateTax(Employee employee, decimal basicSalary, int payslipYear, int payslipMonth)
         {
             if (!ShouldApplyIncomeTax(employee.ApplyTax))
                 return (0m, 0m);
 
-            var applicableRule = FindApplicableTaxRule(basicSalary, payslipYear);
+            var applicableRule = FindApplicableTaxRule(basicSalary, payslipYear, payslipMonth);
             if (applicableRule == null)
                 return (0m, 0m);
 
@@ -309,29 +309,18 @@ namespace HRMBT.Web.Services.Payroll
         }
 
         /// <summary>
-        /// Loads rules; prefers rows whose <see cref="TaxRule.TaxYear"/> matches the payslip year. If none match (legacy DB), uses all rules.
-        /// Picks the slab with largest MinSalary bracket containing basicSalary.
+        /// Tax year starts on 1 July (T6): a payslip for July-December 2026 uses the 2026-2027 slabs, January-June 2026 uses 2025-2026.
+        /// Rules for any other year are ignored; with no slab for that year no tax is charged.
+        /// Picks the slab with the largest MinSalary bracket containing basicSalary.
         /// </summary>
-        private TaxRule? FindApplicableTaxRule(decimal basicSalary, int payslipYear)
+        private TaxRule? FindApplicableTaxRule(decimal basicSalary, int payslipYear, int payslipMonth)
         {
-            var rules = _context.TaxRules.AsNoTracking().ToList();
-            var yearKey = payslipYear.ToString(CultureInfo.InvariantCulture);
+            var taxYearStart = payslipMonth >= 7 ? payslipYear : payslipYear - 1;
+            var label = $"{taxYearStart}-{taxYearStart + 1}";
 
-            var labeled = rules.Where(r => !string.IsNullOrWhiteSpace(r.TaxYear)).ToList();
-            var forYear = labeled
-                .Where(r => string.Equals(r.TaxYear.Trim(), yearKey, StringComparison.OrdinalIgnoreCase))
-                .ToList();
-
-            List<TaxRule> pool;
-            if (forYear.Count > 0)
-                pool = forYear;
-            else
-            {
-                var wildcards = rules.Where(r => string.IsNullOrWhiteSpace(r.TaxYear)).ToList();
-                pool = wildcards.Count > 0 ? wildcards : rules;
-            }
-
-            return pool
+            return _context.TaxRules.AsNoTracking()
+                .Where(r => r.TaxYear == label)
+                .ToList()
                 .Where(r => basicSalary >= r.MinSalary && basicSalary <= EffectiveMaxInclusive(r.MaxSalary))
                 .OrderByDescending(r => r.MinSalary)
                 .FirstOrDefault();

@@ -36,6 +36,16 @@ public class EmployeeDocument
 
     public bool IsDeleted { get; set; }
 
+    [StringLength(30)]
+    public string? DocumentType { get; set; }
+
+    /// <summary>SHA-256 of the file content (T3).</summary>
+    [StringLength(64)]
+    public string? FileHash { get; set; }
+
+    [StringLength(100)]
+    public string? UploadedBy { get; set; }
+
     [ForeignKey(nameof(EmployeeId))]
     public Employee? Employee { get; set; }
 }

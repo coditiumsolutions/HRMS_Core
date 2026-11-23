@@ -265,7 +265,7 @@ public class DeductionsController : Controller
                 .Select(d => d.DepartmentName)
                 .FirstOrDefaultAsync();
             if (!string.IsNullOrWhiteSpace(deptName))
-                query = query.Where(d => d.Employee != null && d.Employee.Department == deptName);
+                query = query.Where(d => d.Employee != null && d.Employee.DepartmentInfo!.DepartmentName == deptName);
         }
 
         if (!string.IsNullOrWhiteSpace(empSearch))
@@ -325,7 +325,7 @@ public class DeductionsController : Controller
                 .Select(d => d.DepartmentName)
                 .FirstOrDefaultAsync();
             if (!string.IsNullOrWhiteSpace(deptName))
-                empQuery = empQuery.Where(e => e.Department != null && e.Department == deptName);
+                empQuery = empQuery.Where(e => e.DepartmentInfo!.DepartmentName != null && e.DepartmentInfo!.DepartmentName == deptName);
         }
 
         if (!string.IsNullOrWhiteSpace(empSearch))
@@ -572,7 +572,7 @@ public class DeductionsController : Controller
 
         var exact = await _context.Employees.AsNoTracking()
             .Where(e => e.EmployeeID != null && e.EmployeeID == term)
-            .Select(e => new { e.uid, e.EmployeeID, e.EmployeeName, e.EmployeeStatus, e.Department })
+            .Select(e => new { e.uid, e.EmployeeID, e.EmployeeName, e.EmployeeStatus, Department = e.DepartmentInfo!.DepartmentName })
             .FirstOrDefaultAsync();
 
         var match = exact;
@@ -581,7 +581,7 @@ public class DeductionsController : Controller
             match = await _context.Employees.AsNoTracking()
                 .Where(e => e.EmployeeID != null && e.EmployeeID.Contains(term))
                 .OrderBy(e => e.EmployeeID)
-                .Select(e => new { e.uid, e.EmployeeID, e.EmployeeName, e.EmployeeStatus, e.Department })
+                .Select(e => new { e.uid, e.EmployeeID, e.EmployeeName, e.EmployeeStatus, Department = e.DepartmentInfo!.DepartmentName })
                 .FirstOrDefaultAsync();
         }
 
@@ -607,13 +607,20 @@ public class DeductionsController : Controller
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(
-        [Bind("EmployeeId,DeductionType,DeductionName,Frequency,CalculationMethod,PercentageValue,IsMandatory,EffectiveDate,EndDate,IsActive")]
+        [Bind("EmployeeId,DeductionType,DeductionName,Frequency,CalculationMethod,PercentageValue,IsMandatory,EffectiveDate,EndDate,IsActive,RequestId")]
         Deduction deduction,
         string? employeeCode)
     {
         ViewData["Module"] = "Deductions";
         ViewData["Title"] = "Add deduction";
         ModelState.Remove(nameof(Deduction.Employee));
+
+        // S21: a replayed POST is shown as "already saved" instead of creating a second row
+        if (deduction.RequestId.HasValue && await _context.Deductions.AnyAsync(d => d.RequestId == deduction.RequestId))
+        {
+            TempData["SuccessMessage"] = "This deduction was already saved.";
+            return RedirectToAction(nameof(Index));
+        }
 
         Employee? employee = null;
         if (deduction.EmployeeId > 0)

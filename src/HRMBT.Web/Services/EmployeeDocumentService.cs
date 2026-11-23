@@ -132,6 +132,20 @@ public class EmployeeDocumentService : IEmployeeDocumentService
             }
 
             var originalName = Path.GetFileName(file.FileName);
+
+            // T3: the same file cannot be attached twice to one employee (a deleted document can be uploaded again)
+            string fileHash;
+            await using (var hashStream = file.OpenReadStream())
+            {
+                fileHash = Convert.ToHexString(await System.Security.Cryptography.SHA256.HashDataAsync(hashStream, cancellationToken)).ToLowerInvariant();
+            }
+            if (entities.Any(e => e.FileHash == fileHash)
+                || await _context.EmployeeDocuments.AnyAsync(d => d.EmployeeId == employeeUid && !d.IsDeleted && d.FileHash == fileHash, cancellationToken))
+            {
+                errors.Add($"{originalName}: this file is already attached to the employee.");
+                continue;
+            }
+
             var extension = NormalizeExtension(Path.GetExtension(originalName));
             var storedName = $"{Guid.NewGuid():N}{extension}";
             var physicalPath = Path.Combine(employeeFolder, storedName);
@@ -158,6 +172,7 @@ public class EmployeeDocumentService : IEmployeeDocumentService
                     FilePath = relativePath,
                     FileExtension = string.IsNullOrEmpty(extension) ? null : extension,
                     FileSize = file.Length,
+                    FileHash = fileHash,
                     UploadedOn = DateTime.Now,
                     IsDeleted = false
                 });
