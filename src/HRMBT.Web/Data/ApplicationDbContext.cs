@@ -292,6 +292,8 @@ namespace HRMBT.Web.Data
             modelBuilder.Entity<TaxRule>(entity =>
             {
                 entity.ToTable("TaxRules");
+                entity.Property(t => t.MinSalary).HasColumnType("decimal(18,2)");
+                entity.Property(t => t.MaxSalary).HasColumnType("decimal(18,2)");
                 entity.Property(t => t.TaxPercentage).HasColumnType("decimal(5,2)");
                 entity.Property(t => t.TaxYear).HasColumnName("TaxYearStart").HasColumnType("smallint")
                     .HasConversion(v => TaxYearToStart(v), v => StartToTaxYear(v));
@@ -329,6 +331,7 @@ namespace HRMBT.Web.Data
             });
             modelBuilder.Entity<PayslipDetail>(entity =>
             {
+                entity.Property(d => d.Amount).HasColumnType("decimal(18,2)");
                 entity.ToTable("PayslipDetails");
                 entity.Property(d => d.ItemType).HasMaxLength(20).IsUnicode(false);
                 entity.HasOne(d => d.Payslip)
@@ -344,6 +347,7 @@ namespace HRMBT.Web.Data
                     .HasConversion(v => MonthToNumber(v), v => NumberToMonth(v));
                 entity.Property(p => p.BasicSalary).HasColumnType("decimal(18,2)");
                 entity.Property(p => p.TotalAllowances).HasColumnType("decimal(18,2)");
+                entity.Property(p => p.LeaveDays).HasColumnType("decimal(5,2)");
                 entity.Property(p => p.GrossSalary).HasColumnType("decimal(18,2)");
                 entity.Property(p => p.TaxPercentage).HasColumnType("decimal(5,2)");
                 entity.Property(p => p.TaxAmount).HasColumnType("decimal(18,2)");
