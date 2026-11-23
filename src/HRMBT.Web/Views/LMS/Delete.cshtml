@@ -32,7 +32,7 @@
                         <dt class="col-sm-4">Leave type</dt>
                         <dd class="col-sm-8">@Model.LeaveType</dd>
                         <dt class="col-sm-4">Dates</dt>
-                        <dd class="col-sm-8">@Model.FromDate.ToString("yyyy-MM-dd") → @Model.ToDate.ToString("yyyy-MM-dd") (@days calendar days)</dd>
+                        <dd class="col-sm-8">@Fmt.ShortDate(Model.FromDate) → @Fmt.ShortDate(Model.ToDate) (@days calendar days)</dd>
                         <dt class="col-sm-4">Status</dt>
                         <dd class="col-sm-8">@(Model.Status ?? "—")</dd>
                     </dl>

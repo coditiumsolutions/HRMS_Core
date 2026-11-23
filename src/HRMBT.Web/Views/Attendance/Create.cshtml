@@ -169,7 +169,7 @@
                                             <td>
                                                 @if (item.DateOfJoining.HasValue)
                                                 {
-                                                    @item.DateOfJoining.Value.ToString("yyyy-MM-dd")
+                                                    @Fmt.ShortDate(item.DateOfJoining.Value)
                                                 }
                                             </td>
                                             <td>
@@ -188,7 +188,7 @@
                                             <td class="text-end salary">
                                                 @if (item.BasicSalary.HasValue)
                                                 {
-                                                    @item.BasicSalary.Value.ToString("N2")
+                                                    @Fmt.Amount(item.BasicSalary.Value)
                                                 }
                                             </td>
                                         </tr>

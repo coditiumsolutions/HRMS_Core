@@ -22,7 +22,7 @@
         }
         .employee-list-page .emp-summary-grid tbody td { color: #000; }
         .employee-list-page .emp-summary-grid tbody td.num {
-            color: #0d6efd;
+            color: var(--hr-teal-600, #2d6a87);
             font-weight: 700;
             font-variant-numeric: tabular-nums;
             text-align: end;
@@ -166,24 +166,24 @@
                                         <td class="num">
                                             @if (row.IsPercentage)
                                             {
-                                                @($"{row.PercentageValue:N2} %")
+                                                @(Fmt.Percent(row.PercentageValue))
                                             }
                                             else
                                             {
-                                                @row.Amount.ToString("N2")
+                                                @Fmt.Amount(row.Amount)
                                             }
                                         </td>
                                         <td>@row.EmployeeName</td>
                                         <td>@row.Department</td>
-                                        <td class="text-nowrap">@row.EffectiveDate.ToString("yyyy-MM-dd")</td>
-                                        <td class="text-nowrap">@(row.EndDate?.ToString("yyyy-MM-dd") ?? "—")</td>
+                                        <td class="text-nowrap">@Fmt.ShortDate(row.EffectiveDate)</td>
+                                        <td class="text-nowrap">@(Fmt.ShortDate(row.EndDate))</td>
                                     </tr>
                                 }
                             </tbody>
                             <tfoot>
                                 <tr>
                                     <td colspan="3">Total</td>
-                                    <td class="num">@Model.TotalAmount.ToString("N2")</td>
+                                    <td class="num">@Fmt.Amount(Model.TotalAmount)</td>
                                     <td colspan="4"></td>
                                 </tr>
                             </tfoot>

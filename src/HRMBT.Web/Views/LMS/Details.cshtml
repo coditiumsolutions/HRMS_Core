@@ -42,10 +42,10 @@
                         <dd class="col-sm-8">@Model.LeaveType</dd>
 
                         <dt class="col-sm-4 text-muted small text-uppercase">From date</dt>
-                        <dd class="col-sm-8">@Model.FromDate.ToString("yyyy-MM-dd")</dd>
+                        <dd class="col-sm-8">@Fmt.ShortDate(Model.FromDate)</dd>
 
                         <dt class="col-sm-4 text-muted small text-uppercase">To date</dt>
-                        <dd class="col-sm-8">@Model.ToDate.ToString("yyyy-MM-dd")</dd>
+                        <dd class="col-sm-8">@Fmt.ShortDate(Model.ToDate)</dd>
 
                         <dt class="col-sm-4 text-muted small text-uppercase">Calendar days</dt>
                         <dd class="col-sm-8">

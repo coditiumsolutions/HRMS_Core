@@ -109,8 +109,8 @@
                                         <td>@(row.EmployeeName ?? "—")</td>
                                         <td>@row.LeaveTypeName</td>
                                         <td class="text-end">@row.AvailableLeaves</td>
-                                        <td class="text-end">@row.AvailedLeaves.ToString("0.##")</td>
-                                        <td class="text-end">@row.BalanceLeaves.ToString("0.##")</td>
+                                        <td class="text-end">@Fmt.Number(row.AvailedLeaves)</td>
+                                        <td class="text-end">@Fmt.Number(row.BalanceLeaves)</td>
                                     </tr>
                                 }
                             </tbody>

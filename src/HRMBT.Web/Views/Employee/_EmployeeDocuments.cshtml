@@ -40,7 +40,7 @@
                                multiple
                                accept="@accept" />
                         <div class="form-text">
-                            Max @Model.MaxFilesPerUpload file(s) per upload · @maxMb.ToString("0.#") MB each ·
+                            Max @Model.MaxFilesPerUpload file(s) per upload · @Fmt.Number(maxMb) MB each ·
                             Allowed: @Model.AllowedExtensionsDisplay
                         </div>
                     </div>

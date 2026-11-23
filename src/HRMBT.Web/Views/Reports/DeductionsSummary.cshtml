@@ -22,7 +22,7 @@
         }
         .employee-list-page .emp-summary-grid tbody td { color: #000; }
         .employee-list-page .emp-summary-grid tbody td.num {
-            color: #0d6efd;
+            color: var(--hr-teal-600, #2d6a87);
             font-weight: 700;
             font-variant-numeric: tabular-nums;
             text-align: end;
@@ -166,17 +166,17 @@
                                         <td class="num">
                                             @if (row.IsPercentage)
                                             {
-                                                @($"{row.PercentageValue:N2} %")
+                                                @(Fmt.Percent(row.PercentageValue))
                                             }
                                             else
                                             {
-                                                @($"PKR {(row.PercentageValue ?? 0m):N2}")
+                                                @(Fmt.Money(row.PercentageValue ?? 0m))
                                             }
                                         </td>
                                         <td>@row.EmployeeName</td>
                                         <td>@row.Department</td>
-                                        <td class="text-nowrap">@row.EffectiveDate.ToString("yyyy-MM-dd")</td>
-                                        <td class="text-nowrap">@(row.EndDate?.ToString("yyyy-MM-dd") ?? "—")</td>
+                                        <td class="text-nowrap">@Fmt.ShortDate(row.EffectiveDate)</td>
+                                        <td class="text-nowrap">@(Fmt.ShortDate(row.EndDate))</td>
                                     </tr>
                                 }
                             </tbody>

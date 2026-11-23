@@ -172,7 +172,7 @@ public class HomeController : Controller
     private async Task SignInAsync(AppUser user)
     {
         var loggedInAt = DateTime.Now;
-        var loginAtStr = loggedInAt.ToString("dd MMM yyyy HH:mm", CultureInfo.CurrentCulture);
+        var loginAtStr = loggedInAt.ToString(Fmt.DateTimeFormat, CultureInfo.InvariantCulture);
 
         var claims = new List<Claim>
         {

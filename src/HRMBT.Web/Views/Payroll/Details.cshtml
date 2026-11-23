@@ -68,27 +68,27 @@
                             </tr>
                             <tr>
                                 <th scope="row" class="pd-label">Basic Salary</th>
-                                <td class="pd-value">@Model.BasicSalary.ToString("N2")</td>
+                                <td class="pd-value">@Fmt.Amount(Model.BasicSalary)</td>
                                 <th scope="row" class="pd-label">Total Allowances</th>
-                                <td class="pd-value">@(Model.TotalAllowances.HasValue ? Model.TotalAllowances.Value.ToString("N2") : "—")</td>
+                                <td class="pd-value">@(Model.TotalAllowances.HasValue ? Fmt.Amount(Model.TotalAllowances.Value) : "—")</td>
                             </tr>
                             <tr>
                                 <th scope="row" class="pd-label">Gross Salary</th>
-                                <td class="pd-value">@Model.GrossSalary.ToString("N2")</td>
+                                <td class="pd-value">@Fmt.Amount(Model.GrossSalary)</td>
                                 <th scope="row" class="pd-label">Tax Percentage</th>
-                                <td class="pd-value">@Model.TaxPercentage.ToString("N2")%</td>
+                                <td class="pd-value">@Fmt.Percent(Model.TaxPercentage)</td>
                             </tr>
                             <tr>
                                 <th scope="row" class="pd-label">Tax Amount</th>
-                                <td class="pd-value">@Model.TaxAmount.ToString("N2")</td>
+                                <td class="pd-value">@Fmt.Amount(Model.TaxAmount)</td>
                                 <th scope="row" class="pd-label">Total Deductions</th>
-                                <td class="pd-value">@payrollDedTotal.ToString("N2")</td>
+                                <td class="pd-value">@Fmt.Amount(payrollDedTotal)</td>
                             </tr>
                             <tr>
                                 <th scope="row" class="pd-label">Net Salary</th>
-                                <td class="pd-value pd-value-emphasis">@Model.NetSalary.ToString("N2")</td>
+                                <td class="pd-value pd-value-emphasis">@Fmt.Amount(Model.NetSalary)</td>
                                 <th scope="row" class="pd-label">Generated Date</th>
-                                <td class="pd-value">@Model.GeneratedDate.ToString("yyyy-MM-dd HH:mm")</td>
+                                <td class="pd-value">@Fmt.DateAndTime(Model.GeneratedDate)</td>
                             </tr>
                             @if (Model.WorkingDays.HasValue || Model.LeaveDays.HasValue)
                             {
@@ -96,7 +96,7 @@
                                     <th scope="row" class="pd-label">Working Days</th>
                                     <td class="pd-value">@(Model.WorkingDays?.ToString() ?? "—")</td>
                                     <th scope="row" class="pd-label">Leave Days</th>
-                                    <td class="pd-value">@(Model.LeaveDays?.ToString("N2") ?? "—")</td>
+                                    <td class="pd-value">@(Fmt.Amount(Model.LeaveDays))</td>
                                 </tr>
                             }
                         </tbody>
@@ -122,7 +122,7 @@
                                         <tr>
                                             <td>@line.ItemName</td>
                                             <td>@(string.IsNullOrWhiteSpace(line.ItemCategory) ? "—" : line.ItemCategory)</td>
-                                            <td class="text-end">@line.Amount.ToString("N2")</td>
+                                            <td class="text-end">@Fmt.Amount(line.Amount)</td>
                                         </tr>
                                     }
                                 </tbody>
@@ -150,27 +150,27 @@
                                         <tr>
                                             <td>@line.ItemName</td>
                                             <td>@(string.IsNullOrWhiteSpace(line.ItemCategory) ? "—" : line.ItemCategory)</td>
-                                            <td class="text-end">@line.Amount.ToString("N2")</td>
+                                            <td class="text-end">@Fmt.Amount(line.Amount)</td>
                                         </tr>
                                     }
                                     <tr class="table-light">
                                         <td colspan="2" class="fw-semibold">Total deductions</td>
-                                        <td class="text-end fw-semibold">@payrollDedTotal.ToString("N2")</td>
+                                        <td class="text-end fw-semibold">@Fmt.Amount(payrollDedTotal)</td>
                                     </tr>
                                     @foreach (var line in taxLines)
                                     {
                                         <tr>
                                             <td>@line.ItemName</td>
                                             <td>@(string.IsNullOrWhiteSpace(line.ItemCategory) ? "—" : line.ItemCategory)</td>
-                                            <td class="text-end">@line.Amount.ToString("N2")</td>
+                                            <td class="text-end">@Fmt.Amount(line.Amount)</td>
                                         </tr>
                                     }
                                     @if (taxLines.Count == 0 && Model.TaxAmount > 0)
                                     {
                                         <tr>
                                             <td>Income Tax</td>
-                                            <td>@Model.TaxPercentage.ToString("N2")% of Basic</td>
-                                            <td class="text-end">@Model.TaxAmount.ToString("N2")</td>
+                                            <td>@Fmt.Percent(Model.TaxPercentage) of Basic</td>
+                                            <td class="text-end">@Fmt.Amount(Model.TaxAmount)</td>
                                         </tr>
                                     }
                                 </tbody>
@@ -181,7 +181,7 @@
                     {
                         <p class="text-muted small mb-0">
                             No individual deduction lines on this payslip
-                            @(Model.TotalDeductions > 0 ? $"(header total: {Model.TotalDeductions:N2}). Re-generate payroll to store each deduction separately." : ".")
+                            @(Model.TotalDeductions > 0 ? $"(header total: {Fmt.Amount(Model.TotalDeductions)}). Re-generate payroll to store each deduction separately." : ".")
                         </p>
                     }
                 </div>

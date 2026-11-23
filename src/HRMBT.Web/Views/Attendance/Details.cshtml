@@ -42,10 +42,10 @@
                 <div class="card-body">
                     <dl class="row">
                         <dt class="col-sm-4">@Html.DisplayNameFor(model => model.TimeIn)</dt>
-                        <dd class="col-sm-8">@(Model.TimeIn?.ToString(@"hh\:mm\:ss") ?? "-")</dd>
+                        <dd class="col-sm-8">@Fmt.Time(Model.TimeIn)</dd>
 
                         <dt class="col-sm-4">@Html.DisplayNameFor(model => model.TimeOut)</dt>
-                        <dd class="col-sm-8">@(Model.TimeOut?.ToString(@"hh\:mm\:ss") ?? "-")</dd>
+                        <dd class="col-sm-8">@Fmt.Time(Model.TimeOut)</dd>
 
                         <dt class="col-sm-4">@Html.DisplayNameFor(model => model.Status)</dt>
                         <dd class="col-sm-8">

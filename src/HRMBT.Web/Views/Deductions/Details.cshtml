@@ -8,8 +8,8 @@
     var empCode = Model.Employee?.EmployeeID;
     var valueLabel = isPct ? "Percentage" : "Fixed (PKR)";
     var valueText = isPct
-        ? $"{Model.PercentageValue:N2} %"
-        : $"PKR {Model.PercentageValue:N2}";
+        ? Fmt.Percent(Model.PercentageValue)
+        : Fmt.Money(Model.PercentageValue);
 }
 
 @section Styles {
@@ -67,13 +67,13 @@
                             </tr>
                             <tr>
                                 <th scope="row" class="pd-label">Effective</th>
-                                <td class="pd-value">@Model.EffectiveDate.ToString("yyyy-MM-dd")</td>
+                                <td class="pd-value">@Fmt.ShortDate(Model.EffectiveDate)</td>
                                 <th scope="row" class="pd-label">End</th>
-                                <td class="pd-value">@(Model.EndDate?.ToString("yyyy-MM-dd") ?? "—")</td>
+                                <td class="pd-value">@(Fmt.ShortDate(Model.EndDate))</td>
                             </tr>
                             <tr>
                                 <th scope="row" class="pd-label">Created</th>
-                                <td class="pd-value">@Model.CreatedDate.ToString("yyyy-MM-dd HH:mm")</td>
+                                <td class="pd-value">@Fmt.DateAndTime(Model.CreatedDate)</td>
                                 <th scope="row" class="pd-label">Created by</th>
                                 <td class="pd-value">@(string.IsNullOrWhiteSpace(Model.CreatedBy) ? "—" : Model.CreatedBy)</td>
                             </tr>
@@ -81,7 +81,7 @@
                             {
                                 <tr>
                                     <th scope="row" class="pd-label">Modified</th>
-                                    <td class="pd-value">@Model.ModifiedDate.Value.ToString("yyyy-MM-dd HH:mm")</td>
+                                    <td class="pd-value">@Fmt.DateAndTime(Model.ModifiedDate.Value)</td>
                                     <th scope="row" class="pd-label">Modified by</th>
                                     <td class="pd-value">@(string.IsNullOrWhiteSpace(Model.ModifiedBy) ? "—" : Model.ModifiedBy)</td>
                                 </tr>

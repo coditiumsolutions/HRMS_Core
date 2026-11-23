@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using HRMBT.Web.Infrastructure;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -238,7 +239,7 @@ public class EmployeeController : Controller
             ws.Cells[row, 6].Value = e.Department;
             ws.Cells[row, 7].Value = e.Designation;
             ws.Cells[row, 8].Value = e.Project;
-            ws.Cells[row, 9].Value = e.DateOfJoining?.ToString("yyyy-MM-dd");
+            ws.Cells[row, 9].Value = Fmt.ShortDate(e.DateOfJoining);
             ws.Cells[row, 10].Value = e.EmployeeStatus;
             ws.Cells[row, 11].Value = e.BasicSalary;
             ws.Cells[row, 11].Style.Numberformat.Format = "#,##0.00";

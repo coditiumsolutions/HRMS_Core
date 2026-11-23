@@ -27,7 +27,7 @@
                     <span class="badge bg-success fs-6">@enteredCount</span>
                     @if (totalCount > 0)
                     {
-                        <span class="text-muted">(@((enteredCount * 100.0 / totalCount).ToString("F1"))%)</span>
+                        <span class="text-muted">(@Fmt.Percent((decimal)(enteredCount * 100.0 / totalCount)))</span>
                     }
                 </p>
                 <p class="mb-0">
@@ -35,7 +35,7 @@
                     <span class="badge bg-danger fs-6">@notEnteredCount</span>
                     @if (totalCount > 0)
                     {
-                        <span class="text-muted">(@((notEnteredCount * 100.0 / totalCount).ToString("F1"))%)</span>
+                        <span class="text-muted">(@Fmt.Percent((decimal)(notEnteredCount * 100.0 / totalCount)))</span>
                     }
                 </p>
             </div>
@@ -56,7 +56,7 @@
                             <span class="badge bg-success fs-6">@Model.SuccessfulRows</span>
                             @if (Model.TotalRows > 0)
                             {
-                                <span class="text-muted ms-2">(@((Model.SuccessfulRows * 100.0 / Model.TotalRows).ToString("F1"))% of total)</span>
+                                <span class="text-muted ms-2">(@Fmt.Percent((decimal)(Model.SuccessfulRows * 100.0 / Model.TotalRows)) of total)</span>
                             }
                         </dd>
                         
@@ -65,7 +65,7 @@
                             <span class="badge bg-danger fs-6">@Model.FailedRows</span>
                             @if (Model.TotalRows > 0)
                             {
-                                <span class="text-muted ms-2">(@((Model.FailedRows * 100.0 / Model.TotalRows).ToString("F1"))% of total)</span>
+                                <span class="text-muted ms-2">(@Fmt.Percent((decimal)(Model.FailedRows * 100.0 / Model.TotalRows)) of total)</span>
                             }
                         </dd>
                         

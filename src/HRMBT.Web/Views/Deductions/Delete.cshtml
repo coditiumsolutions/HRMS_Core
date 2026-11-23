@@ -34,11 +34,11 @@
                     <dd class="col-sm-9">
                         @if (isPct)
                         {
-                            @($"{Model.PercentageValue:N2} %")
+                            @(Fmt.Percent(Model.PercentageValue))
                         }
                         else
                         {
-                            @($"PKR {Model.PercentageValue:N2}")
+                            @(Fmt.Money(Model.PercentageValue))
                         }
                     </dd>
                 </dl>

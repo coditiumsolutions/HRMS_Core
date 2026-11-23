@@ -155,8 +155,8 @@
                                             <div class="emp-meta">@(item.Employee?.EmployeeID ?? ("#" + item.EmployeeId))</div>
                                         </td>
                                         <td class="text-nowrap">@item.Month @item.Year</td>
-                                        <td class="text-end salary col-salary">@item.BasicSalary.ToString("N2")</td>
-                                        <td class="text-end salary col-salary">@item.NetSalary.ToString("N2")</td>
+                                        <td class="text-end salary col-salary">@Fmt.Amount(item.BasicSalary)</td>
+                                        <td class="text-end salary col-salary">@Fmt.Amount(item.NetSalary)</td>
                                         <td>
                                             @if (item.IsLocked)
                                             {

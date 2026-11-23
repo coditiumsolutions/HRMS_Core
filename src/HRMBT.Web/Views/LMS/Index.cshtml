@@ -121,8 +121,8 @@
                                             }
                                         </td>
                                         <td>@item.LeaveType</td>
-                                        <td class="text-nowrap">@item.FromDate.ToString("yyyy-MM-dd")</td>
-                                        <td class="text-nowrap">@item.ToDate.ToString("yyyy-MM-dd")</td>
+                                        <td class="text-nowrap">@Fmt.ShortDate(item.FromDate)</td>
+                                        <td class="text-nowrap">@Fmt.ShortDate(item.ToDate)</td>
                                         <td>@item.CalendarDays</td>
                                         <td><span class="status-pill @statusClass">@(item.Status ?? "—")</span></td>
                                     </tr>

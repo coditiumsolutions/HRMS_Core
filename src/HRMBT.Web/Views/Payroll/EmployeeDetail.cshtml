@@ -160,10 +160,10 @@
                                         </td>
                                         <td>@item.Department</td>
                                         <td class="text-end salary">
-                                            @(item.BasicSalary.HasValue ? item.BasicSalary.Value.ToString("N2") : "—")
+                                            @(item.BasicSalary.HasValue ? Fmt.Amount(item.BasicSalary.Value) : "—")
                                         </td>
                                         <td class="text-end salary">
-                                            @(grossByUid.TryGetValue(item.uid, out var grossVal) ? grossVal.ToString("N2") : "—")
+                                            @(grossByUid.TryGetValue(item.uid, out var grossVal) ? Fmt.Amount(grossVal) : "—")
                                         </td>
                                         <td class="col-generation-status">@(string.IsNullOrWhiteSpace(item.GenStatus) ? "—" : item.GenStatus)</td>
                                     </tr>

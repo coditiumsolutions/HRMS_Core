@@ -1,3 +1,4 @@
+using HRMBT.Web.Infrastructure;
 using HRMBT.Web.Models;
 using HRMBT.Web.Data;
 using Microsoft.AspNetCore.Http;
@@ -39,7 +40,7 @@ namespace HRMBT.Web.Services
                 .FirstOrDefaultAsync();
             if (already != null)
             {
-                result.ErrorMessages = new List<string> { $"This file was already imported on {already.UploadDate:yyyy-MM-dd HH:mm}." };
+                result.ErrorMessages = new List<string> { $"This file was already imported on {Fmt.DateAndTime(already.UploadDate)}." };
                 return result;
             }
 
@@ -255,7 +256,7 @@ namespace HRMBT.Web.Services
                 .FirstOrDefaultAsync();
             if (already != null)
             {
-                result.ErrorMessages = new List<string> { $"This file was already imported on {already.UploadDate:yyyy-MM-dd HH:mm}." };
+                result.ErrorMessages = new List<string> { $"This file was already imported on {Fmt.DateAndTime(already.UploadDate)}." };
                 return result;
             }
 

@@ -287,7 +287,7 @@
                                                         <strong class="text-dark d-block">Last modified</strong>
                                                         @if (!string.IsNullOrWhiteSpace(Model.ModifiedOn))
                                                         {
-                                                            <span>@Model.ModifiedOn</span>
+                                                            <span>@Fmt.DateAndTime(Model.ModifiedOn)</span>
                                                         }
                                                         else
                                                         {
@@ -324,7 +324,7 @@
                                                     @if (Model.DateOfJoining.HasValue)
                                                     {
                                                         <tr class="emp-form-row">
-                                                            <td class="emp-field-cell">@Model.DateOfJoining.Value.ToString("dd-MMM-yyyy")</td>
+                                                            <td class="emp-field-cell">@Fmt.ShortDate(Model.DateOfJoining.Value)</td>
                                                             <td class="emp-field-cell">Joined</td>
                                                             <td class="emp-field-cell">
                                                                 @(string.IsNullOrWhiteSpace(Model.Department) ? "—" : Model.Department)
@@ -339,7 +339,7 @@
                                                     @if (!string.IsNullOrWhiteSpace(Model.ModifiedOn))
                                                     {
                                                         <tr class="emp-form-row">
-                                                            <td class="emp-field-cell">@Model.ModifiedOn</td>
+                                                            <td class="emp-field-cell">@Fmt.DateAndTime(Model.ModifiedOn)</td>
                                                             <td class="emp-field-cell">Record updated</td>
                                                             <td class="emp-field-cell">
                                                                 Status: @(string.IsNullOrWhiteSpace(Model.EmployeeStatus) ? "—" : Model.EmployeeStatus)

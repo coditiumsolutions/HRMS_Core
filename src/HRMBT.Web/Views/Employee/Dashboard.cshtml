@@ -82,7 +82,7 @@
                     <span class="kpi-icon"><i class="bi bi-people-fill"></i></span>
                     <div>
                         <div class="kpi-label">Total Employees</div>
-                        <div class="kpi-value">@Model.TotalEmployees.ToString("N0")</div>
+                        <div class="kpi-value">@Fmt.Int(Model.TotalEmployees)</div>
                         <div class="kpi-sub">across @Model.DepartmentCount departments</div>
                     </div>
                 </div>
@@ -92,8 +92,8 @@
                     <span class="kpi-icon"><i class="bi bi-check2-circle"></i></span>
                     <div>
                         <div class="kpi-label">Active</div>
-                        <div class="kpi-value">@Model.ActiveEmployees.ToString("N0")</div>
-                        <div class="kpi-sub">@(Model.TotalEmployees == 0 ? "—" : (Model.ActiveEmployees * 100.0 / Model.TotalEmployees).ToString("0.#") + "%") of workforce</div>
+                        <div class="kpi-value">@Fmt.Int(Model.ActiveEmployees)</div>
+                        <div class="kpi-sub">@(Model.TotalEmployees == 0 ? "—" : Fmt.Percent((decimal)(Model.ActiveEmployees * 100.0 / Model.TotalEmployees))) of workforce</div>
                     </div>
                 </div>
             </div>
@@ -102,7 +102,7 @@
                     <span class="kpi-icon"><i class="bi bi-airplane"></i></span>
                     <div>
                         <div class="kpi-label">On Leave</div>
-                        <div class="kpi-value">@Model.OnLeaveEmployees.ToString("N0")</div>
+                        <div class="kpi-value">@Fmt.Int(Model.OnLeaveEmployees)</div>
                         <div class="kpi-sub">currently away</div>
                     </div>
                 </div>
@@ -112,7 +112,7 @@
                     <span class="kpi-icon"><i class="bi bi-x-octagon"></i></span>
                     <div>
                         <div class="kpi-label">Inactive</div>
-                        <div class="kpi-value">@Model.InactiveEmployees.ToString("N0")</div>
+                        <div class="kpi-value">@Fmt.Int(Model.InactiveEmployees)</div>
                         <div class="kpi-sub">resigned / terminated</div>
                     </div>
                 </div>
@@ -125,7 +125,7 @@
                         <div class="kpi-value" style="font-size:1.15rem; line-height:1.25;">
                             @(Model.TopDepartment?.Department ?? "—")
                         </div>
-                        <div class="kpi-sub">@(Model.TopDepartment == null ? "no data" : Model.TopDepartment.Count.ToString("N0") + " employees")</div>
+                        <div class="kpi-sub">@(Model.TopDepartment == null ? "no data" : Fmt.Int(Model.TopDepartment.Count) + " employees")</div>
                     </div>
                 </div>
             </div>

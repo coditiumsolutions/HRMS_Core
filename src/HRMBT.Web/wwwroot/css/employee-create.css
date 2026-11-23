@@ -90,7 +90,7 @@
   border: 1px solid #ced4da;
   font-size: 0.875rem;
   padding: 0.3rem 0.65rem;
-  color: #0d6efd;
+  color: var(--hr-teal-600, #2d6a87);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -552,13 +552,13 @@
   vertical-align: middle;
   padding: 0.3rem 0.65rem;
   border-bottom: 1px solid #eef0f2;
-  color: #0d6efd;
+  color: var(--hr-teal-600, #2d6a87);
 }
 
 .employee-create-page .emp-form-table .emp-field-cell .form-control,
 .employee-create-page .emp-form-table .emp-field-cell .form-select {
   max-width: 100%;
-  color: #0d6efd;
+  color: var(--hr-teal-600, #2d6a87);
 }
 
 .employee-create-page .emp-field-narrow {
@@ -614,14 +614,14 @@
   font-weight: 600;
   letter-spacing: normal;
   text-transform: none;
-  color: #000;
+  color: var(--hr-ink-2, #4a5570);
   margin-bottom: 0;
 }
 
 .employee-create-page .emp-details-table .info-value {
   display: block;
   font-size: 0.875rem;
-  color: #0d6efd;
+  color: var(--hr-ink, #16213a);
   font-weight: 500;
   word-break: break-word;
 }
@@ -634,11 +634,11 @@
 
 .employee-create-page .emp-details-table .emp-label-cell {
   vertical-align: middle;
-  color: #000;
+  color: var(--hr-ink-2, #4a5570);
 }
 
 .employee-create-page .emp-details-table .emp-field-cell {
-  color: #0d6efd;
+  color: var(--hr-ink, #16213a);
 }
 
 .employee-create-page .emp-details-table .emp-field-cell .status-pill {
@@ -664,7 +664,7 @@
 
 .employee-create-page .emp-salary-list tbody td.text-end {
   font-variant-numeric: tabular-nums;
-  color: #0d6efd;
+  color: var(--hr-teal-600, #2d6a87);
   font-weight: 600;
 }
 
@@ -753,3 +753,22 @@
   }
 }
 
+/* Collapsible "Additional Info" block at the bottom of Employee Info */
+.employee-create-page .emp-collapse-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.65rem 0.9rem;
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    border-radius: 0.5rem;
+    background: #f8f9fa;
+    color: #212529;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+}
+.employee-create-page .emp-collapse-toggle:hover { background: #eef1f4; }
+.employee-create-page .emp-collapse-toggle .emp-chevron { transition: transform 0.15s ease; font-size: 0.8rem; }
+.employee-create-page .emp-collapse-toggle[aria-expanded="true"] .emp-chevron { transform: rotate(90deg); }
+.employee-create-page .emp-collapse-hint { margin-left: auto; font-weight: 400; font-size: 0.85rem; color: #6c757d; }

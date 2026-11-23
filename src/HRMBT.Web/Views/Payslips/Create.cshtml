@@ -310,7 +310,7 @@
 
             function fmt(n) {
                 if (isNaN(n) || n === null || n === undefined) n = 0;
-                return Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                return Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             }
 
             function recalc() {

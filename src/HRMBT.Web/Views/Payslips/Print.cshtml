@@ -66,7 +66,7 @@
                 <h2>Attendance &amp; leave</h2>
                 <div class="pp-grid">
                     <div class="pp-row"><span class="pp-key">Working days</span><span class="pp-val">@(Model.WorkingDays?.ToString() ?? "—")</span></div>
-                    <div class="pp-row"><span class="pp-key">Leave days</span><span class="pp-val">@(Model.LeaveDays?.ToString("0.##") ?? "—")</span></div>
+                    <div class="pp-row"><span class="pp-key">Leave days</span><span class="pp-val">@(Fmt.Number(Model.LeaveDays))</span></div>
                     <div class="pp-row"><span class="pp-key">Leave balance</span><span class="pp-val">@(string.IsNullOrWhiteSpace(Model.LeaveBalance) ? "—" : Model.LeaveBalance)</span></div>
                 </div>
             </div>
@@ -83,38 +83,38 @@
                     <tbody>
                         <tr>
                             <td>Basic Salary</td>
-                            <td class="amount">@Model.BasicSalary.ToString("N2")</td>
+                            <td class="amount">@Fmt.Amount(Model.BasicSalary)</td>
                         </tr>
                         @foreach (var line in allowanceLines)
                         {
                             <tr>
                                 <td>@line.ItemName (@line.ItemCategory)</td>
-                                <td class="amount">@line.Amount.ToString("N2")</td>
+                                <td class="amount">@Fmt.Amount(line.Amount)</td>
                             </tr>
                         }
                         @if (Model.TotalAllowances.HasValue || allowanceLines.Count > 0)
                         {
                             <tr class="table-light">
                                 <td><strong>Total Allowances</strong></td>
-                                <td class="amount"><strong>@((Model.TotalAllowances ?? allowanceLines.Sum(l => l.Amount)).ToString("N2"))</strong></td>
+                                <td class="amount"><strong>@Fmt.Amount(Model.TotalAllowances ?? allowanceLines.Sum(l => l.Amount))</strong></td>
                             </tr>
                         }
                         <tr>
                             <td>Gross Salary</td>
-                            <td class="amount">@Model.GrossSalary.ToString("N2")</td>
+                            <td class="amount">@Fmt.Amount(Model.GrossSalary)</td>
                         </tr>
                         @foreach (var line in deductionLines)
                         {
                             <tr>
                                 <td>@line.ItemName (@line.ItemCategory)</td>
-                                <td class="amount">- @line.Amount.ToString("N2")</td>
+                                <td class="amount">- @Fmt.Amount(line.Amount)</td>
                             </tr>
                         }
                         @if (Model.TotalDeductions > 0 || deductionLines.Count > 0)
                         {
                             <tr class="table-light">
                                 <td><strong>Total payroll deductions</strong></td>
-                                <td class="amount"><strong>- @payrollDedTotal.ToString("N2")</strong></td>
+                                <td class="amount"><strong>- @Fmt.Amount(payrollDedTotal)</strong></td>
                             </tr>
                         }
                         @{
@@ -127,14 +127,14 @@
                         {
                             <tr>
                                 <td>@line.ItemName (@line.ItemCategory)</td>
-                                <td class="amount">- @line.Amount.ToString("N2")</td>
+                                <td class="amount">- @Fmt.Amount(line.Amount)</td>
                             </tr>
                         }
                         @if (taxLines.Count == 0 && Model.TaxAmount > 0)
                         {
                             <tr>
-                                <td>Income tax (@Model.TaxPercentage.ToString("N2")% of basic)</td>
-                                <td class="amount">- @Model.TaxAmount.ToString("N2")</td>
+                                <td>Income tax (@Fmt.Percent(Model.TaxPercentage) of basic)</td>
+                                <td class="amount">- @Fmt.Amount(Model.TaxAmount)</td>
                             </tr>
                         }
                     </tbody>
@@ -143,7 +143,7 @@
 
             <div class="pp-net">
                 <span class="pp-net-label">Net Salary Payable</span>
-                <span class="pp-net-value">PKR @Model.NetSalary.ToString("N2")</span>
+                <span class="pp-net-value">@Fmt.Money(Model.NetSalary)</span>
             </div>
 
             @if (!string.IsNullOrWhiteSpace(Model.Notes))
@@ -156,7 +156,7 @@
 
             <div class="pp-footer">
                 <div>
-                    Generated on @Model.GeneratedDate.ToString("dd MMM yyyy HH:mm") by <strong>@(string.IsNullOrWhiteSpace(Model.GeneratedBy) ? "System" : Model.GeneratedBy)</strong>.
+                    Generated on @Fmt.DateAndTime(Model.GeneratedDate) by <strong>@(string.IsNullOrWhiteSpace(Model.GeneratedBy) ? "System" : Model.GeneratedBy)</strong>.
                     This is a computer-generated document.
                 </div>
                 <div class="d-grid gap-3" style="grid-template-columns: 1fr 1fr;">

@@ -7,8 +7,12 @@
 
     var storageKey = root.getAttribute('data-tab-storage-key') || 'hrms.employeeDetails.activeTab';
 
+    // Personal Info, Official Info and Additional Info were merged into Employee Info.
+    var legacyKeys = { personal: 'employee', official: 'employee', additional: 'employee' };
+
     function getTabButton(key) {
         if (!key) return null;
+        key = legacyKeys[key] || key;
         return tabList.querySelector('[data-tab-key="' + key + '"]');
     }
 

@@ -1,3 +1,4 @@
+using HRMBT.Web.Infrastructure;
 using System.Globalization;
 using HRMBT.Web.Data;
 using HRMBT.Web.Models;
@@ -61,7 +62,7 @@ public class EmployeeDocumentService : IEmployeeDocumentService
             doc.FileSizeDisplay = FormatFileSize(doc.FileSize);
             doc.UploadedOnDisplay = doc.UploadedOn == DateTime.MinValue
                 ? "—"
-                : doc.UploadedOn.ToString("dd MMM yyyy HH:mm", CultureInfo.CurrentCulture);
+                : Fmt.DateAndTime(doc.UploadedOn);
         }
 
         return new EmployeeDocumentsViewModel

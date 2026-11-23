@@ -34,7 +34,7 @@
             padding: 0.35rem 0.55rem;
             vertical-align: middle;
             font-size: 0.875rem;
-            color: #0d6efd;
+            color: var(--hr-teal-600, #2d6a87);
             word-break: break-word;
         }
         .allowance-details-table tr { border-bottom: 1px solid #eef0f2; }
@@ -96,7 +96,7 @@
                                 <th scope="row" class="pd-label">Frequency</th>
                                 <td class="pd-value">@Show(Model.Frequency)</td>
                                 <th scope="row" class="pd-label">Amount</th>
-                                <td class="pd-value">@Model.Amount.ToString("N2")</td>
+                                <td class="pd-value">@Fmt.Amount(Model.Amount)</td>
                             </tr>
                             <tr>
                                 <th scope="row" class="pd-label">Quantity</th>
@@ -106,13 +106,13 @@
                             </tr>
                             <tr>
                                 <th scope="row" class="pd-label">Percentage (%)</th>
-                                <td class="pd-value">@(Model.PercentageValue?.ToString("N2") ?? "—")</td>
+                                <td class="pd-value">@(Fmt.Amount(Model.PercentageValue))</td>
                                 <th scope="row" class="pd-label">Effective date</th>
-                                <td class="pd-value">@Model.EffectiveDate.ToString("yyyy-MM-dd")</td>
+                                <td class="pd-value">@Fmt.ShortDate(Model.EffectiveDate)</td>
                             </tr>
                             <tr>
                                 <th scope="row" class="pd-label">End date</th>
-                                <td class="pd-value">@(Model.EndDate.HasValue ? Model.EndDate.Value.ToString("yyyy-MM-dd") : "—")</td>
+                                <td class="pd-value">@(Model.EndDate.HasValue ? Fmt.ShortDate(Model.EndDate.Value) : "—")</td>
                                 <th scope="row" class="pd-label">Active</th>
                                 <td class="pd-value">@(Model.IsActive ? "Yes" : "No")</td>
                             </tr>
@@ -122,9 +122,9 @@
                             </tr>
                             <tr>
                                 <th scope="row" class="pd-label">Created</th>
-                                <td class="pd-value">@Model.CreatedDate.ToString("g") · @Show(Model.CreatedBy)</td>
+                                <td class="pd-value">@Fmt.DateAndTime(Model.CreatedDate) · @Show(Model.CreatedBy)</td>
                                 <th scope="row" class="pd-label">Modified</th>
-                                <td class="pd-value">@(Model.ModifiedDate.HasValue ? Model.ModifiedDate.Value.ToString("g") + " · " + Show(Model.ModifiedBy) : "—")</td>
+                                <td class="pd-value">@(Model.ModifiedDate.HasValue ? Fmt.DateAndTime(Model.ModifiedDate.Value) + " · " + Show(Model.ModifiedBy) : "—")</td>
                             </tr>
                         </tbody>
                     </table>

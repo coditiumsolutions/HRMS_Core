@@ -185,12 +185,12 @@
                                         <td>@item.Name</td>
                                         <td>@item.AllowanceType</td>
                                         <td>@(string.IsNullOrWhiteSpace(item.Frequency) ? "—" : item.Frequency)</td>
-                                        <td class="text-end salary col-salary">@item.Amount.ToString("N2")</td>
+                                        <td class="text-end salary col-salary">@Fmt.Amount(item.Amount)</td>
                                         <td class="text-end">@item.Quantity</td>
                                         <td>@(item.IsPercentage ? "Y" : "N")</td>
-                                        <td class="text-end">@(item.PercentageValue?.ToString("N2") ?? "—")</td>
-                                        <td class="text-nowrap">@item.EffectiveDate.ToString("dd-MMM-yy")</td>
-                                        <td class="text-nowrap">@(item.EndDate.HasValue ? item.EndDate.Value.ToString("dd-MMM-yy") : "—")</td>
+                                        <td class="text-end">@(Fmt.Amount(item.PercentageValue))</td>
+                                        <td class="text-nowrap">@Fmt.ShortDate(item.EffectiveDate)</td>
+                                        <td class="text-nowrap">@(item.EndDate.HasValue ? Fmt.ShortDate(item.EndDate.Value) : "—")</td>
                                         <td>
                                             @if (item.IsActive)
                                             {

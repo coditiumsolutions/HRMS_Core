@@ -116,9 +116,9 @@
                                         <td class="col-emp-id"><span class="text-muted small emp-id-cell">@item.EmployeeID</span></td>
                                         <td><div class="emp-name">@item.EmployeeName</div></td>
                                         <td>@item.DepartmentName</td>
-                                        <td class="text-nowrap">@item.AttendanceDate.ToString("yyyy-MM-dd")</td>
-                                        <td>@(item.TimeIn?.ToString(@"hh\:mm\:ss") ?? "—")</td>
-                                        <td>@(item.TimeOut?.ToString(@"hh\:mm\:ss") ?? "—")</td>
+                                        <td class="text-nowrap">@Fmt.ShortDate(item.AttendanceDate)</td>
+                                        <td>@Fmt.Time(item.TimeIn)</td>
+                                        <td>@Fmt.Time(item.TimeOut)</td>
                                         <td><span class="status-pill @statusClass">@statusLabel</span></td>
                                     </tr>
                                 }

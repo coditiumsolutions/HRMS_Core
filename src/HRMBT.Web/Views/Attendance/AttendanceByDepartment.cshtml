@@ -48,7 +48,7 @@
                     <i class="bi bi-table"></i>
                     @if (ViewBag.AttendanceDate != null)
                     {
-                        <text>Department summary for @ViewBag.AttendanceDate.ToString("dd MMM yyyy")</text>
+                        <text>Department summary for @Fmt.ShortDate(ViewBag.AttendanceDate)</text>
                     }
                     else
                     {

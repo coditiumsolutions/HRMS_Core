@@ -1,3 +1,4 @@
+using HRMBT.Web.Infrastructure;
 using HRMBT.Web.Data;
 using HRMBT.Web.Models;
 using HRMBT.Web.Models.ViewModels;
@@ -243,7 +244,7 @@ public class SetupController : Controller
             user.PasswordHash = LoginPasswordHasher.Hash(model.Password);
 
         var actor = User.Identity?.Name ?? "Setup";
-        var line = $"{DateTime.Now:yyyy-MM-dd HH:mm} updated by {actor}";
+        var line = $"{Fmt.DateAndTime(DateTime.Now)} updated by {actor}";
         user.History = string.IsNullOrEmpty(user.History) ? line : user.History + Environment.NewLine + line;
 
         await _context.SaveChangesAsync();

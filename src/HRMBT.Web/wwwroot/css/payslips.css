@@ -279,10 +279,10 @@
   background: #ffffff;
 }
 .payslip-page table.payslip-grid tbody tr:nth-child(even) {
-  background: #dce8f2;
+  background: var(--hr-surface-2, #faf8f3);
 }
 .payslip-page table.payslip-grid tbody tr:hover {
-  background: #fff3c4;
+  background: var(--hr-brass-100, #f6efd6);
   box-shadow: inset 4px 0 0 #d4af37;
 }
 
@@ -358,7 +358,7 @@
   transition: transform 0.12s ease, border-color 0.12s ease, color 0.12s ease, background 0.12s ease;
 }
 .payslip-page .row-actions .btn:hover { transform: translateY(-1px); border-color: var(--row-action-color); }
-.payslip-page .row-actions .btn-view   { --row-action-color: #0d6efd; }
+.payslip-page .row-actions .btn-view   { --row-action-color: var(--hr-teal-600, #2d6a87); }
 .payslip-page .row-actions .btn-edit {
   --row-action-color: #00203f;
   background: #d4af37;
@@ -452,7 +452,7 @@
   vertical-align: middle;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #0d6efd;
+  color: var(--hr-teal-600, #2d6a87);
   word-break: break-word;
 }
 .payslip-page .payroll-details-table .pd-value-emphasis {

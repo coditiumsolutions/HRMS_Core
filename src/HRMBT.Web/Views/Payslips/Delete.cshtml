@@ -46,7 +46,7 @@
                             </div>
                             <div class="info-cell">
                                 <span class="info-label">Net salary</span>
-                                <span class="info-value">PKR @Model.NetSalary.ToString("N2")</span>
+                                <span class="info-value">@Fmt.Money(Model.NetSalary)</span>
                             </div>
                             <div class="info-cell">
                                 <span class="info-label">Status</span>
@@ -63,7 +63,7 @@
                             </div>
                             <div class="info-cell">
                                 <span class="info-label">Generated</span>
-                                <span class="info-value">@Model.GeneratedDate.ToString("dd MMM yyyy HH:mm")</span>
+                                <span class="info-value">@Fmt.DateAndTime(Model.GeneratedDate)</span>
                             </div>
                         </div>
 

@@ -64,6 +64,10 @@ Config-driven dropdowns (Department, Designation, Project, LeaveTypes, Allowance
 - `TaxRules.TaxYear` is stored as `2025-2026`/`2026-2027`, but the payroll lookup compares it to the payslip year (`2026`); nothing matches and all slabs are pooled. Fix this before relying on tax output.
 - Attendance and leave do not feed payroll yet (`Payslips.WorkingDays/LeaveDays/LeaveBalance` are unused). HR requirements for the planned attendance/schedule/leave rework (hourly pay, 7h minimum day, half days with approval, overnight shifts, per-employee leave quotas, Dastarkhuwan staff without leave) are in the project discussion, not in code; `Attendance`/`EmployeeLeaves` are empty in production.
 
+## UI display
+
+- Show numbers, dates and times in views through `Infrastructure/Fmt` (`Fmt.Amount`, `Fmt.Int`, `Fmt.Number`, `Fmt.Percent`, `Fmt.Range`, `Fmt.ShortDate`, `Fmt.LongDate`, `Fmt.Time`, `Fmt.DateAndTime`, `Fmt.DateRange`), never `ToString("N2")`/`ToString("yyyy-MM-dd")` in a view. `<input type="date">` values stay ISO. Formats: dates DD/MM/YYYY, times 12-hour, date-times time first (`02:05 PM 23/11/2026`). Colours/spacing come from `wwwroot/css/hrms-theme.css` tokens; tables are aligned by `wwwroot/js/hrms-grid.js`. Standard and examples: `docs/ui_standards.md`.
+
 ## Docs
 
 - `docs/analysis/` - static analysis (stack, functionality, data, security, deployment, gaps, UI). `05-deployment.md` is marked outdated in its frontmatter; `docs/deployment.md` is current. Docs with `status: outdated` frontmatter should not be trusted for server/IP details.

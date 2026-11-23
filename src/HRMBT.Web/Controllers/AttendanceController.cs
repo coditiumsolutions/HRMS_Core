@@ -1,3 +1,4 @@
+using HRMBT.Web.Infrastructure;
 using HRMBT.Web.Models;
 using HRMBT.Web.Models.ViewModels;
 using HRMBT.Web.Services;
@@ -171,7 +172,7 @@ namespace HRMBT.Web.Controllers
                     if (existing != null)
                     {
                         skipCount++;
-                        errors.Add($"Attendance already exists for {employee.EmployeeName} ({employeeId}) on {attendanceDate:yyyy-MM-dd}.");
+                        errors.Add($"Attendance already exists for {employee.EmployeeName} ({employeeId}) on {Fmt.ShortDate(attendanceDate)}.");
                         continue;
                     }
 
@@ -375,7 +376,7 @@ namespace HRMBT.Web.Controllers
                 existingSet.Add(emp.uid);
             }
 
-            var summaryLine = $"Off-day for {day:yyyy-MM-dd}, leave type \"{canonicalType}\": {toAdd.Count} new row(s) to save, {skipped.Count} skipped (duplicate), {notFound.Count} unknown ID(s), {selectedEmployeeIds.Count} checkbox(es) posted.";
+            var summaryLine = $"Off-day for {Fmt.ShortDate(day)}, leave type \"{canonicalType}\": {toAdd.Count} new row(s) to save, {skipped.Count} skipped (duplicate), {notFound.Count} unknown ID(s), {selectedEmployeeIds.Count} checkbox(es) posted.";
 
             var detailLines = new List<string>();
             if (skipped.Count > 0)

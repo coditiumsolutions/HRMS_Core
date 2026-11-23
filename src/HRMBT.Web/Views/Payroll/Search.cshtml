@@ -143,8 +143,8 @@
                                             <div class="fw-semibold">@(item.Employee?.EmployeeName ?? "—")</div>
                                         </td>
                                         <td class="text-nowrap">@item.Month @item.Year</td>
-                                        <td class="text-end salary">@item.GrossSalary.ToString("N2")</td>
-                                        <td class="text-end salary">@item.NetSalary.ToString("N2")</td>
+                                        <td class="text-end salary">@Fmt.Amount(item.GrossSalary)</td>
+                                        <td class="text-end salary">@Fmt.Amount(item.NetSalary)</td>
                                         <td>@(string.IsNullOrWhiteSpace(item.Employee?.GenStatus) ? "—" : item.Employee!.GenStatus)</td>
                                         <td class="text-end">
                                             <div class="row-actions">

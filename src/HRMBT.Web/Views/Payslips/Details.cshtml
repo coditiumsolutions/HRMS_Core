@@ -69,35 +69,35 @@
                         <div class="info-grid info-grid-4">
                             <div class="info-cell">
                                 <span class="info-label">Basic Salary</span>
-                                <span class="info-value">PKR @Model.BasicSalary.ToString("N2")</span>
+                                <span class="info-value">@Fmt.Money(Model.BasicSalary)</span>
                             </div>
                             <div class="info-cell">
                                 <span class="info-label">Total Allowances</span>
                                 <span class="info-value @(Model.TotalAllowances.HasValue || allowanceLines.Count > 0 ? "" : "text-empty")">
                                     @(Model.TotalAllowances.HasValue || allowanceLines.Count > 0
-                                        ? $"PKR {(Model.TotalAllowances ?? allowanceLines.Sum(l => l.Amount)):N2}"
+                                        ? Fmt.Money(Model.TotalAllowances ?? allowanceLines.Sum(l => l.Amount))
                                         : "—")
                                 </span>
                             </div>
                             <div class="info-cell">
                                 <span class="info-label">Gross Salary</span>
-                                <span class="info-value">PKR @Model.GrossSalary.ToString("N2")</span>
+                                <span class="info-value">@Fmt.Money(Model.GrossSalary)</span>
                             </div>
                             <div class="info-cell">
                                 <span class="info-label">Payroll deductions</span>
                                 <span class="info-value @(Model.TotalDeductions > 0 || deductionLines.Count > 0 ? "" : "text-empty")">
-                                    @(Model.TotalDeductions > 0 || deductionLines.Count > 0 ? $"PKR {payrollDedTotal:N2}" : "—")
+                                    @(Model.TotalDeductions > 0 || deductionLines.Count > 0 ? Fmt.Money(payrollDedTotal) : "—")
                                 </span>
                             </div>
                         </div>
                         <div class="info-grid info-grid-4 mt-2">
                             <div class="info-cell">
                                 <span class="info-label">Income tax</span>
-                                <span class="info-value @(Model.TaxAmount > 0 ? "" : "text-empty")">@(Model.TaxAmount > 0 ? $"PKR {Model.TaxAmount:N2}" : "—")</span>
+                                <span class="info-value @(Model.TaxAmount > 0 ? "" : "text-empty")">@(Model.TaxAmount > 0 ? Fmt.Money(Model.TaxAmount) : "—")</span>
                             </div>
                             <div class="info-cell">
                                 <span class="info-label">Tax % (of basic)</span>
-                                <span class="info-value">@Model.TaxPercentage.ToString("N2")%</span>
+                                <span class="info-value">@Fmt.Percent(Model.TaxPercentage)</span>
                             </div>
                             <div class="info-cell" style="grid-column: span 2;"></div>
                         </div>
@@ -116,7 +116,7 @@
                                         {
                                             <tr>
                                                 <td>@line.ItemName <span class="text-muted small">(@line.ItemCategory)</span></td>
-                                                <td class="text-end">@line.Amount.ToString("N2")</td>
+                                                <td class="text-end">@Fmt.Amount(line.Amount)</td>
                                             </tr>
                                         }
                                     </tbody>
@@ -138,7 +138,7 @@
                                         {
                                             <tr>
                                                 <td>@line.ItemName <span class="text-muted small">(@line.ItemCategory)</span></td>
-                                                <td class="text-end">@line.Amount.ToString("N2")</td>
+                                                <td class="text-end">@Fmt.Amount(line.Amount)</td>
                                             </tr>
                                         }
                                     </tbody>
@@ -148,19 +148,19 @@
                         <div class="calc-summary">
                             <div class="calc-tile">
                                 <span class="label">Gross</span>
-                                <span class="value">@Model.GrossSalary.ToString("N2")</span>
+                                <span class="value">@Fmt.Amount(Model.GrossSalary)</span>
                             </div>
                             <div class="calc-tile">
                                 <span class="label">Payroll ded.</span>
-                                <span class="value">@payrollDedTotal.ToString("N2")</span>
+                                <span class="value">@Fmt.Amount(payrollDedTotal)</span>
                             </div>
                             <div class="calc-tile">
                                 <span class="label">Tax</span>
-                                <span class="value">@Model.TaxAmount.ToString("N2")</span>
+                                <span class="value">@Fmt.Amount(Model.TaxAmount)</span>
                             </div>
                             <div class="calc-tile calc-net">
                                 <span class="label">Net Salary</span>
-                                <span class="value">@Model.NetSalary.ToString("N2")</span>
+                                <span class="value">@Fmt.Amount(Model.NetSalary)</span>
                             </div>
                         </div>
                     </div>
@@ -177,7 +177,7 @@
                             </div>
                             <div class="info-cell">
                                 <span class="info-label">Leave days</span>
-                                <span class="info-value @(Model.LeaveDays.HasValue ? "" : "text-empty")">@(Model.LeaveDays?.ToString("0.##") ?? "—")</span>
+                                <span class="info-value @(Model.LeaveDays.HasValue ? "" : "text-empty")">@(Fmt.Number(Model.LeaveDays))</span>
                             </div>
                             <div class="info-cell">
                                 <span class="info-label">Leave balance</span>
@@ -242,7 +242,7 @@
                             </div>
                             <div class="info-cell">
                                 <span class="info-label">Generated</span>
-                                <span class="info-value">@Model.GeneratedDate.ToString("dd MMM yyyy HH:mm")</span>
+                                <span class="info-value">@Fmt.DateAndTime(Model.GeneratedDate)</span>
                             </div>
                             <div class="info-cell">
                                 <span class="info-label">Generated by</span>

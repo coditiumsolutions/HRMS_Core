@@ -1,3 +1,4 @@
+using HRMBT.Web.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -101,7 +102,7 @@ namespace HRMBT.Web.Controllers
 
             return other == null
                 ? null
-                : $"This employee already has a {other.Status} leave request (#{other.Id}) from {other.FromDate:dd MMM yyyy} to {other.ToDate:dd MMM yyyy} that overlaps these dates.";
+                : $"This employee already has a {other.Status} leave request (#{other.Id}) from {Fmt.ShortDate(other.FromDate)} to {Fmt.ShortDate(other.ToDate)} that overlaps these dates.";
         }
 
         /// <summary>Leave rows that consume quota (adjust if your workflow uses other statuses).</summary>

@@ -62,7 +62,7 @@
                         <i class="bi bi-eye me-1 text-success"></i><strong class="text-dark">@Model.StartRecord–@Model.EndRecord</strong> showing
                     </span>
                     <span class="badge rounded-pill text-bg-light border px-3 py-2">
-                        <i class="bi bi-cash-coin me-1 text-warning"></i>Net (filtered period): <strong class="text-dark ms-1">PKR @(((decimal)ViewBag.TotalAmount).ToString("N0"))</strong>
+                        <i class="bi bi-cash-coin me-1 text-warning"></i>Net (filtered period): <strong class="text-dark ms-1">PKR @Fmt.Int((decimal)ViewBag.TotalAmount)</strong>
                     </span>
                 </div>
             }
@@ -227,10 +227,10 @@
                                         </td>
                                         <td>@(p.Employee?.Department ?? "—")</td>
                                         <td class="text-nowrap">@p.Month @p.Year</td>
-                                        <td class="text-end salary">@p.BasicSalary.ToString("N0")</td>
-                                        <td class="text-end salary">@p.GrossSalary.ToString("N0")</td>
-                                        <td class="text-end salary">@p.TotalDeductions.ToString("N0")</td>
-                                        <td class="text-end salary">@p.NetSalary.ToString("N0")</td>
+                                        <td class="text-end salary">@Fmt.Int(p.BasicSalary)</td>
+                                        <td class="text-end salary">@Fmt.Int(p.GrossSalary)</td>
+                                        <td class="text-end salary">@Fmt.Int(p.TotalDeductions)</td>
+                                        <td class="text-end salary">@Fmt.Int(p.NetSalary)</td>
                                         <td>
                                             @if (p.IsLocked)
                                             {

@@ -124,17 +124,17 @@
                                         <td class="text-end salary col-salary">
                                             @if (isPct)
                                             {
-                                                @($"{item.PercentageValue:N2} %")
+                                                @(Fmt.Percent(item.PercentageValue))
                                             }
                                             else
                                             {
-                                                @($"PKR {item.PercentageValue:N2}")
+                                                @(Fmt.Money(item.PercentageValue))
                                             }
                                         </td>
                                         <td>@(item.Employee?.EmployeeName ?? "—")</td>
                                         <td>@(item.Employee?.Department ?? "—")</td>
-                                        <td class="text-nowrap">@item.EffectiveDate.ToString("yyyy-MM-dd")</td>
-                                        <td class="text-nowrap">@(item.EndDate.HasValue ? item.EndDate.Value.ToString("yyyy-MM-dd") : "—")</td>
+                                        <td class="text-nowrap">@Fmt.ShortDate(item.EffectiveDate)</td>
+                                        <td class="text-nowrap">@(item.EndDate.HasValue ? Fmt.ShortDate(item.EndDate.Value) : "—")</td>
                                         <td class="text-end text-nowrap">
                                             <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-grid-edit" title="Edit">
                                                 <i class="bi bi-pencil"></i>
