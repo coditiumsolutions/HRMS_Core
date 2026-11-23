@@ -1,6 +1,15 @@
+---
+status: partially-outdated
+last_verified: 2026-11-23
+verified_against: main @ 7aa2685 plus the uncommitted security and user-roles changes (code), and the redesigned development database (scripts 01-04, 06, 07 applied)
+outdated_since: 2026-11-23
+outdated_sections: [Pages by module (partly)]
+reason: Updated on 2026-11-23 for the Lookups views, the shared org-fields partial, the role tick boxes and the Logout button. Layout, navigation and asset sections were not re-verified line by line.
+see_also: 06-gaps.md
+---
 # 7. UI Elements
 
-Server-rendered Razor (`.cshtml`) – about 125 view files, Bootstrap 5 styling, a small amount of vanilla JS/jQuery. No SPA components.
+Server-rendered Razor (`.cshtml`) – 102 view files (counted 2026-11-23), Bootstrap 5 styling, a small amount of vanilla JS/jQuery. No SPA components.
 
 ## Layouts & shell
 | Layout | Used for |
@@ -36,7 +45,12 @@ Server-rendered Razor (`.cshtml`) – about 125 view files, Bootstrap 5 styling,
 | Allowances / Deductions | `Index`, `Add` (bulk), `Create`, `Edit`, `Details`, `Delete`, `_FuelAllowanceFormScript` |
 | Tax | `Index`, `Create`, `Edit`, `Details`, `Delete` |
 | Reports | `SalariesSummary`, `EmployeeSummary`, `AllowancesSummary`, `DeductionsSummary`, `TaxesSummary` |
-| Setup | `Index`, `Users`, `CreateUser`, `EditUser`, `DeleteUser`, `Config`, `CreateConfig`, `EditConfig`, `DeleteConfig` |
+| Setup | `Index` (tiles incl. Lists), `Users`, `CreateUser`, `EditUser`, `DeleteUser`, `Config`, `CreateConfig`, `EditConfig`, `DeleteConfig` |
+| Lookups (Setup → Lists) | `Index` (one list per kind), `Edit` (create/edit form) |
+| Setup users | `CreateUser`/`EditUser` have an Admin and an HR tick box (several roles per user); the Users list shows all roles |
+| Logout | a POST form button in the three layouts (was a link) |
+| Employee partial | `_EmployeeOrgFields` (project/department/sub-department/designation selects shared by Create and Edit) |
+| Home | also `AccessDenied` (403 page) |
 
 ## Recurring UI components
 - **Data grids:** Bootstrap tables with filter bars (department, search, status, month/year), column sort arrows (`bi-arrow-down-up`/`bi-sort-up`), `PaginatedList<T>` pager that preserves filters, row selection with "select all" (`hrms-grid-selection.js`, `_HrmsGridSelectionScript`).
@@ -62,3 +76,4 @@ Server-rendered Razor (`.cshtml`) – about 125 view files, Bootstrap 5 styling,
 - Heavy per-view inline `<style>` and duplicated CSS; mixture of emoji and Bootstrap-icon iconography.
 - Some sidebar entries are duplicates pointing to the same action; `_Layout.cshtml` still has placeholder links.
 - No role-based menu hiding (all users see Setup, Payroll, etc.), no breadcrumbs, no dark mode, limited accessibility labelling, English-only.
+- Not built yet: screens for shifts, rosters, attendance punches, half-day requests, attendance corrections and record notes (tables exist).

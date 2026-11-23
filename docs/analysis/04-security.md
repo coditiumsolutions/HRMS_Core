@@ -1,70 +1,104 @@
 ---
-status: partially-outdated
-outdated_since: 2026-11-16
-outdated_sections: [Security findings #2]
-reason: Finding #2 describes credentials for 5 servers incl. the old public IP 178.105.20.255. appsettings.json now has one active DefaultConnection (production, Teezhost 16GB) and the old strings are commented out, but the sa credentials are still committed in the file and in git history, and SQL port 1433 is open to the internet.
-see_also: ../deployment.md
+status: current
+last_verified: 2026-11-23
+verified_against: main @ 7aa2685 plus the uncommitted security and user-roles changes (code), and the redesigned development database (scripts 01-04, 06, 07 applied)
+supersedes_snapshot: 2026-11-16 (commit 2843f59)
+see_also: ../deployment.md, ../db/prod_rollout.md
+note: Each finding carries a status as of the verified date. Production still runs the older build; "Fixed" items exist only in this repository (uncommitted at the verified date) until the next deployment.
+summary: {fixed: 12, partly: 3, deferred: 1}   # 16 tasks
+deployed_to_production: false
+tasks:
+  - {id: 1,  title: "SetupController anonymous -> Admin only",              status: fixed}
+  - {id: 2,  title: "sa password in git history: rotate, least-privilege login, close port 1433", status: deferred, owner: project owner}
+  - {id: 3,  title: "Role checks beyond Setup/Lists/employee delete (payroll, salary, reports)", status: partly, blocked_by: "decision on what HR may do"}
+  - {id: 4,  title: "Neutral login errors",                                 status: fixed}
+  - {id: 5,  title: "Re-hash legacy passwords on login",                    status: fixed, follow_up: "remove plain-text/SHA-256 support after every user has logged in once"}
+  - {id: 6,  title: "Secure cookie + HTTPS redirect",                       status: fixed, follow_up: "verify after deployment (only tested over http locally)"}
+  - {id: 7,  title: "Login throttle",                                       status: fixed}
+  - {id: 8,  title: "Remove Debug and Home/Test",                           status: fixed}
+  - {id: 9,  title: "Uploads: block /uploads; move outside wwwroot",        status: partly, follow_up: "set EmployeeDocuments:StorageBasePath and copy existing files"}
+  - {id: 10, title: "PII protection, audit coverage, AllowedHosts",         status: partly}
+  - {id: 11, title: "Logout POST, PBKDF2 600k",                             status: fixed}
+  - {id: 12, title: "_build_verify removed from git",                       status: fixed}
+  - {id: 13, title: "Employee soft delete (Admin only)",                    status: fixed}
+  - {id: 14, title: "Attendance UploadedBy = signed-in user",               status: fixed}
+  - {id: 15, title: "Global antiforgery filter",                            status: fixed}
+  - {id: 16, title: "Several roles per user (UserRoles, script 07)",        status: fixed, note: "added 2026-11-23; farhan has Admin+HR on the dev copy"}
 ---
 # 4. Security
 
 ## Authentication
 - **Scheme:** ASP.NET Core cookie authentication (`CookieAuthenticationDefaults`).
 - **Login:** `POST /Home/Login` (anti-forgery validated). Looks up `Users` by case-insensitive username, verifies password via `LoginPasswordHasher.Verify`, then `SignInAsync`.
-- **Cookie settings:** `HttpOnly`, `SameSite=Lax`, 8-hour expiry with sliding expiration, `IsPersistent = true`. `Secure` policy is **not** set (cookie is sent over plain HTTP).
-- **Claims:** `Name`, `display_name`, `login_at`, and `Role` (from `Users.Role`, free text, optional).
-- **Logout:** `GET /Home/Logout` (anonymous allowed, state-changing GET).
-- **Password storage** (`LoginPasswordHasher`): PBKDF2-HMAC-SHA256, 100,000 iterations, 16-byte salt, 32-byte key, format `iterations.salt.hash`, constant-time compare. Verification **also accepts legacy SHA-256 hex and plain-text** values stored in `PasswordHash`.
-- No lockout, no MFA, no password-complexity beyond ≥ 6 characters, no password reset, no forced change for legacy plain-text accounts.
+- **Cookie settings:** `HttpOnly` (verified in the `Set-Cookie` header), `SameSite=Lax`, `Secure` outside Development (`SameAsRequest` locally), 8-hour expiry with sliding expiration, `IsPersistent = true`. The antiforgery cookie is also HttpOnly by default.
+- **Claims:** `Name`, `display_name`, `login_at`, and one `Role` claim per row in `UserRoles` (a user can hold `Admin`, `HR`, both or none; the database CHECK allows only those two). Login also requires `Users.IsActive` (users are disabled, not deleted).
+- **Logout:** `POST /Home/Logout` with an antiforgery token (changed 2026-11-23; was a state-changing GET).
+- **Password storage** (`LoginPasswordHasher`): PBKDF2-HMAC-SHA256, 600,000 iterations, 16-byte salt, 32-byte key, format `iterations.salt.hash`, constant-time compare. Verification **still accepts legacy SHA-256 hex and plain-text** values, but re-hashes them (and older, lower-iteration hashes) to the current format on the next successful login.
+- Lockout: 5 failed attempts per client address + username lock that pair for 15 minutes (in-memory). Still no MFA, no password complexity beyond ≥ 6 characters, no password reset.
 
 ## Authorization / protected routes
 - `FallbackPolicy = RequireAuthenticatedUser` → **every endpoint requires login unless explicitly `[AllowAnonymous]`**. Good default.
 - `[Authorize]` is also on `HomeController` and `ReportsController`.
-- **There is no role/policy authorization anywhere.** `ClaimTypes.Role` is issued but no `[Authorize(Roles=…)]`, policy or `IsInRole` check exists. Any authenticated user can create/edit/delete employees, run payroll, view salaries, manage users, etc.
+- **Role authorization exists in one place only.** `LookupsController` (Setup → Lists) has `[Authorize(Roles = "Admin,HR")]`; a signed-in user without the role is sent to `/Home/AccessDenied` (cookie `AccessDeniedPath`, 403). Nothing else checks roles (no policy, no `IsInRole`), so any authenticated user can still create/edit/delete employees, run payroll, view salaries, and so on. Only the roles `Admin` and `HR` exist; the planned `Payroll`/`Viewer` roles do not.
 
 | Route group | Access |
 |-------------|--------|
-| `/Home/Login`, `/Home/Logout`, `/Home/Error`, `/Home/DbHealth` (Development only) | Anonymous |
-| **`/Setup/*` (users + configuration)** | **Anonymous – `[AllowAnonymous]` on the whole `SetupController`** |
-| `/Home/Index`, `/Home/Privacy`, `/Home/Test` | Any logged-in user (`Test` dumps DB table names and counts) |
-| `/Debug` | Any logged-in user (same table dump as `Home/Test`) |
+| `/Home/Login`, `/Home/Logout` (POST), `/Home/Error`, `/Home/DbHealth` (Development only) | Anonymous |
+| `/Setup/*` (users + configuration) | `Admin` (was anonymous before 2026-11-23) |
+| `/Home/Index`, `/Home/Privacy` | Any logged-in user |
+| `/Home/AccessDenied` | Target of the cookie handler (403) |
+| `/Lookups/*` (projects, departments, sub-departments, designations, leave types) | `Admin` or `HR` |
 | Employee, EmployeeDocuments, Attendance, LMS, Payroll, Payslips, Allowances, Deductions, Tax, Reports | Any logged-in user (fallback policy) |
 
 ## Request-level protections
-- **CSRF:** `[ValidateAntiForgeryToken]` on all inspected POST actions (≈ 50 occurrences across controllers). No global `AutoValidateAntiforgeryToken` filter, so a future POST without the attribute would be unprotected. Logout is a GET.
+- **CSRF:** every `[HttpPost]` action in the controllers has `[ValidateAntiForgeryToken]` (rechecked 2026-11-23, none missing). There is still no global `AutoValidateAntiforgeryToken` filter, so a future POST without the attribute would be unprotected. Logout is a GET.
 - **Open redirect:** login uses `Url.IsLocalUrl` – OK.
 - **Mass assignment:** most create/edit actions use `[Bind(...)]` with explicit field lists – OK; `Payslip`/`Allowance` use view models/bind lists.
-- **SQL injection:** EF/LINQ everywhere; the two raw-SQL spots (`Home/Test`, `Debug`) interpolate only a hard-coded table list.
-- **File upload:** extension whitelist (config), 10 MB per file, 10 files per request, GUID stored names, `Path.GetFileName` on the original name. Weaknesses: no content-type/magic-byte check, files are stored **under `wwwroot`** (potentially directly web-served by `UseStaticFiles`, bypassing the authenticated Download action and the `IsDeleted` flag), `.doc/.xls` macro-capable formats allowed, no antivirus scan. Attendance upload accepts any posted file type into the parser; global request limit is 100 MB.
+- **SQL injection:** EF/LINQ everywhere; the two raw-SQL spots (`Home/Test`, `Debug`) were removed on 2026-11-23.
+- **File upload:** extension whitelist (config), 10 MB per file, 10 files per request, GUID stored names, `Path.GetFileName` on the original name, and (new) a SHA-256 duplicate check per employee. Weaknesses (unchanged): no content-type/magic-byte check, files are stored **under `wwwroot`** (potentially directly web-served by `UseStaticFiles`, bypassing the authenticated Download action and the `IsDeleted` flag), `.doc/.xls` macro-capable formats allowed, no antivirus scan. Attendance upload accepts any posted file type into the parser; global request limit is 100 MB.
+- **Documents:** requests under `/uploads` return 404 (middleware before `UseStaticFiles`).
 - **Output encoding:** Razor auto-encodes; no raw HTML rendering seen in review of controllers.
-- **Transport:** `UseHsts` only outside Development; **no `UseHttpsRedirection`**; production URL is plain `http://…:82`.
-- **Error handling:** custom `/Home/Error` in production. However the login page returns very verbose messages (see below).
-- **Audit:** `AuditLogs` records IP/user but only for payslip locking.
+- **Transport:** `UseHsts` and `UseHttpsRedirection` outside Development; production URL is `https://hr.coditium.com`.
+- **Error handling:** custom `/Home/Error` in production; login errors are neutral.
+- **Audit:** `AuditLogs` records IP/user but only for payslip locking and allowance/deduction changes (`AllowancesController`, `DeductionsController`). Employee, leave, attendance and user changes are not audited. New: `ModifiedBy`/`ModifiedOn` on the main edit screens and `RowVersion` (optimistic concurrency) on `Employee`, `Attendance`, `LeaveRequests`, `Payslips`.
 
 ## Security findings
-| # | Severity | Finding |
-|---|----------|---------|
-| 1 | **Critical** | `SetupController` is `[AllowAnonymous]`: anyone who can reach the site can list users (incl. hashes), **create an account with any role, reset any user's password, delete users**, and edit `Configuration` (e.g. `FuelPrice`, which drives payroll). Full unauthenticated takeover. |
-| 2 | **Critical** | **Database credentials committed in `appsettings.json`**: `sa` account with a shared password for 5 servers incl. public IP `178.105.20.255,50001`, in git history. Rotate immediately; use user-secrets/environment variables/Key Vault and a least-privilege SQL login. |
-| 3 | High | No RBAC. `Users.Role` is cosmetic; payroll, salary data, user admin and deletes are open to every logged-in user. |
-| 4 | High | Login errors disclose internals: "No row in Users for username …" (user enumeration), password-format hints (`DescribeStoredFormat`), SQL exception text. |
-| 5 | Medium | Plain-text and unsalted SHA-256 password formats are still accepted by the code with no upgrade-on-login. Live check (2026-11-16): all 6 users already use PBKDF2, so this is a latent risk (e.g. a row inserted by SQL). |
-| 6 | Medium | Cookie lacks `Secure`; site served over HTTP on a public IP; no HTTPS redirection. |
-| 7 | Medium | No brute-force protection (lockout/rate limiting/CAPTCHA). |
-| 8 | Medium | `Home/Test` and `Debug` expose schema/table counts to any user; `Debug` has no explicit attributes or environment guard. |
-| 9 | Medium | Employee documents stored in web root → likely directly downloadable by URL without auth (verify `UseStaticFiles` serves `/uploads/...`). Move outside `wwwroot`. |
-| 10 | Medium | PII/payroll (CNIC, salary, mobile) not field-level protected; audit trail missing for most data changes; `AllowedHosts: *`. |
-| 11 | Low | Logout via GET (CSRF logout); `IsPersistent=true` forces a persistent cookie for everyone; 100,000 PBKDF2 iterations is below current OWASP guidance (600k for SHA-256). |
-| 12 | Low | `_build_verify/` (compiled binaries incl. `appsettings.json` copy) is committed to git. |
+Status as of 2026-11-23, after the security fixes in the repository: **Open**, **Partly**, **Fixed**, **Deferred** (owner decision). "Fixed" means fixed in the code in this repository; production gets it with the next deployment.
 
-## Recommended minimum fixes (in order)
-1. Remove `[AllowAnonymous]` from `SetupController`; gate with an `Admin` policy.
-2. Rotate DB credentials and remove secrets from the repo/history.
-3. Add roles/policies (`Admin`, `HR`, `Payroll`, `Viewer`) and apply per controller/action.
-4. Add global `AutoValidateAntiforgeryToken`, convert Logout to POST.
-5. Neutral login errors, lockout/rate limiting, upgrade/force-reset legacy password formats.
-6. HTTPS everywhere + `CookieSecurePolicy.Always`.
-7. Move uploads outside `wwwroot` and serve only through the authorised action.
+| # | Severity | Status | Finding |
+|---|----------|--------|---------|
+| 1 | **Critical** | **Fixed** (not yet deployed) | `SetupController` was `[AllowAnonymous]`. It now has `[Authorize(Roles = "Admin")]`: anonymous users are sent to login, `HR` users get 403. **Production is exposed until this build is deployed.** |
+| 2 | **Critical** | **Deferred** | Connection strings are out of `appsettings.json`. The old `sa` password is still in git history and must be treated as leaked: rotating it, a least-privilege SQL login for the app and closing port 1433 are **deferred to the project owner**. |
+| 3 | High | **Partly** | A user can now hold several roles (`UserRoles`; for example HR plus Admin), edited in Setup → Users. Role checks: `Setup` (Admin), `Lookups` (Admin, HR), employee delete (Admin). Payroll, salaries, allowances, deductions, tax and reports are still open to every logged-in user; what `HR` may do needs a decision. |
+| 4 | High | **Fixed** | Login now answers "Invalid username or password." for an unknown user, a wrong password, an empty hash and a disabled user, and "Sign-in is temporarily unavailable" for database errors (details only in the server log). Hash-format hints removed. |
+| 5 | Medium | **Fixed** | A successful login re-hashes plain-text, SHA-256 and low-iteration values to PBKDF2. Legacy formats are still accepted for that first login, so the support can be removed once every row has been upgraded. |
+| 6 | Medium | **Fixed** (not yet deployed) | Auth cookie is `Secure` outside Development, `HttpOnly`, `SameSite=Lax`; `UseHttpsRedirection` and HSTS outside Development. The `Secure` setting could only be tested on plain http locally (Development uses `SameAsRequest`), so check it after deployment. |
+| 7 | Medium | **Fixed** (basic) | Login throttle: 5 failures per client address + username locks that pair for 15 minutes (in-memory, resets on app restart, per server). No CAPTCHA or MFA. |
+| 8 | Medium | **Fixed** | `DebugController` and `Home/Test` removed. `Home/DbHealth` remains but returns 404 outside Development. |
+| 9 | Medium | **Partly** | Anything under `/uploads` now returns 404 from the web server, so documents are only reachable through the authorised `Download` action. Files still live in `wwwroot/uploads` until `EmployeeDocuments:StorageBasePath` is set to a folder outside the site (supported now; see below). |
+| 10 | Medium | **Partly** | CNIC, salary and mobile numbers are not protected at field level, `AllowedHosts` is `*`, and the audit trail covers only payroll locks and allowance/deduction edits. `ModifiedBy`/`ModifiedOn`, soft delete, `RowVersion` and `RequestId` guards exist. |
+| 11 | Low | **Fixed** | Logout is POST with an antiforgery token (layouts use a form); PBKDF2 raised to 600,000 iterations (existing hashes keep working and are upgraded at login). `IsPersistent = true` is unchanged (8-hour sliding cookie). |
+| 12 | Low | **Fixed** | `_build_verify/` is no longer tracked in git. |
+| 13 | Medium | **Fixed** | Employee "delete" now sets `EmployeeStatus = Inactive` (and `ModifiedBy`/`ModifiedOn`) instead of removing the row; Admin only. |
+| 14 | Low | **Fixed** | Attendance uploads record the signed-in user in `UploadedBy`. |
+| 15 | Low | **Fixed** | A global `AutoValidateAntiforgeryToken` filter now covers every POST/PUT/DELETE, in addition to the per-action attributes. |
+| 16 | Medium | **Fixed** (not yet deployed) | A user could hold only one role, so an HR user could not also have Admin rights. Roles now live in `UserRoles` (script `07_user_roles.sql`); Setup → Users has a tick box per role, and the last active Admin cannot be demoted or disabled. |
 
-## Live data observations (2026-11-16)
+**Uploads outside the site (finding 9).** Set `EmployeeDocuments:StorageBasePath` (absolute path, or relative to the content root) in `appsettings.Production.json`, copy the existing `wwwroot/uploads` folder into it (the stored paths stay `uploads/employees/{uid}/{file}`), then deploy. `DeployToIIS.bat` wipes only the deploy folder, so a path outside `C:\HRMSDeploy` survives releases.
+
+## Recommended fixes (state on 2026-11-23)
+1. **Done** (repository): `SetupController` requires `Admin`.
+2. **Deferred to the owner:** rotate the `sa` password (in git history), least-privilege app login, close port 1433.
+3. **Partly done:** extend role checks to payroll, salary views, Reports (needs the HR/Admin decision).
+4. **Done:** global antiforgery filter; Logout is POST.
+5. **Done:** neutral login errors, throttle, re-hash legacy passwords. Later: remove plain-text/SHA-256 support once all users have logged in once, add MFA if wanted.
+6. **Done** (verify after deployment): `Secure` cookie, HTTPS redirect. If IIS sits behind a proxy that terminates TLS, add forwarded-headers handling.
+7. **Partly done:** `/uploads` blocked; move the files with `StorageBasePath`.
+8. **Done:** `Debug` and `Home/Test` removed.
+
+## Live data observations (production, 2026-11-16; not re-checked)
 - `Users`: 6 rows - roles Admin (4), HR (1) and one with an empty role; all PBKDF2. Roles are not enforced anywhere, so 'Admin' vs 'HR' makes no difference today.
 - One user references an `EmployeeID` that no longer exists in `Employee`.
+
+## Local copy (2026-11-23)
+The development database is a copy of production with the redesigned schema applied (`../db/prod_rollout.md`). There the roles are in `UserRoles` (limited by a CHECK to `Admin`/`HR`; the old `Users.Role` column is gone), and `Users.EmployeeId` is a nullable FK to `Employee.uid`. Production does not have these changes yet.

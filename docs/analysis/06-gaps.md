@@ -1,62 +1,119 @@
+---
+status: current
+last_verified: 2026-11-23
+verified_against: main @ 7aa2685 plus the uncommitted security and user-roles changes (code), and the redesigned development database (scripts 01-04, 06, 07 applied)
+supersedes_snapshot: 2026-11-16 (commit 2843f59)
+see_also: 04-security.md, ../db/db_changes.md, ../db/prod_rollout.md, ../db/decisions.md
+note: Items are marked Open, Partly, Deferred, Fixed, or Done in dev (done in the repository and the local development database, not yet on production). Production still runs the old build and the old schema until the rollout in ../db/prod_rollout.md.
+deployed_to_production: false
+next_step: "Commit and push the security + user-roles work, then deploy it together with the database rollout (script 01-04, 06, 07)."
+tasks:
+  security:
+    - {title: "Setup behind Admin",                         status: fixed_not_deployed}
+    - {title: "Rotate sa password / least-privilege login / close 1433", status: deferred, owner: project owner}
+    - {title: "Several roles per user",                     status: fixed_not_deployed}
+    - {title: "Roles on payroll, salary, reports",          status: partly, blocked_by: "what HR may do (decision)"}
+    - {title: "Neutral login, throttle, re-hash, Secure cookie, logout POST, global antiforgery", status: fixed_not_deployed}
+    - {title: "Uploads outside wwwroot (StorageBasePath)",  status: partly}
+  database:
+    - {title: "Redesign applied to local dev DB (01-04, 06, 07)", status: done_in_dev}
+    - {title: "Apply redesign to production (prod_rollout.md)",   status: open, blocked_by: "HR decisions (B2, B3, B4...), maintenance window, approval"}
+    - {title: "db.md migration-pending note",              status: done}
+    - {title: "db.md rewrite to v2.0",                      status: open, after: "production rollout"}
+    - {title: "RowVersion on allowances/deductions/quotas/tax rules", status: open}
+  business_logic:
+    - {title: "Tax-year bug",                               status: done_in_dev}
+    - {title: "Progressive tax (T4)",                       status: open}
+    - {title: "Paid/unpaid leave, allowance dates, frequency in payroll", status: open}
+    - {title: "Leave approval workflow, balance and overlap checks",       status: partly}
+    - {title: "Screens/processing for shifts, punches, half days, corrections, roster, notes", status: open}
+  engineering:
+    - {title: "Tests and CI",                              status: open}
+    - {title: "Split fat controllers, remove duplicate code", status: open}
+---
 # 6. Gaps, Risks & Recommendations
 
 Priority: **P0** fix now · **P1** next sprint · **P2** planned · **P3** nice to have.
 
-## Security (details in [04-security.md](04-security.md))
-| P | Gap |
-|---|-----|
-| P0 | `SetupController` is `[AllowAnonymous]` – unauthenticated user/password/config management |
-| P0 | `sa` credentials for five servers committed in `appsettings.json` (and git history) |
-| P1 | No role-based authorization; every logged-in user can do everything incl. payroll and user admin |
-| P1 | Verbose login errors (user enumeration, hash-format hints); legacy plain-text/SHA-256 passwords still accepted |
-| P1 | HTTP only, cookie not `Secure`, no HTTPS redirection |
-| P2 | No lockout/rate limiting; no global antiforgery filter; logout via GET |
-| P2 | Uploaded documents live in `wwwroot` (directly servable); no content sniffing/AV |
-| P2 | `Home/Test` and `Debug` expose DB metadata to any user |
+## What is left, in order
+1. **Commit and deploy the security fixes and the multi-role support.** (The work is done and tested on the local copy but not yet committed.) `SetupController` (Admin only), neutral login, `Secure` cookie and the other items in 04-security.md are in the repository but production still runs the old build, where Setup is anonymous.
+2. **Deferred (owner):** rotate the old `sa` password (in git history), least-privilege app login, close port 1433.
+3. **P1: role checks beyond Setup and Lists** (payroll, salary views, reports); needs the HR/Admin decision.
+4. **P1: production rollout** of the database redesign and the new build in one maintenance window (`../db/prod_rollout.md`), after HR answers the open decisions.
+5. **P2: finish the new attendance/schedule features** (tables and entities exist, no screens or processing).
+6. **P2: payroll rules** that need HR answers (paid/unpaid leave, allowance dates, frequency, progressive tax).
+7. **P3: tests and CI.**
+
+## Security (details and status per finding in [04-security.md](04-security.md))
+| P | Gap | Status |
+|---|-----|--------|
+| P0 | `SetupController` was `[AllowAnonymous]` | **Fixed in the repository** (Admin only); production exposed until deployed |
+| P0 | `sa` credentials in git history | **Deferred** to the project owner (rotate, least-privilege login, close port 1433) |
+| P1 | Users can hold only one role | **Fixed in the repository**: several roles per user (`UserRoles`, script 07; for example HR plus Admin) |
+| P1 | Role-based authorization | **Partly**: Setup (Admin), Lookups (Admin, HR), employee delete (Admin); payroll/salary/reports still open to all logged-in users |
+| P1 | Verbose login errors; legacy passwords accepted | **Fixed**: neutral errors, re-hash on login |
+| P1 | Cookie not `Secure`, no HTTPS redirection | **Fixed** (verify after deployment) |
+| P2 | No lockout; no global antiforgery; logout via GET | **Fixed**: throttle, global filter, POST logout |
+| P2 | Uploaded documents directly servable | **Partly**: `/uploads` blocked; set `StorageBasePath` to move files out of `wwwroot` |
+| P2 | `Home/Test` and `Debug` | **Fixed**: removed |
+| P2 | Employee hard delete | **Fixed**: marks Inactive (Admin only) |
 
 ## Data integrity & database
-- **Mixed employee keys:** `Employee.uid` (int) for payroll vs `Employee.EmployeeID` (string) for attendance/leave/users, with no foreign keys on the string links → orphan rows possible, deleting an employee (`EmployeeController.DeleteConfirmed` does a hard `Remove`) can leave attendance/leave/allowance data dangling or fail on the payslip `Restrict` FK.
-- **Department is free text** in `Employee`/`Attendance`; a `Departments` table exists but is not linked.
-- **Dates as strings** (`DOB`, `ModifiedOn`, `CreatedOn`) and inconsistent date types.
-- **Two leave models** (`LeaveRequests` vs `EmployeeLeaves`) with different key types; unclear which is authoritative for balances.
-- **Schema drift:** model vs `db.md` differences (`CarryforwardLeaves`, `EmployeeLeaves` columns), outdated tables in `database-schema.sql`, several tables with no migration, `Deductions.PercentageValue` overloaded to hold fixed amounts, `Allowances.ModifiedBy` is `nvarchar(max)` in DB but 100/unspecified in model.
-- **No concurrency control** (no row-version tokens) – two HR users can overwrite each other; payroll generation has a check-then-insert race (no unique index on `Payslips(EmployeeId, Month, Year)` evident).
-- **No automatic migration**; deploy relies on manual SQL. Verified live: 6 repo migrations were applied by hand and are missing from `__EFMigrationsHistory`, and the DB records a migration that is not in the repo. Running `dotnet ef database update` would try to re-apply them.
-- **Three tables have no primary key** in the live DB (`Configuration`, `EmployeeLeaves`, `LeaveQuota`); `CarryforwardLeaves` and `GazettedHolidays` do not match their EF entities (see `db.md`).
-- **Referential gaps in live data:** 1 `LeaveRequests` row and 1 `Users` row point to missing employees; 54 of 58 department strings are not in `Departments`; `Project` has 8 distinct values while HR describes 6.
+| Gap (2026-11-16) | Status |
+|---|---|
+| Mixed employee keys (`uid` vs string `EmployeeID` with no FK) | **Done in dev**: Attendance, leave, quota, carry-forward and `Users` link to `Employee.uid` by FK; `EmployeeID` stays the unique business code. App maps `Attendance.EmployeeID` as a read-only facade. |
+| Department/Project/Designation are free text | **Done in dev**: `Projects`, `Departments`, `SubDepartments`, `Designations`, `LeaveTypes` tables with FKs, managed under Setup → Lists. HR still has to confirm the real project list and the department mapping (decisions B2, B3). |
+| Dates stored as strings (`DOB`, `ModifiedOn`, `Users.CreatedOn`) | **Done in dev** (`date`/`datetime2`, converters keep the old code shapes) |
+| Two leave models (`LeaveRequests` vs `EmployeeLeaves`) | **Done in dev**: `EmployeeLeaves` removed (it was empty), `LeaveRequests` is the single model |
+| Schema drift (`CarryforwardLeaves`, `GazettedHolidays` entities vs tables) | **Done in dev**: entities and tables aligned; verify against `db.md` once production is migrated |
+| `Deductions.PercentageValue` overloaded for fixed amounts | **Done in dev**: separate `Percentage` and `Amount` columns; `PercentageValue` kept as an unmapped facade in code |
+| No concurrency control | **Partly**: `RowVersion` on `Employee`, `Attendance`, `LeaveRequests`, `Payslips` and `HalfDayRequests` (stale saves are refused on the Employee edit); allowances, deductions, quotas and tax rules have no token yet |
+| Payroll generation race / duplicate payslips | **Done in dev**: unique index on `Payslips(EmployeeId, Year, MonthNo)`; month stored as a number with a converter to the month name |
+| No primary key on `Configuration`, `EmployeeLeaves`, `LeaveQuota` | **Done in dev** (keys added by script 01/03; `EmployeeLeaves` dropped) |
+| Referential gaps in live data (1 leave row and 1 user pointing at missing employees; 54 of 58 department strings not in `Departments`) | **Done in dev**: orphan leave rows moved to `mig.LeaveRequests_Orphans`, user kept with `EmployeeId = NULL`, departments split into department + sub-department via `mig.EmployeeOrgMap`. HR sign-off pending. |
+| No automatic migration; EF history untrustworthy | **Open**: changes are applied by the SQL scripts in `scripts/database/redesign/`; do not run `dotnet ef database update` against production |
+| Production still on the old schema; `db.md` describes production | **Partly**: `db.md` (v1.10) now carries a "migration pending" note pointing to `db_changes.md` and `prod_rollout.md`. Rewrite it as v2.0 only after the production rollout. |
 
 ## Business logic
-- **Tax-year bug (confirmed against live data):** `TaxRules.TaxYear` values are `2025-2026` and `2026-2027`, but payroll compares them with the payslip year `2026`. Nothing matches, so all 14 slabs are pooled and the one with the highest `MinSalary` containing the basic salary is used, regardless of fiscal year (the two years have different rates: max 20% vs 10%). A `CurrentTaxYear` key exists in `Configuration` but payroll does not use it. 827 of 848 employees have `ApplyTax = 1`, so this affects almost every payslip.
-- Tax is a **flat % on basic salary** chosen by slab; Pakistan FBR salary tax is progressive (marginal slabs with fixed amounts) and based on annual taxable income – results will differ from statutory computation.
-- **Leave/attendance do not influence salary** (no absent/unpaid-leave deductions, `WorkingDays`, `LeaveDays`, `LeaveBalance` unused) although leave-based adjustments were originally intended.
-- Percentage allowances use basic, percentage deductions use gross; frequency fields (`Monthly`, one-time, etc.) are stored but not honoured in calculation (all active rows apply every month).
-- Allowance `EffectiveDate/EndDate` are **not** applied in payroll (only `IsActive`), whereas deductions are date-filtered – inconsistent.
-- Any edit to an allowance/deduction locks **all** of the employee's unlocked payslips and there is no unlock/regenerate path, so corrections require deleting/rebuilding.
-- Leave: no approval workflow, no balance check when creating requests, overlapping-leave validation not evident.
-- Taxes Summary report is a stub; employee `ApplyTax` is a free-text flag ("yes/y/true/1").
-- Hard-coded string conventions (`"Fuel Allowance"`, `"Fixed Amount"`, month names) make behaviour fragile.
+| Gap | Status |
+|---|---|
+| **Tax-year bug** (slabs matched against `2026` instead of `2025-2026`, all slabs pooled) | **Done in dev**: tax year is derived from the payslip month (July-June) and stored as `TaxYearStart`; no fallback to pooled slabs. Not on production yet, so production payslips are still computed the old way. |
+| Tax is a flat % on basic, not the progressive FBR computation | **Open** (decision T4) |
+| Leave/attendance do not influence salary | **Open**: `WorkingDays/LeaveDays/LeaveBalance` unused. `LeaveTypes.IsPaid` exists but payroll ignores it. |
+| Allowance `EffectiveDate/EndDate` not applied in payroll (only `IsActive`), while deductions are date-filtered | **Open** (`PayrollCalculationService` filters allowances on `IsActive` only) |
+| Allowance/deduction `Frequency` stored but not honoured | **Open** |
+| Percentage allowances use basic, percentage deductions use gross | Unchanged (as designed; confirm with HR) |
+| Editing an allowance/deduction locks all payslips of the employee and there is no unlock | **Open** |
+| Leave: no approval workflow, no balance check, overlap only blocks exact duplicates | **Partly**: `ApprovedByUserId` and status exist in the schema; the screens do not use an approver, and the duplicate guard only catches identical open requests. Production copy had 21 and 22 overlapping rows. |
+| Taxes Summary report is a stub | **Open** |
+| `ApplyTax` free-text flag | **Done in dev**: `bit` column, converter keeps `Yes`/`No` in code |
+| Hard-coded strings (`"Fuel Allowance"`, `"Fixed Amount"`, month names) | **Open** (project, department, designation and leave-type lists are no longer hard-coded) |
+| New attendance/schedule requirements (hourly pay, 7 h minimum day, half days with approval, overnight shifts, per-employee quotas, Dastarkhuwan staff without leave) | **Partly**: tables and entities exist (`Shifts`, `ShiftAssignments`, `RosterOverrides`, `AttendancePunches`, `HalfDayRequests`, `AttendanceCorrections`, `RecordNotes`, `LeaveEntitlementOverrides`); no pages and no processing yet |
 
 ## Engineering quality
-- **No automated tests** (no test project); no CI.
-- **Fat controllers** (Allowances 873, Payroll 804, Deductions 820 lines) with data access and rules inline; sync EF calls in `PayrollCalculationService` inside async request paths.
-- Duplicate code: Allowances/Deductions controllers and views are near copies; `Create` vs `Add`/bulk flows; both `Payroll/Details` and `Payslips/Details`, `Payroll/Create` vs `Payslips/Create`.
-- Layout duplication: `_Layout`, `_MainLayout`, `_DeductionsLayout`, `_SetupLayout` and per-module sidebars; many views embed large inline `<style>` blocks and CDN links.
-- Sidebar link inconsistencies (Attendance entries "By Department"/"Summary" both point to `Index`).
-- Repository hygiene: `_build_verify/` (≈ 300 binaries), exported schemas, README says .NET 9 (project is .NET 8) and lists only 5 modules.
-- Logging/monitoring: console only, no correlation, no health endpoint; most exceptions swallowed into `TempData` messages or `catch {}`.
-- Attendance upload `UploadedBy` hard-coded `"System"` (TODO); `ModifiedBy` and audit fields inconsistently filled.
-- Performance: dashboards/reports pull full tables in memory in places (`ToList()` then group); `Employee.Department.Date` comparisons (`a.AttendanceDate.Date == DateTime.Today`) may defeat indexes; EF retry strategy conflicts with user-initiated transactions if added later.
-- Accessibility/i18n: English only, emoji icons in sidebar, no localisation; date/number formats depend on server culture.
+- **No automated tests** (no test project) and no CI: **Open**.
+- **Fat controllers** (Allowances, Payroll, Deductions each 700-870 lines) and sync EF calls in `PayrollCalculationService`: **Open**.
+- Duplicate code (Allowances vs Deductions, Payroll vs Payslips Create/Details), layout duplication, inline `<style>` blocks, sidebar link inconsistencies: **Open**.
+- Repository hygiene: `_build_verify/` removed and the README now says .NET 8: **Done**. The README lists five modules, and `src/HRMBT.Web/bin` and `obj` build output appear in file searches (ignored by git).
+- Logging/monitoring: console only, no health endpoint, many exceptions swallowed into `TempData` or `catch {}`: **Open**.
+- `AttendanceService.UploadedBy`: **Done** (uses the signed-in user). `ModifiedBy`/`ModifiedOn` are now filled on the main edit screens.
+- Performance: some dashboards/reports load whole tables into memory: **Open**.
+- Accessibility/i18n: English only, no role-based menu hiding: **Open**.
+- Warnings: the build is at 0 warnings and 0 errors (2026-11-23).
 
 ## Operations
-- Deploy script deletes uploaded employee documents on every release; no backup, no rollback, no blue/green.
-- No environment-specific configuration or secrets handling; production DB host baked into scripts/config.
-- No scheduled jobs (e.g. attendance sync, backups), no email/notifications, no reporting export beyond Excel employee list/print view.
+- `DeployToIIS.bat` wipes the deploy folder including uploaded employee documents on every release; no backup or rollback: **Open** (the rollout runbook covers a manual backup and restore of uploads).
+- Secrets: **Done in the files** (per-environment git-ignored settings), **open in git history** (see Security).
+- Environment safety: with `ASPNETCORE_ENVIRONMENT` unset the app runs as Production and uses the production connection string. Launch profiles (default = Development, `Production` on port 5129) and README warnings are in place; the Production profile has not been started to verify it.
+- No scheduled jobs (attendance sync, backups), no email/notifications, no report export beyond the Excel employee list: **Open**.
+
+## Open decisions that block work (see `../db/decisions.md`)
+T4 (progressive tax), T7, B1, B4-B18, the real project list (B3), HR mapping of `Administrator`/`Mess`/`Transportation` departments, and what `HR` may do versus `Admin`.
 
 ## Recommended roadmap
-1. **Week 1 (P0):** lock down `Setup`, rotate DB credentials and purge secrets from history, remove `_build_verify`.
-2. **P1:** introduce roles/policies, HTTPS + secure cookies, neutral login errors, password re-hash on login, global antiforgery.
-3. **P1:** move uploads outside web root and out of the deploy folder; add DB backup + non-destructive deploy (publish to new folder + swap, or `app_offline.htm`).
-4. **P2:** add a unique index on `Payslips(EmployeeId, Month, Year)`, FK/relations for string employee keys, rowversion; consolidate leave models; baseline migration reflecting the real schema.
-5. **P2:** extract application services from fat controllers; add unit tests for `PayrollCalculationService` (allowance/deduction/tax rules) and integration tests for login/authorization.
-6. **P3:** progressive tax engine, attendance/leave-based salary, payslip unlock with audit, full audit trail, CI pipeline.
+1. **Done in the repository:** `Setup` behind `Admin`; `Debug` and `Home/Test` removed; neutral login errors, throttle, re-hash; `Secure` cookie and HTTPS redirect; logout POST; employee soft delete; `/uploads` blocked. **Deferred (owner):** `sa` password rotation.
+2. **Next (P1):** roles on payroll/salary/Reports; move uploads outside `wwwroot` (`StorageBasePath`); deploy.
+3. **Rollout (P1):** HR sign-off on `mig.EmployeeOrgMap` and the project list, then follow `../db/prod_rollout.md`; update `db.md` to v2.0 afterwards.
+4. **P2:** screens and processing for punches, shifts, half days, corrections, roster, notes; payroll use of the paid/unpaid flag, allowance dates and frequency; leave approval workflow and balance check.
+5. **P2:** extract services from fat controllers; unit tests for `PayrollCalculationService` (tax year, slabs, allowances, deductions) and integration tests for login and authorization; CI.
+6. **P3:** progressive tax engine, payslip unlock with audit, full audit trail.

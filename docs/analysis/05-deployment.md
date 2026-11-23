@@ -1,8 +1,11 @@
 ---
 status: outdated
+last_verified: 2026-11-23
+verified_against: main @ 7aa2685 plus the uncommitted security and user-roles changes (code), and the redesigned development database (scripts 01-04, 06, 07 applied)
 outdated_since: 2026-11-16
-reason: Written before the production server was identified. It describes the old IIS site on http://178.105.20.255:82, a localhost,50001 / HRMS connection string and a C:\HRMSDeploy-only topology. Production is Teezhost 16GB, https://hr.coditium.com, database HRBTK on SQL Server port 1433.
+reason: Written before the production server was identified. It describes the old IIS site on http://178.105.20.255:82, a localhost,50001 / HRMS connection string and a C:\HRMSDeploy-only topology. Production is Teezhost 16GB, https://hr.coditium.com, database HRBTK on SQL Server port 1433. Connection strings are no longer in appsettings.json.
 superseded_by: ../deployment.md
+see_also: ../db/prod_rollout.md
 ---
 # 5. Deployment
 
