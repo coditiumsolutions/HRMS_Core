@@ -24,8 +24,13 @@ tasks:
   business_logic:
     - {title: "Tax-year bug",                               status: done_in_dev}
     - {title: "Progressive tax (T4)",                       status: open}
-    - {title: "Paid/unpaid leave, allowance dates, frequency in payroll", status: open}
-    - {title: "Leave approval workflow, balance and overlap checks",       status: partly}
+    - {title: "Allowance effective/end dates in payroll",     status: fixed_not_committed}
+    - {title: "Allowance/deduction frequency Once and Annual", status: fixed_not_committed}
+    - {title: "Frequency Weekly and Bi-Weekly",                status: waiting_for_hr, decision: "what a weekly/bi-weekly amount means in a monthly payslip"}
+    - {title: "Unpaid-leave deduction in payroll",              status: waiting_for_hr, decision: B11}
+    - {title: "Leave balance check",                           status: waiting_for_hr, decision: B5}
+    - {title: "Leave approval workflow (who approves)",        status: waiting_for_hr, decision: B13}
+    - {title: "Leave overlap check",                           status: fixed_not_committed}
     - {title: "Screens/processing for shifts, punches, half days, corrections, roster, notes", status: open}
   engineering:
     - {title: "Tests and CI",                              status: open}
@@ -79,12 +84,12 @@ Priority: **P0** fix now · **P1** next sprint · **P2** planned · **P3** nice 
 |---|---|
 | **Tax-year bug** (slabs matched against `2026` instead of `2025-2026`, all slabs pooled) | **Done in dev**: tax year is derived from the payslip month (July-June) and stored as `TaxYearStart`; no fallback to pooled slabs. Not on production yet, so production payslips are still computed the old way. |
 | Tax is a flat % on basic, not the progressive FBR computation | **Open** (decision T4) |
-| Leave/attendance do not influence salary | **Open**: `WorkingDays/LeaveDays/LeaveBalance` unused. `LeaveTypes.IsPaid` exists but payroll ignores it. |
-| Allowance `EffectiveDate/EndDate` not applied in payroll (only `IsActive`), while deductions are date-filtered | **Open** (`PayrollCalculationService` filters allowances on `IsActive` only) |
-| Allowance/deduction `Frequency` stored but not honoured | **Open** |
+| Leave/attendance do not influence salary | **Waiting for HR** (B11 absence and unpaid-leave rate, B6 hourly pay, B10 mid-month joiners): `WorkingDays/LeaveDays/LeaveBalance` unused. `LeaveTypes.IsPaid` exists but payroll ignores it. Deliberately not built until HR answers. |
+| Allowance `EffectiveDate/EndDate` not applied in payroll (only `IsActive`), while deductions are date-filtered | **Fixed in the repository (2026-11-23)**: allowances and deductions use the same rule: started before the month ends, not ended before it starts (`PayrollCalculationService.AppliesInPeriod`). Also used by the gross preview on the payroll list (current month). Tested with March and December 2026 payslips. |
+| Allowance/deduction `Frequency` stored but not honoured | **Partly**: `Once` applies only in the month of its effective date and `Annual` only in that calendar month each year (fixed in the repository). `Weekly` and `Bi-Weekly` are still applied once a month because HR has not said how a weekly amount maps to a monthly payslip. The live data only has `Monthly` (allowances) and `Monthly`/`Once` (deductions). |
 | Percentage allowances use basic, percentage deductions use gross | Unchanged (as designed; confirm with HR) |
 | Editing an allowance/deduction locks all payslips of the employee and there is no unlock | **Open** |
-| Leave: no approval workflow, no balance check, overlap only blocks exact duplicates | **Partly**: `ApprovedByUserId` and status exist in the schema; the screens do not use an approver, and the duplicate guard only catches identical open requests. Production copy had 21 and 22 overlapping rows. |
+| Leave: no approval workflow, no balance check, overlap only blocks exact duplicates | **Partly**: overlap is **fixed in the repository**: a new or edited Pending/Approved request is refused when it overlaps another Pending/Approved request of the same employee (Rejected and Cancelled never conflict; existing overlapping rows, 21 and 22 in the production copy, are not changed). **Waiting for HR:** the balance check (B5: leave year, quota rules, whether weekly offs count) and the approval workflow (B13: who approves; `ApprovedByUserId`/`ApprovedAt` exist in the schema but no screen sets them). |
 | Taxes Summary report is a stub | **Open** |
 | `ApplyTax` free-text flag | **Done in dev**: `bit` column, converter keeps `Yes`/`No` in code |
 | Hard-coded strings (`"Fuel Allowance"`, `"Fixed Amount"`, month names) | **Open** (project, department, designation and leave-type lists are no longer hard-coded) |
@@ -108,12 +113,13 @@ Priority: **P0** fix now · **P1** next sprint · **P2** planned · **P3** nice 
 - No scheduled jobs (attendance sync, backups), no email/notifications, no report export beyond the Excel employee list: **Open**.
 
 ## Open decisions that block work (see `../db/decisions.md`)
+B5 (leave year and quotas, balance check), B11 (absence/unpaid-leave deduction), B13 (who approves), B6/B10 (hourly pay, mid-month joiners), B1/B7/B8/B16 (half days, schedules, forgotten check-outs), and a missing definition of Weekly/Bi-Weekly frequency. Also:
 T4 (progressive tax), T7, B1, B4-B18, the real project list (B3), HR mapping of `Administrator`/`Mess`/`Transportation` departments, and what `HR` may do versus `Admin`.
 
 ## Recommended roadmap
 1. **Done in the repository:** `Setup` behind `Admin`; `Debug` and `Home/Test` removed; neutral login errors, throttle, re-hash; `Secure` cookie and HTTPS redirect; logout POST; employee soft delete; `/uploads` blocked. **Deferred (owner):** `sa` password rotation.
 2. **Next (P1):** roles on payroll/salary/Reports; move uploads outside `wwwroot` (`StorageBasePath`); deploy.
 3. **Rollout (P1):** HR sign-off on `mig.EmployeeOrgMap` and the project list, then follow `../db/prod_rollout.md`; update `db.md` to v2.0 afterwards.
-4. **P2:** screens and processing for punches, shifts, half days, corrections, roster, notes; payroll use of the paid/unpaid flag, allowance dates and frequency; leave approval workflow and balance check.
+4. **P2 (waiting for HR answers):** screens and processing for punches, shifts, half days, corrections, roster, notes (B1, B7, B8, B16); payroll use of the paid/unpaid flag (B11, B6, B10); leave balance check (B5) and approval workflow (B13); weekly/bi-weekly frequency meaning.
 5. **P2:** extract services from fat controllers; unit tests for `PayrollCalculationService` (tax year, slabs, allowances, deductions) and integration tests for login and authorization; CI.
 6. **P3:** progressive tax engine, payslip unlock with audit, full audit trail.

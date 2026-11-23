@@ -34,12 +34,12 @@ An internal **HR + payroll system** (Bahria Town; PKR currency; Pakistani CNIC/t
 ### Payroll calculation (`PayrollCalculationService.GeneratePayslip`)
 1. Reject if a payslip already exists for (employee, month, year).
 2. `Basic` = `Employee.BasicSalary`.
-3. **Allowances** (active rows only), per row:
+3. **Allowances** (active rows that apply in the payroll month: `EffectiveDate` before the month ends, `EndDate` empty or not before the month starts; `Frequency` `Once` = effective month only, `Annual` = that calendar month each year, anything else = every month), per row:
    - percentage-based → `Basic × % / 100`
    - "Fuel Allowance": *Fixed Amount* → `Amount`; *Quantity* → `FuelPrice (Configuration table) × Quantity`; legacy type → `Amount` if > 0 else fuel price × qty
    - everything else → `Amount × Quantity`
 4. `Gross = Basic + Σ allowances`.
-5. **Deductions**: active and effective in the payroll month (`EffectiveDate ≤ month end` and `EndDate` null or ≥ month start). *Percentage* → `% of Gross`; otherwise a fixed amount (stored in `PercentageValue` – there is no Amount column). Rounded to 2 dp.
+5. **Deductions**: same date and frequency rule as allowances. *Percentage* → `% of Gross`; otherwise a fixed amount (stored in `PercentageValue` – there is no Amount column). Rounded to 2 dp.
 6. **Income tax**: only if `Employee.ApplyTax` is set (a `bit` in the redesigned schema; `Yes`/`No` in code). The tax year is derived from the payslip month (July to June, e.g. March 2026 → `2025-2026`) and slabs are taken for that year only, with no fallback to other years (the old pooled-slab bug is fixed in the repository, not yet on production). The highest `MinSalary` whose range contains **Basic** wins (null/0 `MaxSalary` = unbounded). `Tax = Basic × % / 100` – a flat percentage of the matched slab, **not progressive/marginal**.
 7. `Net = Gross − Σ deductions − Tax`.
 8. Persist `Payslips` header + `PayslipDetails` lines (types Allowance / Deduction / Tax) and a readable `CalculationDetails` text block.
@@ -51,7 +51,7 @@ Adding/editing/deleting an allowance or deduction calls `PayslipLockService.Lock
 `AttendanceService` parses `.xlsx` (EPPlus; the upload page only accepts `.xlsx`): flexible header-name mapping, looks the employee up by code, validates date/time/status, upserts one row per employee per date (unique index on employee uid + date), rejects a file whose hash was already imported, and records an `AttendanceUploadLogs` entry (counts, status, error details). `UploadedBy` is still hard-coded `"System"`.
 
 ### Leave
-Leave requests (employee, leave type from `LeaveTypes`, from/to, status); quotas per leave type per year (decimal days); balance view combines quotas, requests and carry-forward data. `EmployeeLeaves` has been removed, so `LeaveRequests` is the only leave model. Exact duplicate open requests are refused; overlapping requests and balances are not checked.
+Leave requests (employee, leave type from `LeaveTypes`, from/to, status); quotas per leave type per year (decimal days); balance view combines quotas, requests and carry-forward data. `EmployeeLeaves` has been removed, so `LeaveRequests` is the only leave model. A request is refused when it overlaps another Pending or Approved request of the same employee (exact duplicates are also refused by a unique index). Balances are not checked and there is no approval step (waiting for HR decisions B5 and B13).
 
 ### Audit
 `AuditLogService` records table, operation, record id, old/new JSON, user, timestamp, module and IP. Used for payslip locking and allowance/deduction changes; other CRUD (employees, leave, attendance, users) is **not** audited.
