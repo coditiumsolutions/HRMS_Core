@@ -1,10 +1,10 @@
 ---
 status: partially-outdated
 last_verified: 2026-11-23
-verified_against: main @ 7aa2685 plus the uncommitted security and user-roles changes (code), and the redesigned development database (scripts 01-04, 06, 07 applied)
+verified_against: main @ ddc0ef8 plus the uncommitted UI work (Fmt, hrms-theme.css, hrms-grid.js, Employee Details restructure), checked in the running app with headless-Chrome screenshots, and the redesigned development database
 outdated_since: 2026-11-23
 outdated_sections: [Pages by module (partly)]
-reason: Updated on 2026-11-23 for the Lookups views, the shared org-fields partial, the role tick boxes and the Logout button. Layout, navigation and asset sections were not re-verified line by line.
+reason: Updated on 2026-11-23 for the Lookups views, the shared org-fields partial, the role tick boxes, the Logout button, the display standard and the site-wide restyle (hrms-theme.css, hrms-grid.js). Navigation and per-page sections were not re-verified line by line.
 see_also: 06-gaps.md
 ---
 # 7. UI Elements
@@ -51,6 +51,15 @@ Server-rendered Razor (`.cshtml`) – 102 view files (counted 2026-11-23), Boots
 | Logout | a POST form button in the three layouts (was a link) |
 | Employee partial | `_EmployeeOrgFields` (project/department/sub-department/designation selects shared by Create and Edit) |
 | Home | also `AccessDenied` (403 page) |
+
+## Display standard (added 2026-11-23)
+Numbers, ranges, dates and times in views go through `Infrastructure/Fmt`: dates `23/11/2026` (DD/MM/YYYY; long form `Monday, 23 November 2026`), times 12-hour `02:05 PM`, date-times time first `02:05 PM 23/11/2026`, amounts `12,345.50`. See `../ui_standards.md`.
+
+## Look and feel (added 2026-11-23)
+One design layer, `wwwroot/css/hrms-theme.css`, is linked after the inline layout styles in `_MainLayout`, `_SetupLayout`, `_DeductionsLayout` and `_LoginLayout`. Direction: warm paper canvas, navy ink, brass accent, hairline borders, Fraunces headings with Source Sans 3 body (Google Fonts; falls back to Georgia/system fonts offline). Base text size is 18.75px (19.4px on wide screens), 25% above the Bootstrap default of the first version, and all rem-based sizes scale with it. The login page has a show/hide password eye button (inline SVG, no icon font needed). It re-points Bootstrap variables and restyles the top bars, sidebar, cards, tables, forms, buttons, badges, alerts and pagination, and adds a small-screen layout (sidebar stacks), print rules (chrome hidden) and reduced-motion handling. `wwwroot/js/hrms-grid.js` aligns table columns by content. The sidebar has one width on every page (`--hr-sidebar-w`); before, the three layouts used 16.7%, col-2 and col-md-3/col-lg-2. Page CSS still loads after the theme and wins where it overrides. Per-view inline styles were not removed; hard-coded Bootstrap blue and blue row stripes were swapped for theme tokens.
+
+## Employee details page (changed 2026-11-23)
+Tabs: Employee Info, Salary Info, Leave Balance, Employee History, Attachments. Personal Info and Official Info are one "Employee Info" section; "Additional Info" (details, modified by/on, contact note) is a collapsed block at the bottom of Employee Info. Older saved tab keys (`personal`, `official`, `additional`) open Employee Info.
 
 ## Recurring UI components
 - **Data grids:** Bootstrap tables with filter bars (department, search, status, month/year), column sort arrows (`bi-arrow-down-up`/`bi-sort-up`), `PaginatedList<T>` pager that preserves filters, row selection with "select all" (`hrms-grid-selection.js`, `_HrmsGridSelectionScript`).

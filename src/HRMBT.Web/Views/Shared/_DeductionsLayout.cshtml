@@ -29,7 +29,7 @@
         .navbar-top-1 .navbar-text {
             padding-top: 0.25rem;
             padding-bottom: 0.25rem;
-            color: #0d6efd;
+            color: var(--hr-teal-600, #2d6a87);
         }
         .navbar-top-2 {
             background-color: #00203F;
@@ -185,6 +185,10 @@
             }
         }
     </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Source+Sans+3:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="~/css/hrms-theme.css" asp-append-version="true" />
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
@@ -311,6 +315,7 @@
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/hrms-grid.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
