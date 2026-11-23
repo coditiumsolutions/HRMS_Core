@@ -81,6 +81,27 @@ namespace HRMBT.Web.Services.Payroll
                 ? grossSalary * (d.PercentageValue ?? 0m) / 100m
                 : (d.PercentageValue ?? 0m);
 
+        /// <summary>
+        /// True when an allowance or deduction applies in the payroll period [periodStart, periodEndExclusive).
+        /// It must have started (EffectiveDate before the period ends) and not have ended (EndDate on or after the period start).
+        /// Frequency: Once = only in the month of EffectiveDate; Annual = in the same calendar month every year from EffectiveDate;
+        /// Monthly (and anything else, including Weekly and Bi-Weekly, whose meaning HR has not defined) = every month.
+        /// </summary>
+        public static bool AppliesInPeriod(string? frequency, DateTime effectiveDate, DateTime? endDate, DateTime periodStart, DateTime periodEndExclusive)
+        {
+            if (effectiveDate >= periodEndExclusive)
+                return false;
+            if (endDate.HasValue && endDate.Value.Date < periodStart.Date)
+                return false;
+
+            var f = (frequency ?? string.Empty).Trim();
+            if (f.Equals("Once", StringComparison.OrdinalIgnoreCase))
+                return effectiveDate >= periodStart;
+            if (f.Equals("Annual", StringComparison.OrdinalIgnoreCase))
+                return effectiveDate.Month == periodStart.Month;
+            return true;
+        }
+
         /// <summary>Active allowance total using the same rules as payslip gross.</summary>
         public static decimal SumAllowancesForBasic(decimal basic, IEnumerable<Allowance> allowances, decimal fuelPrice = 0m) =>
             allowances.Sum(a => AllowanceComputedAmount(a, basic, fuelPrice));
@@ -109,8 +130,10 @@ namespace HRMBT.Web.Services.Payroll
         }
 
         /// <summary>Preview gross (basic + active allowances) per employee — matches <see cref="GeneratePayslip"/> gross before deductions.</summary>
-        public Dictionary<int, decimal> ComputeGrossPreviewForEmployees(IEnumerable<Employee> employees)
+        public Dictionary<int, decimal> ComputeGrossPreviewForEmployees(IEnumerable<Employee> employees, DateTime? periodMonth = null)
         {
+            var periodStart = new DateTime((periodMonth ?? DateTime.Today).Year, (periodMonth ?? DateTime.Today).Month, 1);
+            var periodEndExclusive = periodStart.AddMonths(1);
             var list = employees?.ToList() ?? new List<Employee>();
             var result = new Dictionary<int, decimal>();
             if (list.Count == 0) return result;
@@ -120,6 +143,7 @@ namespace HRMBT.Web.Services.Payroll
             var byEmpId = _context.Allowances.AsNoTracking()
                 .Where(a => ids.Contains(a.EmployeeId) && a.IsActive)
                 .ToList()
+                .Where(a => AppliesInPeriod(a.Frequency, a.EffectiveDate, a.EndDate, periodStart, periodEndExclusive))
                 .GroupBy(a => a.EmployeeId)
                 .ToDictionary(g => g.Key, g => g.ToList());
 
@@ -149,23 +173,25 @@ namespace HRMBT.Web.Services.Payroll
                 decimal basic = employee.BasicSalary ?? 0m;
                 decimal fuelPrice = GetFuelPriceFromConfiguration();
 
-                var allowances = _context.Allowances
-                    .Where(a => a.EmployeeId == employeeId && a.IsActive)
-                    .ToList();
-
                 var monthNum = PayrollMonthHelper.OrderIndex(monthName);
                 if (monthNum < 1 || monthNum > 12)
                     monthNum = DateTime.Now.Month;
                 var periodStart = new DateTime(year, monthNum, 1);
-                var periodEnd = periodStart.AddMonths(1).AddDays(-1);
+                var periodEndExclusive = periodStart.AddMonths(1);
 
-                // Every active deduction that applies in this payroll month
+                // Active allowances and deductions that apply in this payroll month (effective/end dates and frequency)
+                var allowances = _context.Allowances
+                    .Where(a => a.EmployeeId == employeeId && a.IsActive)
+                    .ToList()
+                    .Where(a => AppliesInPeriod(a.Frequency, a.EffectiveDate, a.EndDate, periodStart, periodEndExclusive))
+                    .ToList();
+
                 var deductions = _context.Deductions
-                    .Where(d => d.EmployeeId == employeeId && d.IsActive
-                        && d.EffectiveDate <= periodEnd
-                        && (d.EndDate == null || d.EndDate >= periodStart))
+                    .Where(d => d.EmployeeId == employeeId && d.IsActive)
                     .OrderBy(d => d.DeductionType)
                     .ThenBy(d => d.DeductionName)
+                    .ToList()
+                    .Where(d => AppliesInPeriod(d.Frequency, d.EffectiveDate, d.EndDate, periodStart, periodEndExclusive))
                     .ToList();
 
                 decimal totalAllowances = SumAllowancesForBasic(basic, allowances, fuelPrice);

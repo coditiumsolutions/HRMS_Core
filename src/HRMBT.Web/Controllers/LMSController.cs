@@ -81,6 +81,29 @@ namespace HRMBT.Web.Controllers
             return (end - start).TotalDays + 1;
         }
 
+        /// <summary>
+        /// An employee cannot have two open (Pending or Approved) leave requests covering the same day.
+        /// Returns a message naming the conflicting request, or null. Rejected and Cancelled requests never conflict.
+        /// </summary>
+        private async Task<string?> FindLeaveOverlapAsync(int employeeUid, DateTime from, DateTime to, string? status, int? ignoreRequestId)
+        {
+            if (!LeaveRequestCountsAsAvailed(status))
+                return null;
+
+            var other = await _context.LeaveRequests.AsNoTracking()
+                .Where(l => l.EmployeeId == employeeUid
+                            && (ignoreRequestId == null || l.Id != ignoreRequestId)
+                            && (l.Status == "Pending" || l.Status == "Approved")
+                            && l.FromDate <= to && l.ToDate >= from)
+                .OrderBy(l => l.FromDate)
+                .Select(l => new { l.Id, l.FromDate, l.ToDate, l.Status })
+                .FirstOrDefaultAsync();
+
+            return other == null
+                ? null
+                : $"This employee already has a {other.Status} leave request (#{other.Id}) from {other.FromDate:dd MMM yyyy} to {other.ToDate:dd MMM yyyy} that overlaps these dates.";
+        }
+
         /// <summary>Leave rows that consume quota (adjust if your workflow uses other statuses).</summary>
         private static bool LeaveRequestCountsAsAvailed(string? status)
         {
@@ -489,6 +512,13 @@ namespace HRMBT.Web.Controllers
             if (leaveTypeId == null)
                 ModelState.AddModelError(nameof(LeaveRequest.LeaveType), "Please select a valid leave type.");
 
+            if (ModelState.IsValid && model.ToDate.Date >= model.FromDate.Date)
+            {
+                var overlap = await FindLeaveOverlapAsync(model.EmployeeId, model.FromDate.Date, model.ToDate.Date, model.Status, null);
+                if (overlap != null)
+                    ModelState.AddModelError(string.Empty, overlap);
+            }
+
             if (ModelState.IsValid)
             {
                 model.LeaveTypeId = leaveTypeId!.Value;
@@ -550,6 +580,15 @@ namespace HRMBT.Web.Controllers
             var leaveTypeId = await ResolveLeaveTypeIdAsync(model.LeaveType);
             if (leaveTypeId == null)
                 ModelState.AddModelError(nameof(LeaveRequest.LeaveType), "Please select a valid leave type.");
+
+            if (ModelState.IsValid && model.ToDate.Date >= model.FromDate.Date)
+            {
+                var current = await _context.LeaveRequests.AsNoTracking().Where(l => l.Id == model.Id).Select(l => l.Status).FirstOrDefaultAsync();
+                var overlap = await FindLeaveOverlapAsync(model.EmployeeId, model.FromDate.Date, model.ToDate.Date,
+                    string.IsNullOrWhiteSpace(model.Status) ? current : model.Status, model.Id);
+                if (overlap != null)
+                    ModelState.AddModelError(string.Empty, overlap);
+            }
 
             if (ModelState.IsValid)
             {
