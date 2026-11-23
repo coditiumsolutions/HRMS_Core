@@ -44,6 +44,13 @@ Navigation: each controller sets `ViewData["Module"]`, and `Views/Shared/_Sideba
 
 Config-driven dropdowns (Department, Designation, Project, LeaveTypes, AllowanceNames, ...) come from rows in the `Configuration` table, edited under Setup.
 
+## Database redesign (development)
+
+- The redesigned schema (`docs/db/db_changes.md`, standards in `db_standards.md`, decisions in `decisions.md`) is applied to the **local development database only**. Scripts: `scripts/database/redesign/` (01-04 expand, 06 contract; run in order, back up first, `sqlcmd -b -I`). Production `HRBTK` still has the old schema, and `db.md` still describes production. How to apply the redesign to production: `docs/db/prod_rollout.md` (one maintenance window, database and app together; back up first).
+- The app code targets the redesigned schema. Legacy shapes are kept in code through EF value converters and facade properties (payslip month name, tax year label, `Employee.Department`/`Project`/`Designation` names, attendance `TimeIn`/`TimeOut`/`Status`, deduction `PercentageValue`); in LINQ queries use the real columns/navigations (`e.DepartmentInfo!.DepartmentName`, `a.AttendanceDate`, `d.Percentage`/`d.Amount`).
+- Projects, departments, sub-departments, designations and leave types are managed under Setup -> Lists (`LookupsController`, Admin or HR role). Nothing about them is hard-coded.
+- Always run the app with `ASPNETCORE_ENVIRONMENT=Development` when testing; without it the app reads `appsettings.Production.json` and connects to the production server.
+
 ## Security facts to keep in mind
 
 - `FallbackPolicy` requires an authenticated user everywhere; `[AllowAnonymous]` is used on login/logout/error and, currently, **the whole `SetupController`** (user and config management) - a known critical gap.

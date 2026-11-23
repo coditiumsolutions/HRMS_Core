@@ -2,7 +2,7 @@
 Version: 3.4-draft | Based on: db.md v1.9 (2026-11-16) | Date: 2026-11-18
 Database: HRBTK
 Server: Teezhost 16GB (production)
-Status: **FINAL DRAFT, not applied.** Nothing in this file has been run against any database. Production `HRBTK` stays read-only until each script is reviewed and approved (db_standards.md S19). This draft implements the rules in db_standards.md (S1-S23) and the answered decisions in decisions.md (T1, T2, T3, T5, T6). Items that wait for an open decision are tagged ⏸ and name the decision (T4, T7, B1-B18). **Data status (2026-11-18):** the data in `HRBTK` is treated as test data. Row counts, "live checks" and findings in this file describe it for design purposes; they are not requirements (for example, the number of projects is not fixed, B3), and the checks are re-run on the real data before a script is applied.
+Status: **FINAL DRAFT. Applied to the local development copy only (2026-11-23); production `HRBTK` is untouched and stays read-only until each script is reviewed and approved (db_standards.md S19).** The re-runnable scripts are in `scripts/database/redesign/` (01-04 expand, 06 contract); the development app is already adapted (value converters keep the legacy text shapes in code, Setup pages manage the new lists). Deviations found while applying: `UX_PayslipDetails_Payslip_Item` is created in phase 4 (after the `ItemType` type change); filtered indexes block `ALTER COLUMN` and column renames (SQL Server error 1934), so the scripts drop and recreate them around those steps; `UX_Attendance_Employee_ShiftDate` was filtered during the expand phase and is unfiltered after the contract phase. This draft implements the rules in db_standards.md (S1-S23) and the answered decisions in decisions.md (T1, T2, T3, T5, T6). Items that wait for an open decision are tagged ⏸ and name the decision (T4, T7, B1-B18). **Data status (2026-11-18):** the data in `HRBTK` is treated as test data. Row counts, "live checks" and findings in this file describe it for design purposes; they are not requirements (for example, the number of projects is not fixed, B3), and the checks are re-run on the real data before a script is applied.
 
 ## MAINTENANCE RULES:
     1. Bump Version and Date above whenever this file changes; when a change is applied, move it into db.md and add a Change History entry there
@@ -1047,6 +1047,17 @@ All live in decisions.md. The draft shows the assumption it made; nothing below 
 | B18 legacy leave columns | kept as they are until HR defines them (test data today) | Employee |
 
 ## Migration order
+**Script map (applied to the local development database on 2026-11-23; production steps in `prod_rollout.md`):**
+
+| Step below | Script in `scripts/database/redesign/` | Notes |
+|---|---|---|
+| 0 and 1 | `01_lookups_and_keys.sql` | `UX_PayslipDetails_Payslip_Item` moved to script 04 (needs the `ItemType` type change first). |
+| 2 | `02_employee_org.sql` | Creates `mig.EmployeeOrgMap` for HR review; stops on any unmapped project/department text. |
+| 3 | `03_leave_and_users.sql` | Leave requests pointing at a missing employee are archived to `mig.LeaveRequests_Orphans` and removed. |
+| 4 | `04_attendance_payroll.sql` | Expand only; `Attendance.EmployeeUid`, `ShiftDate`, `Payslips.MonthNo`, `TaxRules.TaxYearStart` sit beside the old columns. |
+| 5 | (deployment) | The development app already reads only the new schema; see `prod_rollout.md` for the production deployment. |
+| 6 | `06_contract.sql` | Drops the legacy columns, renames the temporary ones, makes `ProjectId`/`DepartmentId` NOT NULL, removes the moved Configuration rows, drops `EmployeeLeaves`. |
+
 Production stays untouched until each script below has been reviewed and approved. Each phase is an EF migration or a **re-runnable** SQL script (S23: guard every change with `IF COL_LENGTH(...) IS NULL`, `IF OBJECT_ID(...) IS NULL` or `IF NOT EXISTS` on the index/constraint name; write backfills as "update where the new column IS NULL"; seed with `MERGE` on the natural key; run in a transaction with a rollback script; running twice changes nothing), **recorded in `__EFMigrationsHistory`** (or a `SchemaChangeLog` row), and preceded by a backup of `HRBTK` (S19). Create unique indexes **after** the backfill and after checking for duplicates (live checks are listed in the Idempotency section). `sqlcmd` runs against production only with your approval before each run.
 
 0. **Bookkeeping.** Back up. Record the six hand-applied migrations (`20260105120000`, `20260512100000`, `20260515120000`, `20260515140000`, `20260520100000`, `20260918120000`) and decide what to do with `20260110114250_LMSModule` (recorded but missing from the repo).
