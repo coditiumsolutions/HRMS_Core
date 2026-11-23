@@ -46,16 +46,18 @@ Config-driven dropdowns (Department, Designation, Project, LeaveTypes, Allowance
 
 ## Database redesign (development)
 
-- The redesigned schema (`docs/db/db_changes.md`, standards in `db_standards.md`, decisions in `decisions.md`) is applied to the **local development database only**. Scripts: `scripts/database/redesign/` (01-04 expand, 06 contract; run in order, back up first, `sqlcmd -b -I`). Production `HRBTK` still has the old schema, and `db.md` still describes production. How to apply the redesign to production: `docs/db/prod_rollout.md` (one maintenance window, database and app together; back up first).
+- The redesigned schema (`docs/db/db_changes.md`, standards in `db_standards.md`, decisions in `decisions.md`) is applied to the **local development database only**. Scripts: `scripts/database/redesign/` (01-04 expand, 06 contract, 07 user roles; run in order, back up first, `sqlcmd -b -I`). Production `HRBTK` still has the old schema, and `db.md` still describes production. How to apply the redesign to production: `docs/db/prod_rollout.md` (one maintenance window, database and app together; back up first).
 - The app code targets the redesigned schema. Legacy shapes are kept in code through EF value converters and facade properties (payslip month name, tax year label, `Employee.Department`/`Project`/`Designation` names, attendance `TimeIn`/`TimeOut`/`Status`, deduction `PercentageValue`); in LINQ queries use the real columns/navigations (`e.DepartmentInfo!.DepartmentName`, `a.AttendanceDate`, `d.Percentage`/`d.Amount`).
 - Projects, departments, sub-departments, designations and leave types are managed under Setup -> Lists (`LookupsController`, Admin or HR role). Nothing about them is hard-coded.
 - Always run the app with `ASPNETCORE_ENVIRONMENT=Development` when testing; without it the app reads `appsettings.Production.json` and connects to the production server.
 
 ## Security facts to keep in mind
 
-- `FallbackPolicy` requires an authenticated user everywhere; `[AllowAnonymous]` is used on login/logout/error and, currently, **the whole `SetupController`** (user and config management) - a known critical gap.
-- `Users.Role` is copied into the auth cookie but nothing enforces roles yet.
-- All state-changing actions use `[ValidateAntiForgeryToken]` individually (no global filter) - add it to every new POST.
+- `FallbackPolicy` requires an authenticated user everywhere; `[AllowAnonymous]` is only on login/logout/error/DbHealth. `SetupController` requires `Admin`; a user can hold several roles (table `UserRoles`, script `07_user_roles.sql`; one role claim per row; manage them with the tick boxes in Setup → Users; the last active Admin cannot be demoted or disabled); `LookupsController` requires `Admin,HR`; employee delete (marks Inactive) requires `Admin`. Other controllers still allow any logged-in user (payroll/salary/reports need a decision on what `HR` may do).
+- A global `AutoValidateAntiforgeryToken` filter covers all POSTs; keep `[ValidateAntiForgeryToken]` on actions anyway. Logout is POST (forms in the layouts).
+- Login errors are neutral, failed logins are throttled (5 per address+username, 15 min), legacy password formats are re-hashed to PBKDF2 (600k) on login. Auth cookie is HttpOnly, SameSite=Lax, Secure outside Development.
+- `/uploads` returns 404 from the web server; documents are served only by `EmployeeDocumentsController.Download`. Set `EmployeeDocuments:StorageBasePath` to store them outside `wwwroot`.
+- Deferred to the owner: rotating the old `sa` password (still in git history), least-privilege app login, closing SQL port 1433.
 
 ## Known payroll gotchas
 

@@ -8,13 +8,13 @@ Source of truth for *what* changes: `db_changes.md`. This file is *how* to apply
 ## 1. What has been tested, and what has not
 | Tested on the local copy | Not tested |
 |---|---|
-| Scripts 01-04 and 06 run clean in order; each re-runs with no changes (01-04 before 06; 06 again after itself). | Production data volume and timing (the copy was 144 MB; expect a short run). |
+| Scripts 01-04, 06 and 07 run clean in order; each re-runs with no changes (01-04 before 06; 06 and 07 again after themselves). | Production data volume and timing (the copy was 144 MB; expect a short run). |
 | The app (Development environment) loads all pages and the create/edit/upload flows against the new schema. | The IIS deployment of the new build, and `appsettings.Production.json` on the server. |
 | Tax-year logic, unique/duplicate guards, concurrency tokens, file-hash checks. | Anything that depends on the **real** data (see section 3: the copy is test data). |
 
 ## 2. Rules for this rollout
 1. **One maintenance window, database and app together.** The old app cannot run on the new schema: from script 02 on, columns it reads as text (`ApplyTax`, `DOB`, `Users.CreatedOn`, leave status, payslip month...) are typed columns, and script 06 removes the old columns. There is no "database first, app later" option.
-2. **Back up first, and test the restore.** Take a full backup of `HRBTK` (`BACKUP DATABASE ... WITH COPY_ONLY, CHECKSUM`) and keep the current IIS publish folder. Rollback is: restore the backup + redeploy the old build (section 6). Scripts do not have undo scripts.
+2. **Back up first, and test the restore.** Take a full backup of `HRBTK` (`BACKUP DATABASE ... WITH COPY_ONLY, CHECKSUM`) and keep the current IIS publish folder. Rollback is: restore the backup + redeploy the old build (section 6). The old build cannot run after script 07 either (it reads `Users.Role`). Scripts do not have undo scripts.
 3. **Run with `sqlcmd -b -I`** (`-I` = QUOTED_IDENTIFIER ON, required for filtered indexes; `-b` = stop at the first error). Each script is a single transaction, so a failure leaves the database as it was before that script.
 4. **Production is changed only with your approval before each run** (db_standards S19, AGENTS.md). `sa` credentials come from `appsettings.Production.json` / the server owner, never from a committed file.
 5. **Never run the app against production while testing.** Without `ASPNETCORE_ENVIRONMENT=Development` it reads `appsettings.Production.json`.
@@ -32,7 +32,7 @@ The copy used test data. Re-run these checks read-only on production and resolve
 **Checks that must be clean (or consciously handled)**
 | Check | Why / what the script does |
 |---|---|
-| `Users.Role` values other than `Admin`, `HR` or empty | Script 03 stops; the new CHECK allows only Admin and HR. |
+| `Users.Role` values other than `Admin`, `HR` or empty | Script 03 stops; the new CHECK allows only Admin and HR. Script 07 then copies each role into `UserRoles` and drops `Users.Role`; grant extra roles (for example Admin to an HR user) afterwards in Setup → Users, where each user has a tick box per role. |
 | `Employee.EmployeeStatus` values outside `Active, Inactive, Resigned, Terminated` | Script 02 stops. |
 | `Employee.DOB` / `ModifiedOn` / `Users.CreatedOn` not valid dates | Scripts 02/03 stop and list nothing silently; fix the values first. |
 | Designation longer than 100 chars; names/CNIC/mobile longer than the new lengths | Scripts 02 stop. |
@@ -55,6 +55,7 @@ The copy used test data. Re-run these checks read-only on production and resolve
    ... 03_leave_and_users.sql
    ... 04_attendance_payroll.sql
    ... 06_contract.sql
+   ... 07_user_roles.sql      (several roles per user; needs 03, independent of 06)
    ```
    Script 06 is the point of no return for the old app (it drops the old columns). Take a second backup between 04 and 06 if you want a fallback that keeps the old columns.
 4. Verify the database (section 5), then publish the new build with `scripts\deploy\DeployToIIS.bat`, restore `wwwroot/uploads`, start the site.
@@ -69,7 +70,9 @@ Run read-only; all should hold:
 SELECT COUNT(*) FROM dbo.Employee;                                   -- same as before the window
 SELECT COUNT(*) FROM dbo.Employee WHERE ProjectId IS NULL OR DepartmentId IS NULL;   -- 0
 SELECT COUNT(*) FROM sys.foreign_keys WHERE is_not_trusted = 1;     -- 0
-SELECT MigrationId FROM dbo.__EFMigrationsHistory WHERE MigrationId LIKE '202611230000%' ORDER BY 1;  -- phases 1-4 and 6
+SELECT MigrationId FROM dbo.__EFMigrationsHistory WHERE MigrationId LIKE '202611230000%' ORDER BY 1;  -- phases 1-4, 6 and 7
+SELECT COUNT(*) FROM dbo.UserRoles;                                 -- one row per user that had a role (6 users, 5 with a role on 2026-11-16)
+SELECT COUNT(*) FROM dbo.Users u WHERE NOT EXISTS (SELECT 1 FROM dbo.UserRoles r WHERE r.UserId = u.uid AND r.[Role] = 'Admin');  -- at least one Admin must exist: total users minus this must be >= 1
 ```
 Also compare row counts of the tables that existed before with the backup. Keep `mig.EmployeeOrgMap` and `mig.LeaveRequests_Orphans` until HR has signed off, then drop the `mig` schema.
 
@@ -78,7 +81,8 @@ Also compare row counts of the tables that existed before with the backup. Keep 
 - Do not try to reverse individual scripts by hand.
 
 ## 7. After the rollout
+- Roles: script 07 copies each user's single role. Wanted after the rollout (not done by the script): give `farhan` HR as well as Admin in Setup -> Users (already done on the local copy); give any other HR user Admin the same way.
 - Update `db.md` to the new schema (v2.0, with a Change History entry). `db.md` describes production, so do this only once production has the new schema. The `update-db-docs` skill can regenerate it from a connection string.
 - Mark the applied items in `db_changes.md` as applied on production and move answered decisions as the maintenance rules in that file say.
-- The two remaining production-security items from AGENTS.md are separate from this rollout: the anonymous `SetupController` and the old `sa` password in git history.
+- Security: the build deployed in this window includes the security fixes (Setup requires Admin, neutral login, `Secure` cookie, logout POST, `/uploads` blocked). After deploying, check: anonymous `/Setup/Users` redirects to login; login works over https; documents still download. Optionally set `EmployeeDocuments:StorageBasePath` and copy `wwwroot/uploads` there. The old `sa` password in git history is **deferred** to the project owner and is separate from this rollout.
 - Not part of this rollout (see `db_changes.md` and the app): attendance processing from punches, half-day / correction / roster / notes screens (tables exist, no pages yet), payroll use of the paid/unpaid flag.

@@ -1,5 +1,5 @@
 # HRMS Database Schema - Proposed Changes (final draft)
-Version: 3.4-draft | Based on: db.md v1.9 (2026-11-16) | Date: 2026-11-18
+Version: 3.5-draft | Based on: db.md v1.9 (2026-11-16) | Date: 2026-11-23
 Database: HRBTK
 Server: Teezhost 16GB (production)
 Status: **FINAL DRAFT. Applied to the local development copy only (2026-11-23); production `HRBTK` is untouched and stays read-only until each script is reviewed and approved (db_standards.md S19).** The re-runnable scripts are in `scripts/database/redesign/` (01-04 expand, 06 contract); the development app is already adapted (value converters keep the legacy text shapes in code, Setup pages manage the new lists). Deviations found while applying: `UX_PayslipDetails_Payslip_Item` is created in phase 4 (after the `ItemType` type change); filtered indexes block `ALTER COLUMN` and column renames (SQL Server error 1934), so the scripts drop and recreate them around those steps; `UX_Attendance_Employee_ShiftDate` was filtered during the expand phase and is unfiltered after the contract phase. This draft implements the rules in db_standards.md (S1-S23) and the answered decisions in decisions.md (T1, T2, T3, T5, T6). Items that wait for an open decision are tagged ⏸ and name the decision (T4, T7, B1-B18). **Data status (2026-11-18):** the data in `HRBTK` is treated as test data. Row counts, "live checks" and findings in this file describe it for design purposes; they are not requirements (for example, the number of projects is not fixed, B3), and the checks are re-run on the real data before a script is applied.
@@ -78,9 +78,10 @@ Column and key markers (first column of every column table, and at the start of 
 | Shifts | NEW | Shift times, overnight flag, grace minutes, 7-hour full-day rule, half-day cutoff. |
 | SubDepartments | NEW | Optional detail under a department (the function: Mess, Transportation, Record...); information only (B2). |
 | TaxRules | CHANGED | `TaxYearStart` replaces the text label (T6); percentage `decimal(5,2)`; audit columns. |
-| Users | CHANGED | `IsActive`, int FK to Employee, constrained Role, unique Username, audit columns. |
+| UserRoles | NEW | One row per role a login holds (`Admin`, `HR`); replaces the single `Users.Role` column so one user can have several roles (added 2026-11-23). |
+| Users | CHANGED | `IsActive`, int FK to Employee, unique Username, audit columns; `Role` dropped in favour of `UserRoles`. |
 
-Count by status: NEW 12, CHANGED 17, UNCHANGED 1, TO BE REMOVED 1.
+Count by status: NEW 13, CHANGED 17, UNCHANGED 1, TO BE REMOVED 1.
 
 ## How the HR requirements map to the schema
 - 2026-11-16: **Employee, Department and Project, sorted by Project, then Department, then Designation.** `Projects.SortOrder`, `Departments.SortOrder`, `Designations.Rank`; `Employee.ProjectId/DepartmentId/DesignationId`; view `vEmployeeDirectory` and indexes `IX_Employee_Org`.
@@ -947,7 +948,8 @@ Keys and indexes
 Application logins (cookie auth). Existing `CreatedBy/CreatedOn` serve as the creation audit.
 Rows on 2026-11-16: 6.
 - 2026-11-17 (S6, S14): logins are never deleted; `IsActive = 0` disables one, and login must reject inactive users.
-- 2026-11-16: Linked to employees by `uid` like everything else. `Role` becomes a constrained value so it can be enforced for authorization (approvals for leave, half days, corrections; ⏸ B13, B9 for the list of roles).
+- 2026-11-16: Linked to employees by `uid` like everything else. Roles must be constrained values so they can be enforced for authorization (approvals for leave, half days, corrections; ⏸ B13, B9 for the list of roles).
+- 2026-11-23: One login can hold several roles (for example an HR user with Admin privileges), so the single `Role` column is replaced by the child table `UserRoles` (script `07_user_roles.sql`). The app issues one role claim per row, so `[Authorize(Roles = "Admin")]` passes for anyone who has the Admin row. A login with no rows has no role.
 - 2026-11-17: Expand/contract: the new int key is added as `EmployeeUid`, backfilled by `EmployeeID` match, the app switches, the string `EmployeeId` is dropped and `EmployeeUid` is renamed `EmployeeId`.
 
 | Change | Column | Type | Null | Default | Notes |
@@ -956,7 +958,7 @@ Rows on 2026-11-16: 6.
 | 🟡 CHANGED | **EmployeeId** | int | NULL |  | was varchar(50) NULL: Employee.EmployeeID (string), no FK; 1 row points at a missing employee. Now FK -> Employee.uid, optional (admin accounts may not be employees). The orphan stays NULL. Temporary name `EmployeeUid`. |
 |  | Username | nvarchar(100) | NOT NULL |  | Now unique. |
 |  | PasswordHash | nvarchar(255) | NOT NULL |  | PBKDF2 `iterations.salt.hash`. Login code should stop accepting legacy SHA-256/plain text (app change). |
-| 🟡 CHANGED | **Role** | nvarchar(30) | NULL |  | was nvarchar(MAX) NULL, free text (Admin 4, HR 1, empty 1). CHECK Role IN ('Admin','HR') for now; empty -> NULL; extend when more roles are defined (⏸ B9, B13). |
+| 🔴 DROP | Role | nvarchar(30) | NULL |  | was nvarchar(MAX) NULL, free text (Admin 4, HR 1, empty 1). In script 03 it became nvarchar(30) with CHECK Admin/HR; script 07 copies it to `UserRoles` and drops the column (and `CK_Users_Role`). |
 | 🟢 NEW | **IsActive** | bit | NOT NULL | 1 | S6/S14: soft delete. |
 | 🟡 CHANGED | **CreatedBy** | nvarchar(100) | NULL |  | was varchar(MAX) NULL. |
 | 🟡 CHANGED | **CreatedOn** | datetime2(0) | NULL |  | was varchar(MAX) NULL (text). Converted with TRY_CONVERT. Existing name kept. |
@@ -968,7 +970,23 @@ Keys and indexes
 - 🟡 `PK_Users` - primary key, clustered, (uid). was `PK__Users__DD70126471BA34B8`.
 - 🟢 `UX_Users_Username` - unique, nonclustered, (Username). Not enforced today; live data has 6 distinct usernames, so it can be created without cleanup.
 - 🟢 `UX_Users_EmployeeId` - unique, nonclustered, (EmployeeId) WHERE EmployeeId IS NOT NULL. One login per employee; also the FK index.
-- 🟢 `CK_Users_Role` - Role IS NULL OR Role IN ('Admin','HR').
+- 🔴 `CK_Users_Role` - existed between scripts 03 and 07 only; replaced by `CK_UserRoles_Role`.
+
+## Table: dbo.UserRoles [NEW]
+The roles each login holds. A user can have any number of rows (Admin, HR, or both); no rows = no role. Added 2026-11-23 so certain HR users can also have Admin privileges.
+Rows after script 07 on the development copy: 5 (shahid, sindhu, farhan, ryyan = Admin; Zulfiqar = HR; shahzad has none).
+- 2026-11-23: A composite key, not an `Id` column: the row has no identity of its own and is never referenced (S1 exception, like a pure link table).
+- 2026-11-23: The role list lives in the CHECK for now (B9, B13). Adding a role such as Supervisor means changing `CK_UserRoles_Role` and `AppRoles` in the app.
+
+| Change | Column | Type | Null | Default | Notes |
+|---|---|---|---|---|---|
+| 🟢 NEW | **UserId** | int | NOT NULL |  | FK -> Users.uid, ON DELETE CASCADE (logins are normally disabled, never deleted, S6). |
+| 🟢 NEW | **Role** | nvarchar(30) | NOT NULL |  | `Admin` or `HR`. |
+
+Keys and indexes
+- 🟢 `PK_UserRoles` - primary key, clustered, (UserId, Role). One row per user and role; also the FK index.
+- 🟢 `FK_UserRoles_Users` - UserId -> Users.uid, cascade.
+- 🟢 `CK_UserRoles_Role` - Role IN ('Admin','HR').
 
 ## Views (proposed)
 - 🟢 `dbo.vEmployeeDirectory` - Employee joined to Projects, Departments, Designations. Columns: uid, EmployeeID, EmployeeName, ProjectName, DepartmentName, SubDepartmentName, DesignationName, EmployeeStatus, plus the sort keys `Projects.SortOrder`, `Departments.SortOrder`, `Designations.Rank`. Lists use either `ORDER BY p.SortOrder, d.SortOrder, g.Rank, e.EmployeeName` or, for department-first (HR's "all Admin staff, then by project"), `ORDER BY d.SortOrder, p.SortOrder, g.Rank, e.EmployeeName` (a view can't carry ORDER BY). Backed by `IX_Employee_Org` and `IX_Employee_Department_Project`.
@@ -981,6 +999,7 @@ Every table people or imports write to is replay-safe. The guard that makes a se
 |---|---|
 | Employee | `UX_Employee_EmployeeID` (live: 848 distinct) |
 | Users | `UX_Users_Username`; `UX_Users_EmployeeId` |
+| UserRoles | `PK_UserRoles` (UserId, Role) |
 | Configuration | `UX_Configuration_ConfigKey` |
 | Projects / Designations / LeaveTypes / Shifts / Departments | unique `Name` (and `Code` for LeaveTypes) |
 | SubDepartments | `UX_SubDepartments_Department_Name` |
@@ -1040,7 +1059,7 @@ All live in decisions.md. The draft shows the assumption it made; nothing below 
 | B7 half-day rule | cutoff/minimum columns nullable | Shifts, HalfDayRequests |
 | B8 schedule edge cases | generic base only | Shifts, ShiftAssignments, RosterOverrides |
 | B9 value lists, roles | proposed lists in the CHECKs | Employee, EmployeeDocuments, Users |
-| B13 approvals | Admin and HR only | Users, all approval columns |
+| B13 approvals | Admin and HR only; a user may hold both (`UserRoles`) | UserRoles, all approval columns |
 | B14 transfer history | current position only, no history table | Employee |
 | B15 payslip unlock | no schema change | Payslips, AuditLogs |
 | B17 tax base | basic salary | TaxRules |
@@ -1056,6 +1075,7 @@ All live in decisions.md. The draft shows the assumption it made; nothing below 
 | 3 | `03_leave_and_users.sql` | Leave requests pointing at a missing employee are archived to `mig.LeaveRequests_Orphans` and removed. |
 | 4 | `04_attendance_payroll.sql` | Expand only; `Attendance.EmployeeUid`, `ShiftDate`, `Payslips.MonthNo`, `TaxRules.TaxYearStart` sit beside the old columns. |
 | 5 | (deployment) | The development app already reads only the new schema; see `prod_rollout.md` for the production deployment. |
+| 7 | `07_user_roles.sql` | Added 2026-11-23: creates `UserRoles`, copies `Users.Role`, drops `CK_Users_Role` and `Users.Role`. Independent of 06; needs 03. The app needs the new build (the old one reads `Users.Role`). |
 | 6 | `06_contract.sql` | Drops the legacy columns, renames the temporary ones, makes `ProjectId`/`DepartmentId` NOT NULL, removes the moved Configuration rows, drops `EmployeeLeaves`. |
 
 Production stays untouched until each script below has been reviewed and approved. Each phase is an EF migration or a **re-runnable** SQL script (S23: guard every change with `IF COL_LENGTH(...) IS NULL`, `IF OBJECT_ID(...) IS NULL` or `IF NOT EXISTS` on the index/constraint name; write backfills as "update where the new column IS NULL"; seed with `MERGE` on the natural key; run in a transaction with a rollback script; running twice changes nothing), **recorded in `__EFMigrationsHistory`** (or a `SchemaChangeLog` row), and preceded by a backup of `HRBTK` (S19). Create unique indexes **after** the backfill and after checking for duplicates (live checks are listed in the Idempotency section). `sqlcmd` runs against production only with your approval before each run.
@@ -1066,7 +1086,7 @@ Production stays untouched until each script below has been reviewed and approve
 3. **Leave consolidation.** Seed `LeaveTypes`; map `LeaveQuota` (3 rows) to `LeaveTypeId` and int `Year`; add the new `LeaveRequests` columns and migrate the **24 rows** (type, dates, status `Applied` -> `Pending`, TotalDays), resolving the **1 orphan** (fix its EmployeeId or archive the row) and reviewing the overlapping requests 21/22 before adding the FK and unique index; create `LeaveEntitlementOverrides`; rebuild `CarryforwardLeaves` (empty); create `vLeaveBalances`. Add `Users.EmployeeUid` (backfilled by EmployeeID match; the orphan stays NULL) and `Users.IsActive`.
 4. **Attendance, schedule and payroll columns (all empty or additive).** Create `Shifts`, `ShiftAssignments`, `RosterOverrides`, `AttendancePunches`, `HalfDayRequests`, `AttendanceCorrections`, `RecordNotes` (and add the `Notes` columns, widening `Attendance.Comments` and `Allowances.Remarks` to 1000 first); **expand** `Attendance` (add the new columns beside the old ones; the app still writes the old ones until step 5); rebuild `GazettedHolidays` (empty); `AttendanceUploadLogs` types, backfilled `Status`, `FileHash`; `EmployeeDocuments.FileHash`; `Payslips.MonthNo` (backfill from the month name), `TaxPercentage` type, hourly columns, `RowVersion`, unique key; `TaxRules.TaxYearStart` (backfill `LEFT(TaxYear, 4)`); `Deductions.Amount` and `RequestId` (backfill Amount from the 11 `Fixed` rows); `Allowances.RequestId` and date types.
 5. **App switch.** Release the app version that reads and writes only the new columns and tables (org FKs, LeaveTypeId, int employee keys, `Id` primary keys, `MonthNo`/`TaxYearStart`, attendance processing, dropdowns from the new tables, `RequestId` hidden fields, file hashing, the tax-year lookup fix). Verify in production for an agreed period.
-6. **Contract (last, after a backup).** Drop the 🔴 columns (`Employee.Department/Designation/Project`, `Attendance.EmployeeID/EmployeeName/DepartmentName/AttendanceDate/TimeIn/TimeOut/Status`, `LeaveQuota.LeaveTypeName`, `LeaveRequests.LeaveType`, `Users.EmployeeId` (string), `CarryforwardLeaves.LeavesUsed/LeavesRemaining`, `Payslips.Month` (text), `TaxRules.TaxYear`), the moved Configuration rows and the `EmployeeLeaves` table; **then rename** the temporary columns (`EmployeeUid` -> `EmployeeId` in Users and Attendance, `MonthNo` -> `Month`, `Attendance.Comments` and `Allowances.Remarks` -> `Notes`) and the PKs (`AttendanceID`, `DepartmentID`, `LogId`, `UID` -> `Id`); make `Employee.ProjectId` and `Employee.DepartmentId` NOT NULL. Then update db.md (v2.0) and its Change History.
+6. **Contract (last, after a backup).** Drop the 🔴 columns (`Employee.Department/Designation/Project`, `Attendance.EmployeeID/EmployeeName/DepartmentName/AttendanceDate/TimeIn/TimeOut/Status`, `LeaveQuota.LeaveTypeName`, `LeaveRequests.LeaveType`, `Users.EmployeeId` (string), `CarryforwardLeaves.LeavesUsed/LeavesRemaining`, `Payslips.Month` (text), `TaxRules.TaxYear`), the moved Configuration rows and the `EmployeeLeaves` table; **then rename** the temporary columns (`EmployeeUid` -> `EmployeeId` in Users and Attendance, `MonthNo` -> `Month`, `Attendance.Comments` and `Allowances.Remarks` -> `Notes`) and the PKs (`AttendanceID`, `DepartmentID`, `LogId`, `UID` -> `Id`); make `Employee.ProjectId` and `Employee.DepartmentId` NOT NULL. 7. **User roles (2026-11-23).** Create `UserRoles`, copy `Users.Role` into it, drop `CK_Users_Role` and `Users.Role` (`07_user_roles.sql`). Run it after 03; it can run before or after 06. Then update db.md (v2.0) and its Change History.
 
 ## Appendix A. Constraint renames (S5, S16)
 Renamed with `sp_rename` in step 1; no data change.

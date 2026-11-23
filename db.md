@@ -1,5 +1,5 @@
 # HRMS Database Schema
-Version: 1.9 | Last Updated: 2026-11-16
+Version: 1.10 | Last Updated: 2026-11-23
 Database: HRBTK
 Server: Teezhost 16GB (production; hr.coditium.com, SQL Server 2022 16.0.1000.6 on port 1433, same machine as the web app). Its connection string is in the git-ignored `src/HRMBT.Web/appsettings.Production.json`. See `docs/deployment.md`.
 
@@ -9,6 +9,10 @@ Server: Teezhost 16GB (production; hr.coditium.com, SQL Server 2022 16.0.1000.6 
     3. A table marked [REMOVED] stays in this file as a historical/legacy record - do not delete those sections, they document what old code may still (incorrectly) reference
     4. Add an entry to Change History for every schema change, and keep the matching EF migration / SQL script named in it
 ---
+
+> **MIGRATION PENDING (2026-11-23): production `HRBTK` must be migrated to the redesigned schema.** This file describes the schema production has **today** (the old one). The redesign (typed columns, foreign keys, managed lists for projects/departments/designations/leave types, new attendance/schedule tables, `UserRoles` for several roles per user) is finished and tested on a local copy only; production has not been changed. The new app build only works on the new schema and the old build only on the old one, so database and app are switched together in one maintenance window.
+> - What changes: `docs/db/db_changes.md`. How to apply it (scripts in `scripts/database/redesign/`, order, checks, rollback): `docs/db/prod_rollout.md`.
+> - After the migration, rewrite this file to the new schema as v2.0 and add a Change History entry. Until then, do not use this file as the model for new code.
 
 Source of truth for the structure: the live database, verified read-only on 2026-11-16 (19 tables, 175 columns; types and nullability match the earlier 2026-09-23 export exactly). EF Core migrations in `src/HRMBT.Web/Migrations/` are only partly recorded in `__EFMigrationsHistory` (see Known issues), so do not rely on migrations alone to rebuild the schema. Reference SQL: `scripts/database/schema/` and `scripts/database/fixes/`. EF entities are in `src/HRMBT.Web/Models/`, mapped in `Data/ApplicationDbContext.cs`.
 
@@ -413,3 +417,4 @@ Keys and indexes
 - 2026-11-16: Verified against the live production database `HRBTK` with read-only catalog queries (v1.6). Result: no column, type or nullability change since 2026-09-23. Added defaults, identity flags, real primary/foreign keys and indexes, row counts and migration-history findings, and corrected earlier assumptions (Allowances/Deductions do have FKs; EmployeeDocuments has none; Employee.EmployeeID is unique). No schema change was made.
 - 2026-11-16: `appsettings.json` `DefaultConnection` switched to this database; old connection strings commented out (v1.8). No schema change.
 - 2026-11-16: Connection strings moved out of `appsettings.json` into git-ignored `appsettings.Development.json` / `appsettings.Production.json` (examples committed) and `.env` (v1.9). No schema change.
+- 2026-11-23: Added the migration-pending note above (v1.10). Production still has the schema documented here; the redesigned schema has been applied to a local development copy only. No schema change.

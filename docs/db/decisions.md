@@ -281,7 +281,7 @@ Status: Open
 
 ## B9. Value lists and roles
 Status: Open
-**Affects:** `Employee.EmployeeStatus`, `EmployeeDocuments.DocumentType`, `Users.Role` CHECK constraints.
+**Affects:** `Employee.EmployeeStatus`, `EmployeeDocuments.DocumentType`, `UserRoles.Role` CHECK constraint.
 
 - Employee statuses. Suggested: Active, Inactive, Resigned, Terminated.
 - Document types. Suggested: CNIC, HalfDayProof, LeaveProof, MedicalCertificate, Other.
@@ -338,7 +338,7 @@ Status: Open
 
 ## B13. Who approves what
 Status: Open
-**Affects:** `Users.Role`, `*.ApprovedBy`, authorization (currently nothing enforces roles).
+**Affects:** `UserRoles` (was `Users.Role` until 2026-11-23), `*.ApprovedBy`, authorization (Setup requires Admin and Lists require Admin or HR; other areas are not yet role-checked). A user can hold several roles, so an HR user can also be given Admin in Setup → Users.
 
 **Questions.** Who approves leave, half days, attendance corrections and shift overrides? Is there a supervisor per department or project, or does HR approve everything? Can someone approve their own request?
 
