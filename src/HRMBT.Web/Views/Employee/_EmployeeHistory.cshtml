@@ -1,0 +1,165 @@
+@model HRMBT.Web.Services.EmployeeHistoryViewModel
+@using HRMBT.Web.Models
+@* Employee Info > History timeline: read-only on Details, with the "Record an event" form on Edit (Model.CanRecord). Standard: docs/ui_standards.md. *@
+@{
+    var designations = ViewBag.DesignationOptions as IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? Enumerable.Empty<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>();
+    var departments = ViewBag.DepartmentOptions as IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? Enumerable.Empty<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>();
+    var projects = ViewBag.ProjectOptions as IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? Enumerable.Empty<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>();
+    var okMsg = TempData["EventOk"] as string;
+    var errMsg = TempData["EventError"] as string;
+    string Cls(string t) => t switch
+    {
+        EmployeeEvent.Joined => "ev-join",
+        EmployeeEvent.Rejoin => "ev-join",
+        EmployeeEvent.Promotion => "ev-up",
+        EmployeeEvent.Transfer => "ev-move",
+        EmployeeEvent.Resignation => "ev-out",
+        EmployeeEvent.Termination => "ev-out",
+        _ => "ev-other"
+    };
+    var types = Model.IsCurrentlyLeft
+        ? new[] { EmployeeEvent.Rejoin, EmployeeEvent.Other }
+        : new[] { EmployeeEvent.Promotion, EmployeeEvent.Transfer, EmployeeEvent.Resignation, EmployeeEvent.Termination, EmployeeEvent.Other };
+}
+
+@if (!string.IsNullOrEmpty(okMsg)) { <div class="alert alert-success py-2" role="status"><i class="fa-solid fa-circle-check me-2"></i>@okMsg</div> }
+@if (!string.IsNullOrEmpty(errMsg)) { <div class="alert alert-danger py-2" role="alert"><i class="fa-solid fa-circle-exclamation me-2"></i>@errMsg</div> }
+
+@if (Model.CanRecord)
+{
+    <form asp-controller="EmployeeEvents" asp-action="Record" asp-route-id="@Model.EmployeeId" method="post" class="dos-event-form" id="eventForm">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="RequestId" value="@Guid.NewGuid()" />
+        <h3 class="dos-event-title"><i class="fa-solid fa-plus"></i> Record an event</h3>
+        @if (Model.IsCurrentlyLeft)
+        {
+            <p class="dos-event-help">This employee has left. Record a <strong>Rejoin</strong> to bring them back as Active.</p>
+        }
+        else
+        {
+            <p class="dos-event-help">Current position: <strong>@(string.IsNullOrWhiteSpace(Model.CurrentPosition) ? "—" : Model.CurrentPosition)</strong>. Saving a promotion, transfer, resignation or termination also updates the employee record.</p>
+        }
+        <div class="dos-event-grid">
+            <label class="dos-event-field">Event
+                <select name="EventType" id="evType" class="form-select form-select-sm" required>
+                    <option value="">— Select —</option>
+                    @foreach (var t in types) { <option value="@t">@t</option> }
+                </select>
+            </label>
+            <label class="dos-event-field">Effective date
+                <input type="date" name="EventDate" id="evDate" class="form-control form-control-sm" value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+            </label>
+            <label class="dos-event-field" data-ev-show="Promotion Transfer">New designation
+                <select name="ToDesignationId" class="form-select form-select-sm"><option value="">— Select —</option>@foreach (var o in designations) { <option value="@o.Value">@o.Text</option> }</select>
+            </label>
+            <label class="dos-event-field" data-ev-show="Transfer">New department
+                <select name="ToDepartmentId" class="form-select form-select-sm"><option value="">— No change —</option>@foreach (var o in departments) { <option value="@o.Value">@o.Text</option> }</select>
+            </label>
+            <label class="dos-event-field" data-ev-show="Transfer">New project
+                <select name="ToProjectId" class="form-select form-select-sm"><option value="">— No change —</option>@foreach (var o in projects) { <option value="@o.Value">@o.Text</option> }</select>
+            </label>
+            <label class="dos-event-field dos-event-wide"><span>Remarks <span class="dos-event-opt" id="evRemarksHint">(optional)</span></span>
+                <input type="text" name="Remarks" id="evRemarks" class="form-control form-control-sm" maxlength="1000" placeholder="Reason, letter reference, notes" />
+            </label>
+        </div>
+        <div class="dos-event-actions">
+            <button type="submit" class="btn btn-sm dos-event-btn"><i class="fa-solid fa-check me-1"></i>Record event</button>
+        </div>
+    </form>
+}
+
+<div class="table-responsive emp-table-wrap">
+    <table class="table emp-salary-list dos-events mb-0">
+        <thead>
+            <tr>
+                <th style="width:13%;">Date</th>
+                <th style="width:15%;">Event</th>
+                <th>Details</th>
+                <th style="width:22%;">Recorded by</th>
+                @if (Model.CanRecord) { <th style="width:8%;" class="text-end">Actions</th> }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var ev in Model.Events)
+            {
+                <tr class="@(ev.IsVoided ? "dos-event-voided" : "")">
+                    <td><span class="info-value">@Fmt.ShortDate(ev.EventDate)</span></td>
+                    <td><span class="dos-ev @Cls(ev.EventType)">@ev.EventType</span>@if (ev.IsVoided) { <span class="badge bg-secondary ms-1">Voided</span> }</td>
+                    <td>
+                        @if (!string.IsNullOrEmpty(ev.Summary)) { <div class="fw-medium">@ev.Summary</div> }
+                        @if (!string.IsNullOrEmpty(ev.Remarks)) { <div class="text-muted small">@ev.Remarks</div> }
+                        @if (ev.IsVoided) { <div class="small text-danger">Voided by @(ev.VoidedBy ?? "—") on @Fmt.DateAndTime(ev.VoidedAt): @ev.VoidReason</div> }
+                    </td>
+                    <td>
+                        <div>@(string.IsNullOrWhiteSpace(ev.CreatedBy) ? "—" : ev.CreatedBy)</div>
+                        <div class="text-muted small">@Fmt.DateAndTime(ev.CreatedAt)</div>
+                    </td>
+                    @if (Model.CanRecord)
+                    {
+                        <td class="text-end">
+                            @if (ev.IsVoided && User.IsInRole("Admin"))
+                            {
+                                <form asp-controller="EmployeeEvents" asp-action="DeleteVoided" asp-route-id="@Model.EmployeeId" asp-route-eventId="@ev.Id" method="post" class="dos-void-form" onsubmit="return confirm('Delete this voided entry permanently? It will no longer appear in the history.');">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-sm btn-outline-danger row-action-delete" title="Delete this voided entry permanently (Admin)"><i class="fa-solid fa-trash"></i></button>
+                                </form>
+                            }
+                            @if (ev.CanVoid)
+                            {
+                                <form asp-controller="EmployeeEvents" asp-action="Void" asp-route-id="@Model.EmployeeId" asp-route-eventId="@ev.Id" method="post" class="dos-void-form">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="reason" value="" />
+                                    <button type="submit" class="btn btn-sm btn-outline-secondary row-action-delete" title="Void the latest entry and undo its change to the employee (it stays in the history, marked voided)"><i class="fa-solid fa-ban"></i></button>
+                                </form>
+                            }
+                        </td>
+                    }
+                </tr>
+            }
+            @if (Model.Events.Count == 0)
+            {
+                <tr>
+                    <td colspan="@(Model.CanRecord ? 5 : 4)" class="text-center text-muted py-4">
+                        <i class="fa-solid fa-clock-rotate-left d-block fs-4 mb-2"></i>
+                        <div class="fw-semibold text-dark">No history recorded yet</div>
+                        <div class="small">Joining, promotions, transfers, resignations and rejoins appear here.</div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+@if (Model.CanRecord)
+{
+    <p class="dos-event-foot">Entries are never edited. Only the latest entry can be voided (with a reason); voiding it also undoes its change to the employee, and it stays visible, marked voided. An Admin can delete a voided entry so it no longer shows here.</p>
+    <script>
+        (function () {
+            var type = document.getElementById('evType');
+            var form = document.getElementById('eventForm');
+            if (!type || !form) return;
+            var fields = form.querySelectorAll('[data-ev-show]');
+            var hint = document.getElementById('evRemarksHint');
+            function sync() {
+                fields.forEach(function (f) {
+                    var show = (f.getAttribute('data-ev-show') || '').split(' ').indexOf(type.value) >= 0;
+                    f.style.display = show ? '' : 'none';
+                    f.querySelectorAll('select').forEach(function (s) { s.disabled = !show; if (!show) s.value = ''; });
+                    var d = f.querySelector('select[name="ToDesignationId"]');
+                    if (d) d.required = show && type.value === 'Promotion';
+                });
+                var req = type.value === 'Other';
+                document.getElementById('evRemarks').required = req;
+                if (hint) hint.textContent = req ? '(required)' : '(optional)';
+            }
+            type.addEventListener('change', sync);
+            sync();
+            document.querySelectorAll('.dos-void-form').forEach(function (f) {
+                f.addEventListener('submit', function (e) {
+                    var r = window.prompt('Why is this entry being voided?');
+                    if (!r || !r.trim()) { e.preventDefault(); return; }
+                    f.querySelector('input[name="reason"]').value = r.trim();
+                });
+            });
+        })();
+    </script>
+}

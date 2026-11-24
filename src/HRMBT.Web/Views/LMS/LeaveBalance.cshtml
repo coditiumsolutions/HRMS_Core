@@ -16,6 +16,7 @@
             <div class="toolbar-header d-flex flex-wrap justify-content-between align-items-center gap-2">
                 <span><i class="bi bi-pie-chart"></i>Leave balance report</span>
                 <div class="toolbar-actions d-flex flex-wrap gap-2">
+                    <a asp-action="Rollover" asp-route-year="@(int.TryParse(Model.SelectedYear, out var selYear) ? selYear - 1 : DateTime.Now.Year - 1)" class="btn btn-action-secondary">Year-end rollover</a>
                     <a asp-action="Index" class="btn btn-action-secondary">Back to leave requests</a>
                 </div>
             </div>
@@ -96,8 +97,10 @@
                                     <th>Employee</th>
                                     <th>Name</th>
                                     <th>Leave type</th>
+                                    <th class="text-end">Carried forward</th>
                                     <th class="text-end">Available leave</th>
                                     <th class="text-end">Availed leave</th>
+                                    <th class="text-end">Pending</th>
                                     <th class="text-end">Balance leave</th>
                                 </tr>
                             </thead>
@@ -108,9 +111,11 @@
                                         <td>@row.EmployeeCode</td>
                                         <td>@(row.EmployeeName ?? "—")</td>
                                         <td>@row.LeaveTypeName</td>
-                                        <td class="text-end">@row.AvailableLeaves</td>
-                                        <td class="text-end">@Fmt.Number(row.AvailedLeaves)</td>
-                                        <td class="text-end">@Fmt.Number(row.BalanceLeaves)</td>
+                                        <td class="text-end">@Fmt.Days(row.CarryForwardLeaves)</td>
+                                        <td class="text-end">@Fmt.Days(row.AvailableLeaves)</td>
+                                        <td class="text-end">@Fmt.Days(row.AvailedLeaves)</td>
+                                        <td class="text-end">@Fmt.Days(row.PendingLeaves)</td>
+                                        <td class="text-end @(row.BalanceLeaves < 0 ? "text-danger" : "")">@Fmt.Days(row.BalanceLeaves)</td>
                                     </tr>
                                 }
                             </tbody>

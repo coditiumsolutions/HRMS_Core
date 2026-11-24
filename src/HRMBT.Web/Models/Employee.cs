@@ -53,27 +53,6 @@ public class Employee
     [Display(Name = "Details")]
     public string? Details { get; set; }
 
-    [Display(Name = "Carry Forward Leaves")]
-    public double? CarryForwardLeaves { get; set; }
-
-    [Display(Name = "Year 2022")]
-    public double? Year2022 { get; set; }
-
-    [Display(Name = "Year 2023")]
-    public double? Year2023 { get; set; }
-
-    [Display(Name = "Adjusted Ajusted")]
-    public int? AdjustedAjusted { get; set; }
-
-    [Display(Name = "Year 2024")]
-    public int? Year2024 { get; set; }
-
-    [Display(Name = "Carry Forward Leaves 1")]
-    public double? CarryForwardLeaves1 { get; set; }
-
-    [Display(Name = "Year 2023 New")]
-    public decimal? Year2023New { get; set; }
-
     [Display(Name = "Basic Salary")]
     [Range(0, double.MaxValue, ErrorMessage = "Basic salary must be greater than or equal to zero")]
     [DataType(DataType.Currency)]

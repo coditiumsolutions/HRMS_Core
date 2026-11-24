@@ -287,3 +287,59 @@
 /* quieter placeholders, outlined secondary button on the confirmation card */
 .dossier-page .emp-form-table .form-control::placeholder { color: #aab3c0; font-weight: 400; }
 .dossier-page .dos-confirm-actions .btn-action-outline { border: 1.5px solid var(--dos-brass); color: var(--dos-brass-ink); background: #fff; border-radius: 2rem; padding: 0.3rem 1rem; font-weight: 600; }
+
+/* ---- Employee History: timeline table and the "Record an event" form ---- */
+.dossier-page .dos-events td { vertical-align: top; padding: 0.55rem 0.75rem; }
+.dossier-page .dos-ev { display: inline-block; padding: 0.12rem 0.55rem; border-radius: 999px; font-size: 0.74rem; font-weight: 600; letter-spacing: 0.02em; border: 1px solid transparent; white-space: nowrap; }
+.dossier-page .dos-ev.ev-join  { background: #e6f4ef; color: #0f5f4d; border-color: #bfe3d7; }
+.dossier-page .dos-ev.ev-up    { background: #fbf3d8; color: #7a5a00; border-color: #ecd98f; }
+.dossier-page .dos-ev.ev-move  { background: #e8eefb; color: #1d3f8f; border-color: #c4d3f3; }
+.dossier-page .dos-ev.ev-out   { background: #fbe9e9; color: #8f1d1d; border-color: #f0c4c4; }
+.dossier-page .dos-ev.ev-other { background: #eef0f3; color: #4a5568; border-color: #d6dae0; }
+.dossier-page .dos-event-voided td { opacity: 0.6; }
+.dossier-page .dos-event-voided .fw-medium { text-decoration: line-through; }
+.dossier-page .dos-void-form { display: inline; margin: 0; }
+.dossier-page .dos-event-form { border: 1px solid var(--hr-border, #d9d4c7); border-radius: 10px; background: #fcfbf7; padding: 0.9rem 1rem 0.8rem; margin-bottom: 1rem; }
+.dossier-page .dos-event-title { font-family: 'Fraunces', Georgia, serif; font-size: 1.02rem; margin: 0 0 0.2rem; color: var(--hr-navy-800, #00203f); }
+.dossier-page .dos-event-title i { color: var(--hr-brass-500, #d4af37); margin-right: 0.35rem; }
+.dossier-page .dos-event-help { font-size: 0.83rem; color: #5b6472; margin: 0 0 0.6rem; }
+.dossier-page .dos-event-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0.6rem 0.9rem; }
+.dossier-page .dos-event-field { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.74rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #5b6472; }
+.dossier-page .dos-event-field .form-control, .dossier-page .dos-event-field .form-select { text-transform: none; letter-spacing: 0; font-weight: 400; }
+.dossier-page .dos-event-wide { grid-column: 1 / -1; }
+.dossier-page .dos-event-actions { margin-top: 0.7rem; display: flex; justify-content: flex-end; }
+.dossier-page .dos-event-foot { font-size: 0.78rem; color: #6b7280; margin: 0.7rem 0 0; }
+.dossier-page .dos-event-opt { text-transform: none; letter-spacing: 0; font-weight: 400; color: #8a93a0; }
+.dossier-page .dos-event-btn { background: var(--hr-navy-800, #00203f); color: #fff; border: 1px solid var(--hr-navy-800, #00203f); font-weight: 600; padding: 0.35rem 0.9rem; }
+.dossier-page .dos-event-btn:hover { background: #0a3563; color: #fff; }
+
+/* Details has no fixed bottom bar (it covered the bottom of the sidebar): its actions live in the hero */
+.employee-create-page.dossier-page--static, .employee-create-page.dossier-page--static.py-3 { padding-bottom: 1.5rem !important; }
+.dossier-page .dossier-actions { display: flex; gap: 0.4rem; margin-top: 0.35rem; }
+.dossier-page .dossier-act { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.3rem 0.8rem; border-radius: 2rem; font-size: 0.8rem; font-weight: 600; text-decoration: none; color: #fff; border: 1px solid rgba(255,255,255,0.45); background: rgba(255,255,255,0.08); }
+.dossier-page .dossier-act:hover { background: rgba(255,255,255,0.2); color: #fff; }
+.dossier-page .dossier-act--edit { background: var(--hr-brass-500, #d4af37); border-color: var(--hr-brass-500, #d4af37); color: #00203f; }
+.dossier-page .dossier-act--edit:hover { background: #e2c25a; color: #00203f; }
+.dossier-page .dossier-act--delete { border-color: rgba(255,170,170,0.7); color: #ffd6d6; }
+.dossier-page .dossier-act--delete:hover { background: #b91c1c; border-color: #b91c1c; color: #fff; }
+
+/* ---- Leave Balance tab: remaining / carried forward cards and the historical table ---- */
+.dossier-page .dos-leave-title { font-family: 'Fraunces', Georgia, serif; font-size: 1.02rem; color: var(--hr-navy-800, #00203f); margin: 1.1rem 0 0.55rem; }
+.dossier-page .dos-leave-title:first-child { margin-top: 0.2rem; }
+.dossier-page .dos-leave-title span { color: var(--hr-brass-500, #d4af37); margin-left: 0.3rem; }
+.dossier-page .dos-lcards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0.7rem; }
+.dossier-page .dos-lcard { border: 1px solid var(--hr-border, #d9d4c7); border-top: 3px solid var(--hr-brass-500, #d4af37); border-radius: 8px; background: #fcfbf7; padding: 0.65rem 0.85rem 0.6rem; }
+.dossier-page .dos-lcards--cf .dos-lcard { border-top-color: #4a7a9a; }
+.dossier-page .dos-lcard-name { font-size: 0.74rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #5b6472; }
+.dossier-page .dos-lcard-num { font-family: 'Fraunces', Georgia, serif; font-size: 1.9rem; line-height: 1.15; color: var(--hr-navy-800, #00203f); }
+.dossier-page .dos-lcard-num.is-negative { color: #b91c1c; }
+.dossier-page .dos-lcard-num.is-zero { color: #9aa3af; }
+.dossier-page .dos-lcard-sub { font-size: 0.78rem; color: #6b7280; }
+.dossier-page .dos-leave-note { border: 1px dashed var(--hr-border, #d9d4c7); border-radius: 8px; padding: 0.7rem 0.9rem; color: #5b6472; font-size: 0.88rem; background: #fcfbf7; }
+.dossier-page .dos-leave-note i { margin-right: 0.4rem; color: #4a7a9a; }
+.dossier-page .dos-history td { vertical-align: top; padding: 0.5rem 0.75rem; }
+.dossier-page .dos-leave-links { margin: 1rem 0 0; display: flex; gap: 1.2rem; flex-wrap: wrap; font-size: 0.86rem; }
+.dossier-page .dos-leave-links i { margin-right: 0.35rem; }
+.dossier-page .dos-leave-table th, .dossier-page .dos-leave-table td, .dossier-page .dos-history td { padding: 0.35rem 0.75rem; vertical-align: middle; }
+.dossier-page .dos-leave-table td, .dossier-page .dos-history td { white-space: nowrap; }
+

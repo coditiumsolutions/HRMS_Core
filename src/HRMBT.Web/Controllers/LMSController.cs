@@ -15,10 +15,14 @@ namespace HRMBT.Web.Controllers
         private const string DepartmentConfigKey = "Department";
 
         private readonly ApplicationDbContext _context;
+        private readonly HRMBT.Web.Services.LeaveBalanceService _leaveBalances;
+        private readonly HRMBT.Web.Services.IAuditLogService _audit;
 
-        public LMSController(ApplicationDbContext context)
+        public LMSController(ApplicationDbContext context, HRMBT.Web.Services.LeaveBalanceService leaveBalances, HRMBT.Web.Services.IAuditLogService audit)
         {
             _context = context;
+            _leaveBalances = leaveBalances;
+            _audit = audit;
         }
 
         private static IEnumerable<string> SplitConfigCsv(string? csv)
@@ -64,23 +68,6 @@ namespace HRMBT.Web.Controllers
                 .OrderBy(d => d.DepartmentName)
                 .Select(d => d.DepartmentName!)
                 .ToListAsync();
-        }
-
-        private static bool LeaveRequestOverlapsCalendarYear(DateTime fromDate, DateTime toDate, int year)
-        {
-            var yearStart = new DateTime(year, 1, 1);
-            var yearEnd = new DateTime(year, 12, 31);
-            return fromDate.Date <= yearEnd && toDate.Date >= yearStart;
-        }
-
-        private static double LeaveRequestDaysOverlappingCalendarYear(DateTime fromDate, DateTime toDate, int year)
-        {
-            var yearStart = new DateTime(year, 1, 1);
-            var yearEnd = new DateTime(year, 12, 31);
-            var start = fromDate.Date > yearStart ? fromDate.Date : yearStart;
-            var end = toDate.Date < yearEnd ? toDate.Date : yearEnd;
-            if (end < start) return 0;
-            return (end - start).TotalDays + 1;
         }
 
         /// <summary>
@@ -293,14 +280,15 @@ namespace HRMBT.Web.Controllers
             return RedirectToAction(nameof(LeaveQuota));
         }
 
-        // GET: LMS/LeaveBalance — available (LeaveQuota) minus availed (LeaveRequests) for selected year.
+        // GET: LMS/LeaveBalance: entitled (quota + carry-forward + adjustments) minus approved leave for the selected year.
+        // Reads dbo.vLeaveBalances through LeaveBalanceService, the same source as the employee Leave Balance tab.
         [HttpGet("balances")]
         public async Task<IActionResult> LeaveBalance(string? year, string? department)
         {
             ViewData["Module"] = "LMS";
             var yearStr = string.IsNullOrWhiteSpace(year) ? DateTime.Now.Year.ToString() : year!.Trim();
             var deptFilter = string.IsNullOrWhiteSpace(department) ? null : department!.Trim();
-            _ = int.TryParse(yearStr, out var yearInt);
+            if (!int.TryParse(yearStr, out var yearInt)) { yearInt = DateTime.Now.Year; yearStr = yearInt.ToString(); }
 
             var yearChoices = await BuildLeaveBalanceYearChoicesAsync();
             if (!yearChoices.Exists(y => string.Equals(y, yearStr, StringComparison.OrdinalIgnoreCase)))
@@ -328,94 +316,30 @@ namespace HRMBT.Web.Controllers
             if (!string.IsNullOrEmpty(deptFilter))
             {
                 allActive = activeEmployees
-                    .Where(e =>
-                        e.Department != null &&
-                        string.Equals(e.Department.Trim(), deptFilter, StringComparison.OrdinalIgnoreCase))
+                    .Where(e => e.Department != null && string.Equals(e.Department.Trim(), deptFilter, StringComparison.OrdinalIgnoreCase))
                     .ToList();
             }
 
-            var allQuotas = await _context.LeaveQuotas.AsNoTracking().ToListAsync();
-            var quotas = allQuotas
-                .Where(lq => string.Equals(lq.Year?.Trim(), yearStr, StringComparison.OrdinalIgnoreCase))
-                .ToList();
-
-            var quotaByType = quotas
-                .GroupBy(lq => lq.LeaveTypeName.Trim(), StringComparer.OrdinalIgnoreCase)
-                .Select(g => (LeaveTypeName: g.Key, Available: g.Sum(x => x.TotalLeaves)))
-                .ToList();
-
-            string CanonicalLeaveTypeForQuota(string? requestLeaveType)
-            {
-                var t = (requestLeaveType ?? string.Empty).Trim();
-                foreach (var q in quotaByType)
-                {
-                    if (string.Equals(q.LeaveTypeName, t, StringComparison.OrdinalIgnoreCase))
-                        return q.LeaveTypeName;
-                }
-
-                return t;
-            }
-
-            var uidSet = allActive.Select(e => e.uid).ToHashSet();
-            var uidToEmployeeCode = allActive.ToDictionary(e => e.uid, e => e.EmployeeID.Trim());
-
-            var leaveRequests = await _context.LeaveRequests.AsNoTracking()
-                .Where(lr => uidSet.Contains(lr.EmployeeId))
-                .ToListAsync();
-
-            var availedDict = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
-            foreach (var lr in leaveRequests)
-            {
-                if (!LeaveRequestCountsAsAvailed(lr.Status))
-                    continue;
-
-                if (yearInt > 0)
-                {
-                    if (!LeaveRequestOverlapsCalendarYear(lr.FromDate, lr.ToDate, yearInt))
-                        continue;
-                }
-                else
-                {
-                    if (!string.Equals(lr.FromDate.Year.ToString(), yearStr, StringComparison.OrdinalIgnoreCase)
-                        && !string.Equals(lr.ToDate.Year.ToString(), yearStr, StringComparison.OrdinalIgnoreCase))
-                        continue;
-                }
-
-                if (!uidToEmployeeCode.TryGetValue(lr.EmployeeId, out var empCode))
-                    continue;
-
-                var type = CanonicalLeaveTypeForQuota(lr.LeaveType);
-                if (string.IsNullOrEmpty(type))
-                    continue;
-
-                var days = yearInt > 0
-                    ? LeaveRequestDaysOverlappingCalendarYear(lr.FromDate, lr.ToDate, yearInt)
-                    : Math.Max(0, (lr.ToDate.Date - lr.FromDate.Date).TotalDays + 1);
-
-                if (days <= 0)
-                    continue;
-
-                var key = $"{empCode}|{type}";
-                availedDict.TryGetValue(key, out var prev);
-                availedDict[key] = prev + days;
-            }
+            var uids = allActive.Select(e => e.uid).ToList();
+            var (balances, typeNames) = await _leaveBalances.ForYearAsync(yearInt, uids);
+            var typeOrder = await _context.LeaveTypes.AsNoTracking().OrderBy(t => t.SortOrder).ThenBy(t => t.Name).Select(t => t.Id).ToListAsync();
+            var byEmployee = balances.ToLookup(r => r.EmployeeId);
 
             var rows = new List<LmsLeaveBalanceRowVm>();
             foreach (var emp in allActive)
             {
-                foreach (var q in quotaByType)
+                foreach (var r in byEmployee[emp.uid].OrderBy(r => typeOrder.IndexOf(r.LeaveTypeId)))
                 {
-                    var key = $"{emp.EmployeeID.Trim()}|{q.LeaveTypeName.Trim()}";
-                    availedDict.TryGetValue(key, out var availed);
-                    var available = q.Available;
                     rows.Add(new LmsLeaveBalanceRowVm
                     {
                         EmployeeCode = emp.EmployeeID,
                         EmployeeName = emp.EmployeeName,
-                        LeaveTypeName = q.LeaveTypeName,
-                        AvailableLeaves = available,
-                        AvailedLeaves = availed,
-                        BalanceLeaves = available - availed
+                        LeaveTypeName = typeNames.TryGetValue(r.LeaveTypeId, out var n) ? n : "Leave type " + r.LeaveTypeId,
+                        CarryForwardLeaves = r.CarryForward,
+                        AvailableLeaves = r.Entitled,
+                        AvailedLeaves = r.Taken,
+                        PendingLeaves = r.Pending,
+                        BalanceLeaves = r.Remaining
                     });
                 }
             }
@@ -430,6 +354,28 @@ namespace HRMBT.Web.Controllers
             };
 
             return View(model);
+        }
+
+        // GET: LMS/Rollover: preview of the year-end carry-forward (nothing is saved until Apply).
+        [HttpGet("balances/rollover")]
+        public async Task<IActionResult> Rollover(int? year)
+        {
+            ViewData["Module"] = "LMS";
+            var y = year ?? DateTime.Now.Year - 1;
+            ViewBag.Year = y;
+            return View(await _leaveBalances.PreviewRolloverAsync(y));
+        }
+
+        // POST: LMS/Rollover: writes CarryforwardLeaves rows for year -> year + 1 and logs one audit row.
+        [HttpPost("balances/rollover")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Rollover(int year, bool apply)
+        {
+            var (inserted, updated, skipped) = await _leaveBalances.ApplyRolloverAsync(year, User.Identity?.Name);
+            await _audit.WriteAsync("CarryforwardLeaves", "Rollover", year + "->" + (year + 1), null, null,
+                new { FromYear = year, ToYear = year + 1, Inserted = inserted, Updated = updated, Skipped = skipped }, "LMS");
+            TempData["SuccessMessage"] = $"Year-end rollover {year} to {year + 1}: {inserted} added, {updated} updated, {skipped} left as they were.";
+            return RedirectToAction(nameof(LeaveBalance), new { year = year + 1 });
         }
 
         private async Task<List<string>> BuildLeaveBalanceYearChoicesAsync()
@@ -515,6 +461,8 @@ namespace HRMBT.Web.Controllers
 
             if (model.ToDate.Date < model.FromDate.Date)
                 ModelState.AddModelError(nameof(LeaveRequest.ToDate), "To date must be on or after the from date.");
+            else if (model.ToDate.Year != model.FromDate.Year)
+                ModelState.AddModelError(nameof(LeaveRequest.ToDate), "A leave request cannot cross 31 December. Apply for the two parts separately so each counts in its own year.");
 
             if (string.IsNullOrWhiteSpace(model.Status))
                 model.Status = "Pending";
@@ -588,6 +536,8 @@ namespace HRMBT.Web.Controllers
 
             if (model.ToDate.Date < model.FromDate.Date)
                 ModelState.AddModelError(nameof(LeaveRequest.ToDate), "To date must be on or after the from date.");
+            else if (model.ToDate.Year != model.FromDate.Year)
+                ModelState.AddModelError(nameof(LeaveRequest.ToDate), "A leave request cannot cross 31 December. Apply for the two parts separately so each counts in its own year.");
 
             var leaveTypeId = await ResolveLeaveTypeIdAsync(model.LeaveType);
             if (leaveTypeId == null)
@@ -694,6 +644,8 @@ namespace HRMBT.Web.Controllers
         {
             if (model.TotalLeaves < 0)
                 ModelState.AddModelError(nameof(Models.LeaveQuota.TotalLeaves), "Total leaves cannot be negative.");
+            else if (model.TotalLeaves * 2 != decimal.Truncate(model.TotalLeaves * 2))
+                ModelState.AddModelError(nameof(Models.LeaveQuota.TotalLeaves), "Use whole or half days (for example 10 or 10.5).");
 
             if (string.IsNullOrWhiteSpace(model.LeaveTypeName) || string.IsNullOrWhiteSpace(model.Year))
                 return;

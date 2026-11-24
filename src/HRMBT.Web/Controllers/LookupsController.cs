@@ -107,7 +107,7 @@ public class LookupsController : Controller
                     .Select(t => new LookupRowVm
                     {
                         Id = t.Id, Name = t.Name, SortOrder = t.SortOrder, IsActive = t.IsActive,
-                        Detail = t.Code + " · " + (t.IsPaid ? "paid" : "unpaid") + (t.IsHalfDayAllowed ? " · half day allowed" : ""),
+                        Detail = t.Code + " · " + (t.IsPaid ? "paid" : "unpaid") + (t.IsHalfDayAllowed ? " · half day allowed" : "") + (t.AllowsCarryForward ? (t.MaxCarryForwardDays != null ? " · carry forward up to " + t.MaxCarryForwardDays + " days" : " · carries forward") : " · no carry-forward"),
                         Usage = _context.LeaveRequests.Count(r => r.LeaveTypeId == t.Id)
                                 + _context.LeaveQuotas.Count(q => q.LeaveTypeId == t.Id)
                                 + _context.CarryforwardLeaves.Count(c => c.LeaveTypeId == t.Id)
@@ -163,7 +163,7 @@ public class LookupsController : Controller
                     _context.Designations.Add(new Designation { Name = model.Name, Rank = model.Rank, IsActive = model.IsActive, CreatedBy = actor });
                     break;
                 default:
-                    _context.LeaveTypes.Add(new LeaveType { Code = model.Code!, Name = model.Name, IsPaid = model.IsPaid, IsHalfDayAllowed = model.IsHalfDayAllowed, SortOrder = model.SortOrder, IsActive = model.IsActive, CreatedBy = actor });
+                    _context.LeaveTypes.Add(new LeaveType { Code = model.Code!, Name = model.Name, IsPaid = model.IsPaid, IsHalfDayAllowed = model.IsHalfDayAllowed, AllowsCarryForward = model.AllowsCarryForward, MaxCarryForwardDays = model.AllowsCarryForward ? model.MaxCarryForwardDays : null, SortOrder = model.SortOrder, IsActive = model.IsActive, CreatedBy = actor });
                     break;
             }
             await _context.SaveChangesAsync();
@@ -258,6 +258,7 @@ public class LookupsController : Controller
                     var t = await _context.LeaveTypes.FindAsync(model.Id);
                     if (t == null) return NotFound();
                     t.Code = model.Code!; t.Name = model.Name; t.IsPaid = model.IsPaid; t.IsHalfDayAllowed = model.IsHalfDayAllowed;
+                    t.AllowsCarryForward = model.AllowsCarryForward; t.MaxCarryForwardDays = model.AllowsCarryForward ? model.MaxCarryForwardDays : null;
                     t.SortOrder = model.SortOrder; t.IsActive = model.IsActive;
                     t.ModifiedAt = now; t.ModifiedBy = actor;
                     break;
@@ -483,7 +484,7 @@ public class LookupsController : Controller
                 return g == null ? null : new LookupFormVm { Kind = kind, Id = g.Id, Name = g.Name, Rank = g.Rank, IsActive = g.IsActive };
             default:
                 var t = await _context.LeaveTypes.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
-                return t == null ? null : new LookupFormVm { Kind = kind, Id = t.Id, Name = t.Name, Code = t.Code, SortOrder = t.SortOrder, IsActive = t.IsActive, IsPaid = t.IsPaid, IsHalfDayAllowed = t.IsHalfDayAllowed };
+                return t == null ? null : new LookupFormVm { Kind = kind, Id = t.Id, Name = t.Name, Code = t.Code, SortOrder = t.SortOrder, IsActive = t.IsActive, IsPaid = t.IsPaid, IsHalfDayAllowed = t.IsHalfDayAllowed, AllowsCarryForward = t.AllowsCarryForward, MaxCarryForwardDays = t.MaxCarryForwardDays };
         }
     }
 }

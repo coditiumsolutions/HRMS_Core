@@ -6,7 +6,11 @@ public class LmsLeaveBalanceRowVm
     public string EmployeeCode { get; set; } = string.Empty;
     public string? EmployeeName { get; set; }
     public string LeaveTypeName { get; set; } = string.Empty;
-    public int AvailableLeaves { get; set; }
-    public double AvailedLeaves { get; set; }
-    public double BalanceLeaves { get; set; }
+    public decimal CarryForwardLeaves { get; set; }
+    /// <summary>Quota + carry-forward + adjustments.</summary>
+    public decimal AvailableLeaves { get; set; }
+    /// <summary>Approved leave.</summary>
+    public decimal AvailedLeaves { get; set; }
+    public decimal PendingLeaves { get; set; }
+    public decimal BalanceLeaves { get; set; }
 }

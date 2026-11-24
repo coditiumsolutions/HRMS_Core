@@ -1,0 +1,90 @@
+@model HRMBT.Web.Services.EmployeeLeaveBalanceViewModel
+@* Leave Balance tab (Details and Edit): read-only, calculated by LeaveBalanceService from the LMS tables. Standard: docs/ui_standards.md. *@
+@if (!Model.Managed)
+{
+    <div class="dos-leave-note"><i class="fa-solid fa-circle-info"></i> Leave is not managed for this employee's project, so there is no balance to show.</div>
+    return;
+}
+<div class="dos-leave">
+    <h3 class="dos-leave-title">Leave balance <span>@Model.Year</span></h3>
+    @if (Model.Current.Count == 0)
+    {
+        <div class="dos-leave-note"><i class="fa-solid fa-circle-info"></i> No leave quota is set for @Model.Year.
+            <a asp-controller="LMS" asp-action="LeaveQuota">Set the yearly quotas</a>.</div>
+    }
+    else
+    {
+        <div class="table-responsive emp-table-wrap">
+            <table class="table emp-salary-list dos-history dos-leave-table mb-0">
+                <thead>
+                    <tr>
+                        <th>Leave type</th>
+                        <th class="text-end">Quota</th>
+                        <th class="text-end">Carried forward</th>
+                        <th class="text-end">Adjusted</th>
+                        <th class="text-end">Taken</th>
+                        <th class="text-end">Pending</th>
+                        <th class="text-end">Remaining</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var c in Model.Current)
+                    {
+                        <tr>
+                            <td><span class="info-value fw-medium">@c.Name</span></td>
+                            <td class="text-end">@Fmt.Days(c.BaseDays)</td>
+                            <td class="text-end @(c.CarryForward == 0 ? "text-muted" : "")">@Fmt.Days(c.CarryForward)</td>
+                            <td class="text-end @(c.Adjustment == 0 ? "text-muted" : "")">@Fmt.Days(c.Adjustment)</td>
+                            <td class="text-end">@Fmt.Days(c.Taken)</td>
+                            <td class="text-end @(c.Pending == 0 ? "text-muted" : "")">@Fmt.Days(c.Pending)</td>
+                            <td class="text-end fw-bold @(c.Remaining < 0 ? "text-danger" : "")">@Fmt.Days(c.Remaining)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    <h3 class="dos-leave-title">Historical balances</h3>
+    @if (Model.History.Count == 0)
+    {
+        <div class="dos-leave-note"><i class="fa-solid fa-clock-rotate-left"></i> No earlier years recorded for this employee yet.</div>
+    }
+    else
+    {
+        <div class="table-responsive emp-table-wrap">
+            <table class="table emp-salary-list dos-history mb-0">
+                <thead>
+                    <tr>
+                        <th style="width:10%;">Year</th>
+                        @foreach (var name in Model.HistoryTypes) { <th class="text-end">@name</th> }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var y in Model.History)
+                    {
+                        <tr>
+                            <td><span class="info-value fw-semibold">@y.Year</span></td>
+                            @foreach (var cell in y.Cells)
+                            {
+                                <td class="text-end">
+                                    @if (cell == null) { <span class="text-muted">—</span> }
+                                    else
+                                    {
+                                        <span class="fw-semibold @(cell.Remaining < 0 ? "text-danger" : "")">@Fmt.Days(cell.Remaining)</span>
+                                        <span class="text-muted small ms-1">of @Fmt.Days(cell.Entitled)</span>
+                                    }
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    <p class="dos-leave-links">
+        <a asp-controller="LMS" asp-action="Index" asp-route-search="@Model.EmployeeCode"><i class="fa-solid fa-calendar-check"></i> Leave requests of this employee</a>
+        <a asp-controller="LMS" asp-action="LeaveBalance" asp-route-year="@Model.Year"><i class="fa-solid fa-table-list"></i> LMS balances for @Model.Year</a>
+    </p>
+</div>

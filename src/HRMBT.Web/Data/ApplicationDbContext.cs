@@ -46,6 +46,8 @@ namespace HRMBT.Web.Data
         public DbSet<HalfDayRequest> HalfDayRequests { get; set; }
         public DbSet<AttendanceCorrection> AttendanceCorrections { get; set; }
         public DbSet<RecordNote> RecordNotes { get; set; }
+        public DbSet<EmployeeEvent> EmployeeEvents { get; set; }
+        public DbSet<LeaveBalanceRow> LeaveBalances { get; set; }
         public DbSet<LeaveEntitlementOverride> LeaveEntitlementOverrides { get; set; }
 
         // ---- legacy attendance facade: write TimeIn/TimeOut/Status into the stored columns before saving ----
@@ -118,8 +120,6 @@ namespace HRMBT.Web.Data
 
         private static string? DateTimeToText(DateTime? d) => d?.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
 
-        private static decimal IntToDecimal(int v) => v;
-        private static int DecimalToInt(decimal v) => (int)Math.Round(v);
 
         private static int TextToInt(string? v) => int.TryParse(v?.Trim(), out var n) ? n : 0;
 
@@ -179,14 +179,7 @@ namespace HRMBT.Web.Data
                 entity.ToTable("Employee", "dbo");
 
                 entity.Property(e => e.EmployeeID).HasMaxLength(50).IsUnicode(false);
-                entity.Property(e => e.CarryForwardLeaves).HasColumnType("float");
-                entity.Property(e => e.CarryForwardLeaves1).HasColumnType("float");
-                entity.Property(e => e.Year2022).HasColumnType("float");
-                entity.Property(e => e.Year2023).HasColumnType("float");
-                entity.Property(e => e.Year2023New).HasColumnType("decimal(18,2)");
                 entity.Property(e => e.BasicSalary).HasColumnType("decimal(18,2)");
-                entity.Property(e => e.AdjustedAjusted).HasColumnType("int");
-                entity.Property(e => e.Year2024).HasColumnType("int");
                 entity.Property(e => e.HourlyRate).HasColumnType("decimal(18,2)");
                 entity.Property(e => e.PayBasis).HasMaxLength(10).IsUnicode(false);
                 entity.Property(e => e.EmployeeStatus).HasMaxLength(20).IsUnicode(false);
@@ -254,7 +247,7 @@ namespace HRMBT.Web.Data
                 entity.Property(l => l.FromDate).HasColumnType("date");
                 entity.Property(l => l.ToDate).HasColumnType("date");
                 entity.Property(l => l.Status).HasMaxLength(10).IsUnicode(false);
-                entity.Property(l => l.TotalDays).HasColumnType("decimal(5,2)");
+                entity.Property(l => l.TotalDays).HasColumnType("decimal(5,1)");
                 entity.Property(l => l.AppliedAt).HasColumnType("datetime2(0)").ValueGeneratedOnAdd();
                 entity.Property(l => l.ApprovedAt).HasColumnType("datetime2(0)");
                 entity.Property(l => l.ModifiedAt).HasColumnType("datetime2(0)");
@@ -268,8 +261,7 @@ namespace HRMBT.Web.Data
                 entity.ToTable("LeaveQuota");
                 entity.HasKey(e => e.UID);
                 entity.Property(e => e.UID).HasColumnName("Id");
-                entity.Property(e => e.TotalLeaves).HasColumnName("TotalDays").HasColumnType("decimal(5,2)")
-                    .HasConversion(v => IntToDecimal(v), v => DecimalToInt(v));
+                entity.Property(e => e.TotalLeaves).HasColumnName("TotalDays").HasColumnType("decimal(5,1)");
                 entity.Property(e => e.Year).HasColumnName("Year").HasColumnType("int")
                     .HasConversion(v => TextToInt(v), v => v.ToString(CultureInfo.InvariantCulture));
                 entity.HasOne(e => e.LeaveTypeInfo).WithMany().HasForeignKey(e => e.LeaveTypeId).OnDelete(DeleteBehavior.Restrict);
@@ -285,7 +277,7 @@ namespace HRMBT.Web.Data
             modelBuilder.Entity<CarryforwardLeave>(entity =>
             {
                 entity.ToTable("CarryforwardLeaves");
-                entity.Property(c => c.CarryForwardDays).HasColumnType("decimal(5,2)");
+                entity.Property(c => c.CarryForwardDays).HasColumnType("decimal(5,1)");
             });
 
             // ---- Tax ----
@@ -505,11 +497,35 @@ namespace HRMBT.Web.Data
                 entity.Property(x => x.CreatedAt).HasColumnType("datetime2(0)").ValueGeneratedOnAdd();
             });
 
+            modelBuilder.Entity<LeaveBalanceRow>(entity =>
+            {
+                entity.HasNoKey();
+                entity.ToView("vLeaveBalances", "dbo");
+                foreach (var col in new[] { "BaseDays", "Adjustment", "CarryForward", "Entitled", "Taken", "Pending", "Remaining" })
+                    entity.Property<decimal>(col).HasColumnType("decimal(10,1)");
+            });
+
+            modelBuilder.Entity<EmployeeEvent>(entity =>
+            {
+                entity.ToTable("EmployeeEvents", "dbo");
+                entity.Property(x => x.EventType).HasMaxLength(20).IsUnicode(false);
+                entity.Property(x => x.EventDate).HasColumnType("date");
+                entity.Property(x => x.VoidedAt).HasColumnType("datetime2(0)");
+                entity.Property(x => x.CreatedAt).HasColumnType("datetime2(0)").ValueGeneratedOnAdd();
+                entity.HasOne<Employee>().WithMany().HasForeignKey(x => x.EmployeeId).OnDelete(DeleteBehavior.NoAction);
+                entity.HasOne<Project>().WithMany().HasForeignKey(x => x.FromProjectId).OnDelete(DeleteBehavior.NoAction);
+                entity.HasOne<Project>().WithMany().HasForeignKey(x => x.ToProjectId).OnDelete(DeleteBehavior.NoAction);
+                entity.HasOne<Department>().WithMany().HasForeignKey(x => x.FromDepartmentId).OnDelete(DeleteBehavior.NoAction);
+                entity.HasOne<Department>().WithMany().HasForeignKey(x => x.ToDepartmentId).OnDelete(DeleteBehavior.NoAction);
+                entity.HasOne<Designation>().WithMany().HasForeignKey(x => x.FromDesignationId).OnDelete(DeleteBehavior.NoAction);
+                entity.HasOne<Designation>().WithMany().HasForeignKey(x => x.ToDesignationId).OnDelete(DeleteBehavior.NoAction);
+            });
+
             modelBuilder.Entity<LeaveEntitlementOverride>(entity =>
             {
                 entity.ToTable("LeaveEntitlementOverrides", "dbo");
-                entity.Property(x => x.AdjustmentDays).HasColumnType("decimal(5,2)");
-                entity.Property(x => x.OverrideTotalDays).HasColumnType("decimal(5,2)");
+                entity.Property(x => x.AdjustmentDays).HasColumnType("decimal(5,1)");
+                entity.Property(x => x.OverrideTotalDays).HasColumnType("decimal(5,1)");
                 entity.Property(x => x.CreatedAt).HasColumnType("datetime2(0)").ValueGeneratedOnAdd();
             });
         }

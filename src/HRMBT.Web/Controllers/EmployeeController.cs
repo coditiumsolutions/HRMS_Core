@@ -18,16 +18,20 @@ public class EmployeeController : Controller
 {
     private readonly ApplicationDbContext _context;
     private readonly IEmployeeDocumentService _documentService;
+    private readonly EmployeeEventService _eventService;
+    private readonly LeaveBalanceService _leaveBalanceService;
 
-    public EmployeeController(ApplicationDbContext context, IEmployeeDocumentService documentService)
+    public EmployeeController(ApplicationDbContext context, IEmployeeDocumentService documentService, EmployeeEventService eventService, LeaveBalanceService leaveBalanceService)
     {
         _context = context;
         _documentService = documentService;
+        _eventService = eventService;
+        _leaveBalanceService = leaveBalanceService;
     }
 
     // GET: Employee
     [HttpGet("")]
-    public async Task<IActionResult> Index(string? department, string? designation, string? project, string? search, string? employeeName, string? employeeID, string? year2024, string? applyTax, string? sortBy = "EmployeeID", string? sortOrder = "asc", int page = 1, int pageSize = 20)
+    public async Task<IActionResult> Index(string? department, string? designation, string? project, string? search, string? employeeName, string? employeeID, string? applyTax, string? sortBy = "EmployeeID", string? sortOrder = "asc", int page = 1, int pageSize = 20)
     {
         ViewData["Module"] = "Employees";
         
@@ -69,15 +73,6 @@ public class EmployeeController : Controller
                     (e.EmployeeID != null && e.EmployeeID.Contains(searchTerm)));
             }
 
-            // Filter by Year2024 (FR-005)
-            if (!string.IsNullOrEmpty(year2024))
-            {
-                if (int.TryParse(year2024, out int yearValue))
-                {
-                    query = query.Where(e => e.Year2024 == yearValue);
-                }
-            }
-
             // Filter by ApplyTax (FR-005)
             if (!string.IsNullOrEmpty(applyTax))
             {
@@ -93,7 +88,6 @@ public class EmployeeController : Controller
                 "project" => sortOrder == "desc" ? query.OrderByDescending(e => e.ProjectInfo!.Name) : query.OrderBy(e => e.ProjectInfo!.Name),
                 "genstatus" => sortOrder == "desc" ? query.OrderByDescending(e => e.GenStatus) : query.OrderBy(e => e.GenStatus),
                 "basicSalary" => sortOrder == "desc" ? query.OrderByDescending(e => e.BasicSalary) : query.OrderBy(e => e.BasicSalary),
-                "year2024" => sortOrder == "desc" ? query.OrderByDescending(e => e.Year2024) : query.OrderBy(e => e.Year2024),
                 "applytax" => sortOrder == "desc" ? query.OrderByDescending(e => e.ApplyTax) : query.OrderBy(e => e.ApplyTax),
                 _ => query.OrderBy(e => e.EmployeeID) // Default sort by EmployeeID
             };
@@ -108,14 +102,12 @@ public class EmployeeController : Controller
                 .ToListAsync();
             ViewBag.Designations = await _context.Designations.AsNoTracking().Where(d => d.IsActive).OrderBy(d => d.Rank).ThenBy(d => d.Name).Select(d => d.Name).ToListAsync();
             ViewBag.Projects = await _context.Projects.AsNoTracking().Where(p => p.IsActive).OrderBy(p => p.SortOrder).ThenBy(p => p.Name).Select(p => p.Name).ToListAsync();
-            ViewBag.Year2024Options = await _context.Employees.Select(e => e.Year2024).Distinct().Where(y => y != null).OrderBy(y => y).ToListAsync();
             
             // Preserve filter values
             ViewBag.CurrentDepartment = department;
             ViewBag.CurrentDesignation = designation;
             ViewBag.CurrentProject = projectFilter;
             ViewBag.CurrentSearch = searchTerm;
-            ViewBag.CurrentYear2024 = year2024;
             ViewBag.CurrentApplyTax = applyTax;
             ViewBag.CurrentPageSize = pageSize;
             ViewBag.CurrentSortBy = sortBy;
@@ -191,7 +183,7 @@ public class EmployeeController : Controller
 
     // GET: Employee/ExportExcel
     [HttpGet("export")]
-    public async Task<IActionResult> ExportExcel(string? department, string? designation, string? search, string? employeeName, string? employeeID, string? year2024, string? applyTax, string? sortBy = "EmployeeID", string? sortOrder = "asc")
+    public async Task<IActionResult> ExportExcel(string? department, string? designation, string? search, string? employeeName, string? employeeID, string? applyTax, string? sortBy = "EmployeeID", string? sortOrder = "asc")
     {
         var query = _context.Employees.AsQueryable();
         var searchTerm = (search ?? employeeName ?? employeeID)?.Trim();
@@ -206,8 +198,6 @@ public class EmployeeController : Controller
                 (e.EmployeeName != null && e.EmployeeName.Contains(searchTerm)) ||
                 (e.EmployeeID != null && e.EmployeeID.Contains(searchTerm)));
         }
-        if (!string.IsNullOrEmpty(year2024) && int.TryParse(year2024, out int yearValue))
-            query = query.Where(e => e.Year2024 == yearValue);
         if (!string.IsNullOrEmpty(applyTax))
             query = query.Where(e => e.ApplyTax == applyTax);
 
@@ -287,6 +277,8 @@ public class EmployeeController : Controller
         }
 
         ViewBag.EmployeeDocuments = await _documentService.BuildViewModelAsync(employee.uid, canUpload: true);
+        ViewBag.EmployeeHistory = await _eventService.BuildAsync(employee, canRecord: false);
+        ViewBag.EmployeeLeaveBalance = await _leaveBalanceService.BuildAsync(employee);
         ViewBag.EmployeeAllowances = await _context.Allowances
             .AsNoTracking()
             .Where(a => a.EmployeeId == employee.uid)
@@ -316,7 +308,7 @@ public class EmployeeController : Controller
     // POST: Employee/Create
     [HttpPost("new")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create([Bind("EmployeeID,EmployeeName,FatherName,DOB,CNIC,MobileNo,ProjectId,DepartmentId,SubDepartmentId,DesignationId,DateOfJoining,DateOfLeaving,DateOfReturn,EmployeeStatus,ModifiedBy,Details,Notes,CarryForwardLeaves,Year2022,Year2023,AdjustedAjusted,Year2024,CarryForwardLeaves1,Year2023New,BasicSalary,ApplyTax,GenStatus")] Employee employee)
+    public async Task<IActionResult> Create([Bind("EmployeeID,EmployeeName,FatherName,DOB,CNIC,MobileNo,ProjectId,DepartmentId,SubDepartmentId,DesignationId,DateOfJoining,DateOfLeaving,DateOfReturn,EmployeeStatus,ModifiedBy,Details,Notes,BasicSalary,ApplyTax,GenStatus")] Employee employee)
     {
         ViewData["Module"] = "Employees";
         
@@ -339,7 +331,9 @@ public class EmployeeController : Controller
             employee.CreatedBy = User.Identity?.Name;
             _context.Add(employee);
             await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
+            _eventService.AddJoined(employee, User.Identity?.Name);
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Details), new { id = employee.uid });
         }
         await LoadCreateFormOptionsAsync();
         return View(employee);
@@ -363,13 +357,15 @@ public class EmployeeController : Controller
 
         await LoadCreateFormOptionsAsync(employee);
         ViewBag.EmployeeDocuments = await _documentService.BuildViewModelAsync(employee.uid, canUpload: true);
+        ViewBag.EmployeeHistory = await _eventService.BuildAsync(employee, canRecord: true);
+        ViewBag.EmployeeLeaveBalance = await _leaveBalanceService.BuildAsync(employee);
         return View(employee);
     }
 
     // POST: Employee/Edit/5
     [HttpPost("{id}/edit")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(int id, [Bind("RowVersion,uid,EmployeeID,EmployeeName,FatherName,DOB,CNIC,MobileNo,ProjectId,DepartmentId,SubDepartmentId,DesignationId,DateOfJoining,DateOfLeaving,DateOfReturn,EmployeeStatus,ModifiedBy,Details,Notes,CarryForwardLeaves,Year2022,Year2023,AdjustedAjusted,Year2024,CarryForwardLeaves1,Year2023New,BasicSalary,ApplyTax,GenStatus")] Employee employee)
+    public async Task<IActionResult> Edit(int id, [Bind("RowVersion,uid,EmployeeID,EmployeeName,FatherName,DOB,CNIC,MobileNo,ProjectId,DepartmentId,SubDepartmentId,DesignationId,DateOfJoining,DateOfLeaving,DateOfReturn,EmployeeStatus,ModifiedBy,Details,Notes,BasicSalary,ApplyTax,GenStatus")] Employee employee)
     {
         ViewData["Module"] = "Employees";
         if (id != employee.uid)
@@ -410,13 +406,17 @@ public class EmployeeController : Controller
                 _context.Entry(employee).State = EntityState.Detached;
                 await LoadCreateFormOptionsAsync(employee);
                 ViewBag.EmployeeDocuments = await _documentService.BuildViewModelAsync(employee.uid, canUpload: true);
+                ViewBag.EmployeeHistory = await _eventService.BuildAsync(employee, canRecord: true);
+                ViewBag.EmployeeLeaveBalance = await _leaveBalanceService.BuildAsync(employee);
                 return View(employee);
             }
-            return RedirectToAction(nameof(Index));
+            return RedirectToAction(nameof(Details), new { id = employee.uid });
         }
 
         await LoadCreateFormOptionsAsync(employee);
         ViewBag.EmployeeDocuments = await _documentService.BuildViewModelAsync(employee.uid, canUpload: true);
+        ViewBag.EmployeeHistory = await _eventService.BuildAsync(employee, canRecord: true);
+        ViewBag.EmployeeLeaveBalance = await _leaveBalanceService.BuildAsync(employee);
         return View(employee);
     }
 
@@ -470,9 +470,7 @@ public class EmployeeController : Controller
         nameof(Employee.SubDepartmentId), nameof(Employee.DesignationId), nameof(Employee.DateOfJoining),
         nameof(Employee.DateOfLeaving), nameof(Employee.DateOfReturn), nameof(Employee.EmployeeStatus),
         nameof(Employee.ModifiedBy), nameof(Employee.ModifiedOn), nameof(Employee.Details), nameof(Employee.Notes),
-        nameof(Employee.CarryForwardLeaves), nameof(Employee.Year2022), nameof(Employee.Year2023),
-        nameof(Employee.AdjustedAjusted), nameof(Employee.Year2024), nameof(Employee.CarryForwardLeaves1),
-        nameof(Employee.Year2023New), nameof(Employee.BasicSalary), nameof(Employee.ApplyTax), nameof(Employee.GenStatus)
+        nameof(Employee.BasicSalary), nameof(Employee.ApplyTax), nameof(Employee.GenStatus)
     };
 
     private static readonly string[] EmployeeStatusValues = { "Active", "Inactive", "Resigned", "Terminated" };

@@ -21,6 +21,12 @@ public class LeaveType
 
     public int SortOrder { get; set; }
 
+    /// <summary>False = balance is not rolled into next year (Unpaid, Compensation by default).</summary>
+    public bool AllowsCarryForward { get; set; } = true;
+
+    /// <summary>Most days rolled into the next year; NULL = no cap.</summary>
+    public decimal? MaxCarryForwardDays { get; set; }
+
     public DateTime CreatedAt { get; set; }
 
     [StringLength(100)]

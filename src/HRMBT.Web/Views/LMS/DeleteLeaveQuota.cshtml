@@ -34,7 +34,7 @@
                         <dt class="col-sm-4">Year</dt>
                         <dd class="col-sm-8">@Model.Year</dd>
                         <dt class="col-sm-4">Total leaves</dt>
-                        <dd class="col-sm-8">@Model.TotalLeaves</dd>
+                        <dd class="col-sm-8">@Fmt.Days(Model.TotalLeaves)</dd>
                     </dl>
 
                     <form asp-action="DeleteLeaveQuota" method="post">

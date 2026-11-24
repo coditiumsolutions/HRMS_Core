@@ -66,4 +66,11 @@ public class LookupFormVm
 
     [Display(Name = "Half day allowed")]
     public bool IsHalfDayAllowed { get; set; } = true;
+
+    [Display(Name = "Balance carries forward to next year")]
+    public bool AllowsCarryForward { get; set; } = true;
+
+    [Display(Name = "Carry-forward cap (days, empty = no cap)")]
+    [Range(0, 366, ErrorMessage = "The cap must be between 0 and 366 days.")]
+    public decimal? MaxCarryForwardDays { get; set; }
 }

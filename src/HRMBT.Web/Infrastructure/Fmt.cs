@@ -43,6 +43,9 @@ public static class Fmt
     public static string Number(double? v) => v.HasValue ? v.Value.ToString("#,##0.##", C) : Empty;
     public static string Number(int? v) => v.HasValue ? v.Value.ToString("#,##0", C) : Empty;
 
+    /// <summary>Leave days, always one decimal because leave is tracked in half days: 10.0, 0.5, -1.5.</summary>
+    public static string Days(decimal? v) => v.HasValue ? v.Value.ToString("0.0", C) : Empty;
+
     /// <summary>Percentage given as 12.5 (not 0.125): 12.5%.</summary>
     public static string Percent(decimal? v) => v.HasValue ? v.Value.ToString("#,##0.##", C) + "%" : Empty;
 

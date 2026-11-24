@@ -59,6 +59,15 @@
         invalid.focus({ preventScroll: false });
     }
 
+    // Keep the tab area's height while one pane hides and the next shows; without it the page gets shorter for a
+    // moment and the browser clamps the scroll position (the "scroll reset" jump).
+    (function () {
+        var content = document.querySelector('.emp-tab-content');
+        if (!content || !tabList) return;
+        tabList.addEventListener('hide.bs.tab', function () { content.style.minHeight = content.offsetHeight + 'px'; });
+        tabList.addEventListener('shown.bs.tab', function () { content.style.minHeight = ''; });
+    })();
+
     if (tabList) {
         tabList.addEventListener('shown.bs.tab', function (e) {
             var key = e.target.getAttribute('data-tab-key');
@@ -85,7 +94,7 @@
                 preview.src = placeholderSrc;
                 if (fileInput) fileInput.value = '';
                 try { sessionStorage.removeItem(TAB_STORAGE_KEY); } catch (e) { /* ignore */ }
-                showTab('personal');
+                showTab('employee');
             }, 0);
         });
     }

@@ -1,11 +1,12 @@
 ﻿@model HRMBT.Web.Models.Employee?
 @* Employee identity band shared by Details, Edit, Create and Delete.
-   ViewData: PhotoId (int?), HeroTag (small brass pill, e.g. "Editing"), HeroNew (bool, for the Create page), HeroDanger (bool). *@
+   ViewData: PhotoId (int?), HeroActions (bool: Back / Edit / Delete buttons, Details page), HeroTag (small brass pill, e.g. "Editing"), HeroNew (bool, for the Create page), HeroDanger (bool). *@
 @{
     var isNew = ViewData["HeroNew"] as bool? == true || Model == null;
     var photoId = ViewData["PhotoId"] as int?;
     var tag = ViewData["HeroTag"] as string;
     var danger = ViewData["HeroDanger"] as bool? == true;
+    var actions = ViewData["HeroActions"] as bool? == true;
     var name = Model?.EmployeeName;
     var initials = string.Concat((name ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(w => char.ToUpperInvariant(w[0])));
     if (initials.Length == 0) initials = "?";
@@ -60,6 +61,14 @@
             @if (Model.DateOfJoining.HasValue)
             {
                 <span class="dossier-joined">Joined @Fmt.ShortDate(Model.DateOfJoining)</span>
+            }
+            @if (actions)
+            {
+                <div class="dossier-actions">
+                    <a asp-controller="Employee" asp-action="Index" class="dossier-act" title="Back to the employee list"><i class="fa-solid fa-arrow-left"></i><span>Back</span></a>
+                    <a asp-controller="Employee" asp-action="Edit" asp-route-id="@Model.uid" class="dossier-act dossier-act--edit"><i class="fa-solid fa-pen"></i><span>Edit</span></a>
+                    <a asp-controller="Employee" asp-action="Delete" asp-route-id="@Model.uid" class="dossier-act dossier-act--delete"><i class="fa-solid fa-trash"></i><span>Delete</span></a>
+                </div>
             }
         </div>
     }

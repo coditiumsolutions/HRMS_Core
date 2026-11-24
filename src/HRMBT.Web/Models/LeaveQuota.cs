@@ -29,10 +29,10 @@ public class LeaveQuota
         set => _leaveTypeName = value;
     }
 
-    /// <summary>Stored as TotalDays decimal(5,2); kept as whole days in the existing screens.</summary>
+    /// <summary>Stored as TotalDays decimal(5,1): leave is tracked in one decimal (half days).</summary>
     [Display(Name = "Total leaves")]
     [Range(0, 366, ErrorMessage = "Total leaves must be between 0 and 366.")]
-    public int TotalLeaves { get; set; }
+    public decimal TotalLeaves { get; set; }
 
     /// <summary>Calendar year as text; stored as an int.</summary>
     [Required]

@@ -55,6 +55,8 @@ builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 builder.Services.Configure<EmployeeDocumentOptions>(
     builder.Configuration.GetSection(EmployeeDocumentOptions.SectionName));
 builder.Services.AddScoped<IEmployeeDocumentService, EmployeeDocumentService>();
+builder.Services.AddScoped<EmployeeEventService>();
+builder.Services.AddScoped<LeaveBalanceService>();
 
 builder.Services.Configure<FormOptions>(options =>
 {

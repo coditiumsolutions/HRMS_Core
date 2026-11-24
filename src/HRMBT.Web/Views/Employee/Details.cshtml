@@ -37,7 +37,7 @@
     <link rel="stylesheet" href="~/css/employee-dossier.css" asp-append-version="true" />
 }
 
-<div class="employee-create-page dossier-page py-3" id="employeeDetailsView" data-tab-storage-key="hrms.employeeDetails.activeTab">
+<div class="employee-create-page dossier-page dossier-page--static py-3" id="employeeDetailsView" data-tab-storage-key="hrms.employeeDetails.activeTab">
     <div class="container-fluid px-0">
         <nav aria-label="breadcrumb" class="mb-3">
             <ol class="breadcrumb emp-breadcrumb mb-0">
@@ -47,7 +47,7 @@
             </ol>
         </nav>
 
-        <partial name="_DossierHero" model="Model" view-data="@(new ViewDataDictionary(ViewData) { { "PhotoId", photoId } })" />
+        <partial name="_DossierHero" model="Model" view-data="@(new ViewDataDictionary(ViewData) { { "PhotoId", photoId }, { "HeroActions", true } })" />
 
         <div class="row g-0">
             <div class="col-12">
@@ -331,96 +331,22 @@
                             <div class="tab-pane fade" id="tab-leave" role="tabpanel" aria-labelledby="tab-leave-btn" tabindex="0">
                                 <div class="emp-tab-pane-inner">
                                     <h2 class="emp-section-header"><i class="fa-solid fa-umbrella-beach"></i> Leave Balance</h2>
-                                    <p class="emp-section-sub">Carry-forward and historical leave totals.</p>
-                                    <div class="table-responsive emp-table-wrap">
-                                        <table class="table emp-form-table emp-details-table dos-table mb-0">
-                                            <tbody>
-                                            <tr class="emp-form-row">
-                                                <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.CarryForwardLeaves)</span></th>
-                                                <td class="emp-field-cell"><span class="info-value @(Model.CarryForwardLeaves.HasValue ? "" : "text-empty")">@Fmt.Number(Model.CarryForwardLeaves)</span></td>
-                                                <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.CarryForwardLeaves1)</span></th>
-                                                <td class="emp-field-cell"><span class="info-value @(Model.CarryForwardLeaves1.HasValue ? "" : "text-empty")">@Fmt.Number(Model.CarryForwardLeaves1)</span></td>
-                                            </tr>
-                                            <tr class="emp-form-row">
-                                                <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.Year2024)</span></th>
-                                                <td class="emp-field-cell"><span class="info-value @(Model.Year2024.HasValue ? "" : "text-empty")">@Fmt.Number(Model.Year2024)</span></td>
-                                                <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.Year2022)</span></th>
-                                                <td class="emp-field-cell"><span class="info-value @(Model.Year2022.HasValue ? "" : "text-empty")">@Fmt.Number(Model.Year2022)</span></td>
-                                            </tr>
-                                            <tr class="emp-form-row">
-                                                <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.Year2023)</span></th>
-                                                <td class="emp-field-cell"><span class="info-value @(Model.Year2023.HasValue ? "" : "text-empty")">@Fmt.Number(Model.Year2023)</span></td>
-                                                <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.Year2023New)</span></th>
-                                                <td class="emp-field-cell"><span class="info-value @(Model.Year2023New.HasValue ? "" : "text-empty")">@Fmt.Number(Model.Year2023New)</span></td>
-                                            </tr>
-                                            <tr class="emp-form-row">
-                                                <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.AdjustedAjusted)</span></th>
-                                                <td class="emp-field-cell" colspan="3"><span class="info-value @(Model.AdjustedAjusted.HasValue ? "" : "text-empty")">@Fmt.Number(Model.AdjustedAjusted)</span></td>
-                                            </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                    <p class="emp-section-sub">Calculated from the Leave Management System: yearly quota, carry-forward, adjustments and approved leave. Half days count as 0.5.</p>
+                                    @if (ViewBag.EmployeeLeaveBalance is HRMBT.Web.Services.EmployeeLeaveBalanceViewModel leaveVm)
+                                    {
+                                        @await Html.PartialAsync("_EmployeeLeaveBalance", leaveVm)
+                                    }
                                 </div>
                             </div>
 
                             <div class="tab-pane fade" id="tab-history" role="tabpanel" aria-labelledby="tab-history-btn" tabindex="0">
                                 <div class="emp-tab-pane-inner">
                                     <h2 class="emp-section-header"><i class="fa-solid fa-clock-rotate-left"></i> Employee History</h2>
-                                    <p class="emp-section-sub">Transfers, promotions, status changes, and other employment events.</p>
-                                    <div class="table-responsive emp-table-wrap">
-                                        <table class="table emp-salary-list mb-0">
-                                            <thead>
-                                                <tr>
-                                                    <th style="width:18%;">Date</th>
-                                                    <th style="width:22%;">Event</th>
-                                                    <th style="width:35%;">Details</th>
-                                                    <th style="width:25%;">Recorded By</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                @if (Model.DateOfJoining.HasValue)
-                                                {
-                                                    <tr class="emp-form-row">
-                                                        <td class="emp-field-cell"><span class="info-value">@Fmt.ShortDate(Model.DateOfJoining.Value)</span></td>
-                                                        <td class="emp-field-cell"><span class="info-value">Joined</span></td>
-                                                        <td class="emp-field-cell">
-                                                            <span class="info-value">
-                                                                @(string.IsNullOrWhiteSpace(Model.Department) ? "—" : Model.Department)
-                                                                @if (!string.IsNullOrWhiteSpace(Model.Designation))
-                                                                {
-                                                                    <span class="text-muted"> · @Model.Designation</span>
-                                                                }
-                                                            </span>
-                                                        </td>
-                                                        <td class="emp-field-cell"><span class="info-value text-muted">System</span></td>
-                                                    </tr>
-                                                }
-                                                @if (!string.IsNullOrWhiteSpace(Model.ModifiedOn))
-                                                {
-                                                    <tr class="emp-form-row">
-                                                        <td class="emp-field-cell"><span class="info-value">@Fmt.DateAndTime(Model.ModifiedOn)</span></td>
-                                                        <td class="emp-field-cell"><span class="info-value">Record updated</span></td>
-                                                        <td class="emp-field-cell">
-                                                            <span class="info-value">Status: @(string.IsNullOrWhiteSpace(Model.EmployeeStatus) ? "—" : Model.EmployeeStatus)</span>
-                                                        </td>
-                                                        <td class="emp-field-cell"><span class="info-value">@(string.IsNullOrWhiteSpace(Model.ModifiedBy) ? "—" : Model.ModifiedBy)</span></td>
-                                                    </tr>
-                                                }
-                                                @if (!Model.DateOfJoining.HasValue && string.IsNullOrWhiteSpace(Model.ModifiedOn))
-                                                {
-                                                    <tr class="emp-form-row">
-                                                        <td class="emp-field-cell text-muted" colspan="4">
-                                                            <div class="text-center py-3">
-                                                                <i class="fa-solid fa-clock-rotate-left text-muted mb-2 d-block fs-4"></i>
-                                                                <div class="fw-semibold text-dark">No history records</div>
-                                                                <div class="small text-muted">Employment events will appear here when recorded.</div>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                }
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                    <p class="emp-section-sub">Joining, promotions, transfers, resignations, rejoins and other key events, newest first.</p>
+                                    @if (ViewBag.EmployeeHistory is HRMBT.Web.Services.EmployeeHistoryViewModel historyVm)
+                                    {
+                                        @await Html.PartialAsync("_EmployeeHistory", historyVm)
+                                    }
                                 </div>
                             </div>
 
@@ -438,27 +364,6 @@
                             </div>
 
                         </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="employee-create-actions">
-            <div class="container-fluid px-3 px-lg-4">
-                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-                    <div class="small text-muted d-none d-md-block">
-                        <i class="fa-solid fa-eye me-1"></i>Viewing employee profile.
-                    </div>
-                    <div class="d-flex flex-wrap align-items-center gap-2 ms-md-auto">
-                        <a asp-action="Index" class="btn btn-action-outline">
-                            <i class="fa-solid fa-arrow-left me-1"></i>Back
-                        </a>
-                        <a asp-action="Delete" asp-route-id="@Model.uid" class="btn btn-grid-delete">
-                            <i class="fa-solid fa-trash me-1"></i>Delete
-                        </a>
-                        <a asp-action="Edit" asp-route-id="@Model.uid" class="btn btn-grid-edit">
-                            <i class="fa-solid fa-pen me-1"></i>Edit
-                        </a>
                     </div>
                 </div>
             </div>

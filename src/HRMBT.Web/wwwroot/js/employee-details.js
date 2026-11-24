@@ -30,6 +30,15 @@
         } catch (err) { /* ignore */ }
     });
 
+    // Keep the tab area's height while one pane hides and the next shows; without it the page gets shorter for a
+    // moment and the browser clamps the scroll position (the "scroll reset" jump).
+    (function () {
+        var content = document.querySelector('.emp-tab-content');
+        if (!content || !tabList) return;
+        tabList.addEventListener('hide.bs.tab', function () { content.style.minHeight = content.offsetHeight + 'px'; });
+        tabList.addEventListener('shown.bs.tab', function () { content.style.minHeight = ''; });
+    })();
+
     try {
         var key = null;
         var params = new URLSearchParams(window.location.search);

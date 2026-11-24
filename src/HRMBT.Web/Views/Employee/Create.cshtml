@@ -33,13 +33,8 @@
                         <div class="emp-tabs-nav border-bottom">
                             <ul class="nav nav-tabs emp-nav-tabs flex-nowrap" id="employeeCreateTabs" role="tablist">
                                 <li class="nav-item" role="presentation">
-                                    <button class="nav-link active" id="tab-personal-btn" data-bs-toggle="tab" data-bs-target="#tab-personal" type="button" role="tab" aria-controls="tab-personal" aria-selected="true" data-tab-key="personal">
-                                        <i class="fa-solid fa-id-card"></i><span>Personal Info</span>
-                                    </button>
-                                </li>
-                                <li class="nav-item" role="presentation">
-                                    <button class="nav-link" id="tab-official-btn" data-bs-toggle="tab" data-bs-target="#tab-official" type="button" role="tab" aria-controls="tab-official" aria-selected="false" data-tab-key="official">
-                                        <i class="fa-solid fa-building"></i><span>Official Info</span>
+                                    <button class="nav-link active" id="tab-employee-btn" data-bs-toggle="tab" data-bs-target="#tab-employee" type="button" role="tab" aria-controls="tab-employee" aria-selected="true" data-tab-key="employee">
+                                        <i class="fa-solid fa-id-card"></i><span>Employee Info</span>
                                     </button>
                                 </li>
                                 <li class="nav-item" role="presentation">
@@ -50,11 +45,6 @@
                                 <li class="nav-item" role="presentation">
                                     <button class="nav-link" id="tab-leave-btn" data-bs-toggle="tab" data-bs-target="#tab-leave" type="button" role="tab" aria-controls="tab-leave" aria-selected="false" data-tab-key="leave">
                                         <i class="fa-solid fa-calendar-check"></i><span>Leave Balance</span>
-                                    </button>
-                                </li>
-                                <li class="nav-item" role="presentation">
-                                    <button class="nav-link" id="tab-additional-btn" data-bs-toggle="tab" data-bs-target="#tab-additional" type="button" role="tab" aria-controls="tab-additional" aria-selected="false" data-tab-key="additional">
-                                        <i class="fa-solid fa-circle-info"></i><span>Additional Info</span>
                                     </button>
                                 </li>
                                 <li class="nav-item" role="presentation">
@@ -74,10 +64,10 @@
                             <div class="tab-content emp-tab-content" id="employeeCreateTabContent">
 
                                 <!-- Personal Info -->
-                                <div class="tab-pane fade show active" id="tab-personal" role="tabpanel" aria-labelledby="tab-personal-btn" tabindex="0" data-tab-panel="personal">
+                                <div class="tab-pane fade show active" id="tab-employee" role="tabpanel" aria-labelledby="tab-employee-btn" tabindex="0" data-tab-panel="employee">
                                     <div class="emp-tab-pane-inner">
-                                        <h2 class="emp-section-header"><i class="fa-solid fa-user"></i> Personal Info</h2>
-                                        <p class="emp-section-sub">Identity and primary contact details for the employee record.</p>
+                                        <h2 class="emp-section-header"><i class="fa-solid fa-id-card"></i> Employee Info</h2>
+                                        <p class="emp-section-sub">Identity, contact, department, role, project, and employment status.</p>
                                         <div class="table-responsive emp-table-wrap">
                                             <table class="table emp-form-table mb-0">
                                                 <tbody>
@@ -118,23 +108,52 @@
                                                         </td>
                                                     </tr>
                                                 </tbody>
+                                                <partial name="_EmployeeOrgFields" model="Model" />
                                             </table>
+                                        </div>
+                                        <div class="emp-additional mt-4">
+                                            <button class="emp-collapse-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#additionalInfoCollapse" aria-expanded="false" aria-controls="additionalInfoCollapse">
+                                                <i class="fa-solid fa-chevron-right emp-chevron"></i>
+                                                <i class="fa-solid fa-file-lines"></i>
+                                                <span>Additional Info</span>
+                                                <span class="emp-collapse-hint">Notes, remarks, and audit fields</span>
+                                            </button>
+                                            <div class="collapse" id="additionalInfoCollapse">
+                                                <div class="mt-3">
+        <div class="table-responsive emp-table-wrap">
+                                                    <table class="table emp-form-table mb-0">
+                                                        <tbody>
+                                                            <tr class="emp-form-row">
+                                                                <th scope="row" class="emp-label-cell align-top pt-3"><label asp-for="Details" class="form-label mb-0"></label></th>
+                                                                <td class="emp-field-cell" colspan="3">
+                                                                    <textarea asp-for="Details" class="form-control" rows="4" placeholder="Notes, remarks, or onboarding context"></textarea>
+                                                                    <span asp-validation-for="Details" class="field-validation-error"></span>
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="emp-form-row">
+                                                                <th scope="row" class="emp-label-cell"><label asp-for="ModifiedBy" class="form-label mb-0"></label></th>
+                                                                <td class="emp-field-cell" colspan="3">
+                                                                    <input asp-for="ModifiedBy" class="form-control emp-field-narrow" placeholder="Recorder / HR officer name" />
+                                                                    <span asp-validation-for="ModifiedBy" class="field-validation-error"></span>
+                                                                </td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                                <div class="alert alert-light border mt-3 mb-0 d-flex gap-3 align-items-start">
+                                                    <i class="fa-solid fa-phone text-primary fs-5 flex-shrink-0 mt-1"></i>
+                                                    <div class="small text-muted mb-0">
+                                                        <strong class="text-dark d-block mb-1">Primary contact</strong>
+                                                        Mobile number is recorded in the table above for SMS, attendance alerts, and HR correspondence.
+                                                    </div>
+                                                </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
 
                                 <!-- Official Info -->
-                                <div class="tab-pane fade" id="tab-official" role="tabpanel" aria-labelledby="tab-official-btn" tabindex="0" data-tab-panel="official">
-                                    <div class="emp-tab-pane-inner">
-                                        <h2 class="emp-section-header"><i class="fa-solid fa-briefcase"></i> Official Info</h2>
-                                        <p class="emp-section-sub">Department, role, project assignment, and employment status.</p>
-                                        <div class="table-responsive emp-table-wrap">
-                                            <table class="table emp-form-table mb-0">
-                                                <partial name="_EmployeeOrgFields" model="Model" />
-                                            </table>
-                                        </div>
-                                    </div>
-                                </div>
 
                                 <!-- Salary Info -->
                                 <div class="tab-pane fade" id="tab-salary" role="tabpanel" aria-labelledby="tab-salary-btn" tabindex="0" data-tab-panel="salary">
@@ -170,93 +189,12 @@
                                 <div class="tab-pane fade" id="tab-leave" role="tabpanel" aria-labelledby="tab-leave-btn" tabindex="0" data-tab-panel="leave">
                                     <div class="emp-tab-pane-inner">
                                         <h2 class="emp-section-header"><i class="fa-solid fa-umbrella-beach"></i> Leave Balance</h2>
-                                        <p class="emp-section-sub">Optional carry-forward and historical leave totals.</p>
-                                        <div class="table-responsive emp-table-wrap">
-                                            <table class="table emp-form-table mb-0">
-                                                <tbody>
-                                                    <tr class="emp-form-row">
-                                                        <th scope="row" class="emp-label-cell"><label asp-for="CarryForwardLeaves" class="form-label mb-0"></label></th>
-                                                        <td class="emp-field-cell">
-                                                            <input asp-for="CarryForwardLeaves" class="form-control" type="number" step="0.01" placeholder="0" />
-                                                            <span asp-validation-for="CarryForwardLeaves" class="field-validation-error"></span>
-                                                        </td>
-                                                        <th scope="row" class="emp-label-cell"><label asp-for="CarryForwardLeaves1" class="form-label mb-0"></label></th>
-                                                        <td class="emp-field-cell">
-                                                            <input asp-for="CarryForwardLeaves1" class="form-control" type="number" step="0.01" placeholder="0" />
-                                                            <span asp-validation-for="CarryForwardLeaves1" class="field-validation-error"></span>
-                                                        </td>
-                                                    </tr>
-                                                    <tr class="emp-form-row">
-                                                        <th scope="row" class="emp-label-cell"><label asp-for="Year2024" class="form-label mb-0"></label></th>
-                                                        <td class="emp-field-cell">
-                                                            <input asp-for="Year2024" class="form-control" type="number" placeholder="e.g. 2024" />
-                                                            <span asp-validation-for="Year2024" class="field-validation-error"></span>
-                                                        </td>
-                                                        <th scope="row" class="emp-label-cell"><label asp-for="Year2022" class="form-label mb-0"></label></th>
-                                                        <td class="emp-field-cell">
-                                                            <input asp-for="Year2022" class="form-control" type="number" step="0.01" placeholder="0" />
-                                                            <span asp-validation-for="Year2022" class="field-validation-error"></span>
-                                                        </td>
-                                                    </tr>
-                                                    <tr class="emp-form-row">
-                                                        <th scope="row" class="emp-label-cell"><label asp-for="Year2023" class="form-label mb-0"></label></th>
-                                                        <td class="emp-field-cell">
-                                                            <input asp-for="Year2023" class="form-control" type="number" step="0.01" placeholder="0" />
-                                                            <span asp-validation-for="Year2023" class="field-validation-error"></span>
-                                                        </td>
-                                                        <th scope="row" class="emp-label-cell"><label asp-for="Year2023New" class="form-label mb-0"></label></th>
-                                                        <td class="emp-field-cell">
-                                                            <input asp-for="Year2023New" class="form-control" type="number" step="0.01" placeholder="0" />
-                                                            <span asp-validation-for="Year2023New" class="field-validation-error"></span>
-                                                        </td>
-                                                    </tr>
-                                                    <tr class="emp-form-row">
-                                                        <th scope="row" class="emp-label-cell"><label asp-for="AdjustedAjusted" class="form-label mb-0"></label></th>
-                                                        <td class="emp-field-cell" colspan="3">
-                                                            <input asp-for="AdjustedAjusted" class="form-control emp-field-narrow" type="number" placeholder="0" />
-                                                            <span asp-validation-for="AdjustedAjusted" class="field-validation-error"></span>
-                                                        </td>
-                                                    </tr>
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
+                                    <p class="emp-section-sub">Calculated from the Leave Management System: yearly quota, carry-forward, adjustments and approved leave. Half days count as 0.5.</p>
+                                    <div class="dos-leave-note"><i class="fa-solid fa-circle-info"></i> Leave balances appear here once the employee is saved. They come from the yearly leave quota set in the Leave Management System, plus carry-forward and approved leave.</div>
                                 </div>
+                            </div>
 
                                 <!-- Additional Info -->
-                                <div class="tab-pane fade" id="tab-additional" role="tabpanel" aria-labelledby="tab-additional-btn" tabindex="0" data-tab-panel="additional">
-                                    <div class="emp-tab-pane-inner">
-                                        <h2 class="emp-section-header"><i class="fa-solid fa-file-lines"></i> Additional Info</h2>
-                                        <p class="emp-section-sub">Notes, remarks, and audit fields for HR onboarding context.</p>
-                                        <div class="table-responsive emp-table-wrap">
-                                            <table class="table emp-form-table mb-0">
-                                                <tbody>
-                                                    <tr class="emp-form-row">
-                                                        <th scope="row" class="emp-label-cell align-top pt-3"><label asp-for="Details" class="form-label mb-0"></label></th>
-                                                        <td class="emp-field-cell" colspan="3">
-                                                            <textarea asp-for="Details" class="form-control" rows="4" placeholder="Notes, remarks, or onboarding context"></textarea>
-                                                            <span asp-validation-for="Details" class="field-validation-error"></span>
-                                                        </td>
-                                                    </tr>
-                                                    <tr class="emp-form-row">
-                                                        <th scope="row" class="emp-label-cell"><label asp-for="ModifiedBy" class="form-label mb-0"></label></th>
-                                                        <td class="emp-field-cell" colspan="3">
-                                                            <input asp-for="ModifiedBy" class="form-control emp-field-narrow" placeholder="Recorder / HR officer name" />
-                                                            <span asp-validation-for="ModifiedBy" class="field-validation-error"></span>
-                                                        </td>
-                                                    </tr>
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                        <div class="alert alert-light border mt-3 mb-0 d-flex gap-3 align-items-start">
-                                            <i class="fa-solid fa-phone text-primary fs-5 flex-shrink-0 mt-1"></i>
-                                            <div class="small text-muted mb-0">
-                                                <strong class="text-dark d-block mb-1">Primary contact</strong>
-                                                Mobile number is recorded under <strong>Personal Info</strong> for SMS, attendance alerts, and HR correspondence.
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
 
                                 <!-- Employee History -->
                                 <div class="tab-pane fade" id="tab-history" role="tabpanel" aria-labelledby="tab-history-btn" tabindex="0" data-tab-panel="history">

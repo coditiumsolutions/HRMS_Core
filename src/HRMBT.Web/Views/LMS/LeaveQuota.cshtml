@@ -63,7 +63,7 @@
                                     <tr data-record-id="@row.UID" title="Double-click to open">
                                         <td>@row.UID</td>
                                         <td>@row.LeaveTypeName</td>
-                                        <td class="text-end">@row.TotalLeaves</td>
+                                        <td class="text-end">@Fmt.Days(row.TotalLeaves)</td>
                                         <td>@row.Year</td>
                                         <td class="col-actions">
                                             <a class="row-action row-action-edit" asp-controller="LMS" asp-action="EditLeaveQuota" asp-route-id="@row.UID" title="Edit leave quota" aria-label="Edit leave quota"><i class="bi bi-pencil-square"></i></a>
