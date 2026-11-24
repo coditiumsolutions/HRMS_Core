@@ -62,8 +62,9 @@
                 btn.setAttribute('aria-pressed', show ? 'true' : 'false');
                 btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
                 btn.title = show ? 'Hide password' : 'Show password';
-                btn.querySelector('.icon-show').hidden = show;
-                btn.querySelector('.icon-hide').hidden = !show;
+                // SVG elements have no .hidden property, so toggle the attribute itself
+                btn.querySelector('.icon-show').toggleAttribute('hidden', show);
+                btn.querySelector('.icon-hide').toggleAttribute('hidden', !show);
                 input.focus();
             });
         })();
