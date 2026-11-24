@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HRMBT.Web.Controllers;
 
-[Authorize(Roles = "Admin")]
+[Authorize(Roles = "Admin,HR")]
 [Route("setup")]
 public class SetupController : Controller
 {
@@ -119,6 +119,7 @@ public class SetupController : Controller
         return RedirectToAction(nameof(Config));
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpGet("users")]
     public async Task<IActionResult> Users()
     {
@@ -126,12 +127,14 @@ public class SetupController : Controller
         return View(users);
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpGet("users/new")]
     public IActionResult CreateUser()
     {
         return View(new SetupUserFormVm());
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpPost("users/new")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CreateUser(SetupUserFormVm model)
@@ -180,6 +183,7 @@ public class SetupController : Controller
         return RedirectToAction(nameof(Users));
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpGet("users/{id}/edit")]
     public async Task<IActionResult> EditUser(int id)
     {
@@ -197,6 +201,7 @@ public class SetupController : Controller
         return View(vm);
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpPost("users/{id}/edit")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> EditUser(int id, SetupUserFormVm model)
@@ -256,6 +261,7 @@ public class SetupController : Controller
         return RedirectToAction(nameof(Users));
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpGet("users/{id}/delete")]
     public async Task<IActionResult> DeleteUser(int id)
     {
@@ -265,6 +271,7 @@ public class SetupController : Controller
         return View(user);
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpPost("users/{id}/delete"), ActionName("DeleteUser")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteUserConfirmed(int id)

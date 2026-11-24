@@ -99,6 +99,11 @@
             color: #d4af37;
             margin-right: 0.25rem;
         }
+        .setup-section { margin-bottom: 1.5rem; }
+        .setup-section-title {
+            font-size: 0.8rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+            color: #00203f; margin: 0 0 0.6rem; padding-bottom: 0.35rem; border-bottom: 2px solid #d4af37;
+        }
         .setup-tile-actions {
             margin-top: auto;
         }
@@ -111,114 +116,104 @@
 <div class="setup-home">
     <div class="setup-intro">
         <h1><i class="bi bi-gear-wide-connected me-2" style="color:#d4af37;"></i>System setup</h1>
-        <p>Manage login accounts, configuration values and the HR lists: projects, departments, sub-departments, designations and leave types.</p>
+        <p>Manage the HR lists, configuration values and login accounts.</p>
     </div>
 
-    <div class="row g-3">
-        <div class="col-md-6 col-xl-4">
-            <a class="setup-tile" asp-action="Users">
-                <div class="setup-tile-header">
-                    <span class="setup-tile-icon" aria-hidden="true"><i class="bi bi-people-fill"></i></span>
-                    <span>Users</span>
-                </div>
-                <div class="setup-tile-body">
-                    <div class="setup-tile-meta">
-                        <span><i class="bi bi-shield-lock"></i>Login accounts</span>
-                        <span><i class="bi bi-database"></i>dbo.Users</span>
+    <section class="setup-section">
+        <h2 class="setup-section-title">HR managed</h2>
+        <div class="row g-3">
+            <div class="col-md-6 col-xl-4">
+                <a class="setup-tile" asp-controller="Lookups" asp-action="Index" asp-route-kind="departments">
+                    <div class="setup-tile-header">
+                        <span class="setup-tile-icon" aria-hidden="true"><i class="bi bi-building"></i></span>
+                        <span>Departments</span>
                     </div>
-                    <p>Create and maintain login accounts. Passwords are stored as secure hashes used by the login page.</p>
-                </div>
-            </a>
-        </div>
-        <div class="col-md-6 col-xl-4">
-            <a class="setup-tile" asp-action="Config">
-                <div class="setup-tile-header">
-                    <span class="setup-tile-icon" aria-hidden="true"><i class="bi bi-sliders"></i></span>
-                    <span>Config</span>
-                </div>
-                <div class="setup-tile-body">
-                    <div class="setup-tile-meta">
-                        <span><i class="bi bi-key"></i>Key / value</span>
-                        <span><i class="bi bi-database"></i>dbo.Configuration</span>
+                    <div class="setup-tile-body">
+                        <p>Main departments shared by all projects (Administration, Operations, Security...).</p>
                     </div>
-                    <p>View and edit key/value entries that drive lists, payroll settings, and other system options.</p>
-                </div>
-            </a>
-        </div>
-        <div class="col-md-6 col-xl-4">
-            <a class="setup-tile" asp-controller="Lookups" asp-action="Index" asp-route-kind="projects">
-                <div class="setup-tile-header">
-                    <span class="setup-tile-icon" aria-hidden="true"><i class="bi bi-diagram-3"></i></span>
-                    <span>Projects</span>
-                </div>
-                <div class="setup-tile-body">
-                    <div class="setup-tile-meta">
-                        <span><i class="bi bi-list-ul"></i>HR-managed list</span>
-                        <span><i class="bi bi-database"></i>dbo.Projects</span>
+                </a>
+            </div>
+            <div class="col-md-6 col-xl-4">
+                <a class="setup-tile" asp-controller="Lookups" asp-action="Index" asp-route-kind="subdepartments">
+                    <div class="setup-tile-header">
+                        <span class="setup-tile-icon" aria-hidden="true"><i class="bi bi-diagram-2"></i></span>
+                        <span>Sub-departments</span>
                     </div>
-                    <p>The HR-managed project list. Add, rename, reorder or deactivate projects; no project name or count is built into the system.</p>
-                </div>
-            </a>
-        </div>
-        <div class="col-md-6 col-xl-4">
-            <a class="setup-tile" asp-controller="Lookups" asp-action="Index" asp-route-kind="departments">
-                <div class="setup-tile-header">
-                    <span class="setup-tile-icon" aria-hidden="true"><i class="bi bi-building"></i></span>
-                    <span>Departments</span>
-                </div>
-                <div class="setup-tile-body">
-                    <div class="setup-tile-meta">
-                        <span><i class="bi bi-list-ul"></i>HR-managed list</span>
-                        <span><i class="bi bi-database"></i>dbo.Departments</span>
+                    <div class="setup-tile-body">
+                        <p>Optional detail under a department, such as Mess under Administration. Information only.</p>
                     </div>
-                    <p>Main departments shared by all projects (Administration, Operations, Security...).</p>
-                </div>
-            </a>
-        </div>
-        <div class="col-md-6 col-xl-4">
-            <a class="setup-tile" asp-controller="Lookups" asp-action="Index" asp-route-kind="subdepartments">
-                <div class="setup-tile-header">
-                    <span class="setup-tile-icon" aria-hidden="true"><i class="bi bi-diagram-2"></i></span>
-                    <span>Sub-departments</span>
-                </div>
-                <div class="setup-tile-body">
-                    <div class="setup-tile-meta">
-                        <span><i class="bi bi-list-ul"></i>HR-managed list</span>
-                        <span><i class="bi bi-database"></i>dbo.SubDepartments</span>
+                </a>
+            </div>
+            <div class="col-md-6 col-xl-4">
+                <a class="setup-tile" asp-controller="Lookups" asp-action="Index" asp-route-kind="projects">
+                    <div class="setup-tile-header">
+                        <span class="setup-tile-icon" aria-hidden="true"><i class="bi bi-diagram-3"></i></span>
+                        <span>Projects</span>
                     </div>
-                    <p>Optional detail under a department, such as Mess under Administration. Information only.</p>
-                </div>
-            </a>
-        </div>
-        <div class="col-md-6 col-xl-4">
-            <a class="setup-tile" asp-controller="Lookups" asp-action="Index" asp-route-kind="designations">
-                <div class="setup-tile-header">
-                    <span class="setup-tile-icon" aria-hidden="true"><i class="bi bi-award"></i></span>
-                    <span>Designations</span>
-                </div>
-                <div class="setup-tile-body">
-                    <div class="setup-tile-meta">
-                        <span><i class="bi bi-list-ul"></i>HR-managed list</span>
-                        <span><i class="bi bi-database"></i>dbo.Designations</span>
+                    <div class="setup-tile-body">
+                        <p>The HR-managed project list. Add, rename, reorder or deactivate projects; no project name or count is built into the system.</p>
                     </div>
-                    <p>Job titles with a rank that orders employee lists.</p>
-                </div>
-            </a>
-        </div>
-        <div class="col-md-6 col-xl-4">
-            <a class="setup-tile" asp-controller="Lookups" asp-action="Index" asp-route-kind="leavetypes">
-                <div class="setup-tile-header">
-                    <span class="setup-tile-icon" aria-hidden="true"><i class="bi bi-calendar-check"></i></span>
-                    <span>Leave types</span>
-                </div>
-                <div class="setup-tile-body">
-                    <div class="setup-tile-meta">
-                        <span><i class="bi bi-list-ul"></i>HR-managed list</span>
-                        <span><i class="bi bi-database"></i>dbo.LeaveTypes</span>
+                </a>
+            </div>
+            <div class="col-md-6 col-xl-4">
+                <a class="setup-tile" asp-controller="Lookups" asp-action="Index" asp-route-kind="designations">
+                    <div class="setup-tile-header">
+                        <span class="setup-tile-icon" aria-hidden="true"><i class="bi bi-award"></i></span>
+                        <span>Designations</span>
                     </div>
-                    <p>Leave types used by leave requests and quotas.</p>
-                </div>
-            </a>
+                    <div class="setup-tile-body">
+                        <p>Job titles with a rank that orders employee lists.</p>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-6 col-xl-4">
+                <a class="setup-tile" asp-controller="Lookups" asp-action="Index" asp-route-kind="leavetypes">
+                    <div class="setup-tile-header">
+                        <span class="setup-tile-icon" aria-hidden="true"><i class="bi bi-calendar-check"></i></span>
+                        <span>Leave types</span>
+                    </div>
+                    <div class="setup-tile-body">
+                        <p>Leave types used by leave requests and quotas, with carry-forward rules.</p>
+                    </div>
+                </a>
+            </div>
         </div>
-    </div>
+    </section>
+
+    <section class="setup-section">
+        <h2 class="setup-section-title">Admin</h2>
+        <div class="row g-3">
+@if (User.IsInRole("Admin"))
+{
+            <div class="col-md-6 col-xl-4">
+                <a class="setup-tile" asp-action="Users">
+                    <div class="setup-tile-header">
+                        <span class="setup-tile-icon" aria-hidden="true"><i class="bi bi-people-fill"></i></span>
+                        <span>Users</span>
+                    </div>
+                    <div class="setup-tile-body">
+                        <div class="setup-tile-meta">
+                            <span><i class="bi bi-shield-lock"></i>Login accounts</span>
+                        </div>
+                        <p>Create and maintain login accounts and their roles. Passwords are stored as secure hashes used by the login page.</p>
+                    </div>
+                </a>
+            </div>
+}
+            <div class="col-md-6 col-xl-4">
+                <a class="setup-tile" asp-action="Config">
+                    <div class="setup-tile-header">
+                        <span class="setup-tile-icon" aria-hidden="true"><i class="bi bi-sliders"></i></span>
+                        <span>Config</span>
+                    </div>
+                    <div class="setup-tile-body">
+                        <div class="setup-tile-meta">
+                            <span><i class="bi bi-key"></i>Key / value</span>
+                        </div>
+                        <p>View and edit key/value entries that drive lists, payroll settings, and other system options.</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </section>
 </div>

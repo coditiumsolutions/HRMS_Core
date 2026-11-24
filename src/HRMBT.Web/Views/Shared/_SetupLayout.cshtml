@@ -252,18 +252,21 @@
                         string A(string a, string c = "Setup") => (ctrl == c && act == a) ? "nav-link active" : "nav-link";
                     }
                     <li class="nav-item"><a class="@A("Index")" asp-controller="Setup" asp-action="Index">Overview</a></li>
-                    <li class="nav-item"><a class="@A("Users")" asp-controller="Setup" asp-action="Users">Users</a></li>
-                    <li class="nav-item"><a class="@A("Config")" asp-controller="Setup" asp-action="Config">Config</a></li>
                     @{
                         var lk = (ctrl == "Lookups") ? (Context.Request.Query["kind"].ToString() is { Length: > 0 } qk ? qk : (ViewContext.ViewData.Model as HRMBT.Web.Models.ViewModels.LookupFormVm)?.Kind ?? "projects") : "";
                         string L(string k) => lk == k ? "nav-link active" : "nav-link";
                     }
-                    <li class="nav-item"><strong class="sidebar-title sidebar-title--sub">Lists</strong></li>
-                    <li class="nav-item"><a class="@L("projects")" asp-controller="Lookups" asp-action="Index" asp-route-kind="projects">Projects</a></li>
+                    <li class="nav-item"><strong class="sidebar-title sidebar-title--sub">HR Managed</strong></li>
                     <li class="nav-item"><a class="@L("departments")" asp-controller="Lookups" asp-action="Index" asp-route-kind="departments">Departments</a></li>
                     <li class="nav-item"><a class="@L("subdepartments")" asp-controller="Lookups" asp-action="Index" asp-route-kind="subdepartments">Sub-departments</a></li>
+                    <li class="nav-item"><a class="@L("projects")" asp-controller="Lookups" asp-action="Index" asp-route-kind="projects">Projects</a></li>
                     <li class="nav-item"><a class="@L("designations")" asp-controller="Lookups" asp-action="Index" asp-route-kind="designations">Designations</a></li>
                     <li class="nav-item"><a class="@L("leavetypes")" asp-controller="Lookups" asp-action="Index" asp-route-kind="leavetypes">Leave types</a></li>
+                    <li class="nav-item"><strong class="sidebar-title sidebar-title--sub">Admin</strong></li>
+                    @if (User.IsInRole("Admin")) {
+                    <li class="nav-item"><a class="@A("Users")" asp-controller="Setup" asp-action="Users">Users</a></li>
+                    }
+                    <li class="nav-item"><a class="@A("Config")" asp-controller="Setup" asp-action="Config">Config</a></li>
                 </ul>
                 </div>
                 @await Html.PartialAsync("_SidebarHome")
