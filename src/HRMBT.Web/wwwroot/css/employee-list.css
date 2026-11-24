@@ -24,24 +24,16 @@
   overflow: hidden;
 }
 
-.employee-list-page .toolbar-card .toolbar-header,
-.employee-list-page .filter-card .card-header,
-.employee-list-page .grid-card .card-header {
-  background: linear-gradient(90deg, #336b87 0%, #2a5a73 100%);
-  color: #fff;
+.employee-list-page .toolbar-card .toolbar-header {
+  background: linear-gradient(90deg, #00203f 0%, #0b2d52 100%) !important;
+  color: #fff !important;
   font-weight: 600;
-  font-size: 0.82rem;
+  font-size: 0.9rem;
   letter-spacing: 0.02em;
-  border-bottom: 2px solid #d4af37;
-  padding: 0.45rem 1rem;
+  border-bottom: 3px solid #d4af37 !important;
+  padding: 0.4rem 1rem !important;
 }
 
-.employee-list-page .filter-card .card-header i,
-.employee-list-page .grid-card .card-header i {
-  color: #f0d78c;
-  margin-right: 0.5rem;
-  vertical-align: -0.125em;
-}
 
 .employee-list-page .form-label {
   font-size: 0.72rem;
@@ -220,10 +212,10 @@
   background: #4a7a94;
   color: #fff;
   font-weight: 600;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  padding: 0.85rem 0.85rem;
+  padding: 0.5rem 0.85rem;
   white-space: nowrap;
   border-bottom: 2px solid #d4af37;
 }
@@ -238,7 +230,8 @@
 }
 
 .employee-list-page table.employee-grid tbody td {
-  padding: 0.7rem 0.85rem;
+  padding: 0.35rem 0.85rem;
+  line-height: 1.25;
   vertical-align: middle;
   border-bottom: 1px solid #f1f3f5;
 }
@@ -380,7 +373,8 @@
 }
 
 .employee-list-page .emp-meta {
-  font-size: 0.78rem;
+  font-size: 0.75rem;
+  line-height: 1.15;
   color: #6c757d;
 }
 
@@ -388,10 +382,11 @@
 .employee-list-page .status-pill {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  padding: 0.25rem 0.65rem;
+  gap: 0.25rem;
+  padding: 0 0.45rem;
+  line-height: 1.35;
   border-radius: 2rem;
-  font-size: 0.75rem;
+  font-size: 0.66rem;
   font-weight: 600;
   letter-spacing: 0.02em;
   border: 1px solid transparent;
@@ -400,8 +395,8 @@
 
 .employee-list-page .status-pill::before {
   content: "";
-  width: 0.5rem;
-  height: 0.5rem;
+  width: 0.38rem;
+  height: 0.38rem;
   border-radius: 50%;
   background: currentColor;
 }
@@ -486,3 +481,17 @@
   }
 
 }
+
+/* Search & Filters: compact so the grid gets the focus */
+.employee-list-page .filter-card-tight .card-header { padding: 0.3rem 0.85rem !important; font-size: 0.85rem !important; }
+.employee-list-page .filter-card-tight .card-body { padding: 0.5rem 0.85rem 0.6rem; }
+.employee-list-page .filter-card-tight .form-label { font-size: 0.66rem; margin-bottom: 0.15rem; }
+.employee-list-page .filter-card-tight .form-control,
+.employee-list-page .filter-card-tight .form-select { min-height: 2rem; font-size: 0.85rem; border-radius: 0.4rem; }
+.employee-list-page .filter-card-tight .btn-filter-apply { min-height: 2rem; padding-top: 0.2rem; padding-bottom: 0.2rem; font-size: 0.85rem; }
+.employee-list-page .search-icon { position: absolute; top: 50%; left: 0.7rem; transform: translateY(-50%); color: #8a94a0; font-size: 0.85rem; pointer-events: none; }
+.employee-list-page .form-control.search-input { padding-left: 2.1rem; }
+
+/* tighter grid rows; theme rule sets the same padding with table specificity */
+body .employee-list-page table.employee-grid > tbody > tr > td { padding-top: 0.6rem; padding-bottom: 0.6rem; }
+body .employee-list-page table.employee-grid > thead > tr > th { padding-top: 0.5rem; padding-bottom: 0.5rem; }

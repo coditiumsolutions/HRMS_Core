@@ -1,0 +1,33 @@
+<button type="button" class="sidebar-toggle" id="sidebarToggle" title="Collapse or expand sidebar" aria-label="Collapse or expand sidebar" aria-expanded="true">
+    <span id="sidebarToggleIcon">«</span>
+</button>
+<script>
+    (function () {
+        // Shared by every layout that has a side navbar; the choice is remembered across pages.
+        var storageKey = 'hrms.sidebar.collapsed';
+        var body = document.body;
+        var toggle = document.getElementById('sidebarToggle');
+        var icon = document.getElementById('sidebarToggleIcon');
+        if (!toggle || !icon) return;
+
+        function applyCollapsed(collapsed) {
+            body.classList.toggle('sidebar-collapsed', collapsed);
+            toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+            icon.textContent = collapsed ? '»' : '«';
+            try { localStorage.setItem(storageKey, collapsed ? '1' : '0'); } catch (e) { }
+            window.dispatchEvent(new Event('resize'));
+        }
+
+        try {
+            if (localStorage.getItem(storageKey) === '1') {
+                body.classList.add('sidebar-collapsed');
+                toggle.setAttribute('aria-expanded', 'false');
+                icon.textContent = '»';
+            }
+        } catch (e) { }
+
+        toggle.addEventListener('click', function () {
+            applyCollapsed(!body.classList.contains('sidebar-collapsed'));
+        });
+    })();
+</script>

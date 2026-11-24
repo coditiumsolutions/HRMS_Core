@@ -484,8 +484,13 @@ table.payslip-grid > :not(caption) > * > * { padding-left: .35rem; padding-right
     max-width: none;
     min-width: 0;
   }
-  /* the user's collapse choice still applies (Main layout only has the toggle) */
-  body.sidebar-collapsed .layout-sidebar { flex-basis: 3.25rem; width: 3.25rem; max-width: 3.25rem; }
+  /* collapsed: every layout with a side navbar has the toggle */
+  body.sidebar-collapsed .layout-sidebar,
+  body.sidebar-collapsed .container-fluid > .row > .sidebar,
+  body.sidebar-collapsed .setup-sidebar { flex: 0 0 3.25rem; width: 3.25rem; max-width: 3.25rem; padding-left: .35rem; padding-right: .35rem; }
+  body.sidebar-collapsed .sidebar-scroll,
+  body.sidebar-collapsed .sidebar-home { display: none; }
+  body.sidebar-collapsed .sidebar-toggle { right: .55rem; top: .75rem; }
 }
 @media (max-width: 767.98px) {
   body .setup-sidebar, body .container-fluid > .row > .sidebar { flex: 0 0 100%; width: 100%; max-width: 100%; min-height: 0; }
@@ -586,7 +591,7 @@ body .sidebar .sidebar-title + nav { margin-top: 0; }
 @media print { body .sidebar-home { display: none; } }
 
 /* The sidebar scrolls on its own now, so the collapse button sits inside it instead of hanging over the edge */
-body .layout-sidebar .sidebar-toggle { right: .45rem; top: .55rem; }
+body .sidebar-toggle { right: .45rem; top: .55rem; }
 
 /* Links scroll inside their own region; the Home link below never moves */
 body .sidebar-scroll { flex: 1 1 0; min-height: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.25) transparent; }
@@ -626,3 +631,82 @@ body main > .py-5 {
 body .employee-create-page { min-height: 0 !important; padding-top: 0 !important; }
 body main > .container-fluid.py-3, body main > .container-fluid.py-4 { padding-top: 0 !important; }
 body main > h1:first-child, body main > h2:first-child, body main > h3:first-child { margin-top: 0; }
+
+/* Collapse button: same on every layout (Main, Setup, Deductions) */
+body .sidebar-toggle { position: absolute; z-index: 5; width: 1.4rem; height: 1.4rem; padding: 0; border-radius: 50%; border: 1px solid var(--hr-brass-500); background: var(--hr-navy-800); color: var(--hr-brass-400); font-size: .7rem; line-height: 1; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+body .sidebar-toggle:hover { background: var(--hr-navy-700); color: #fff; }
+
+/* Compact second top bar (brand + user info) on every layout */
+body .navbar-top-1 { padding-top: 0 !important; padding-bottom: 0 !important; min-height: 0; }
+body .navbar-top-1 > .container-fluid { min-height: 0; }
+body .navbar-top-1 .navbar-brand { padding: .4rem 0 !important; margin: 0; font-size: 1.05rem; line-height: 1.4; }
+body .navbar-top-1 .navbar-text { padding: .4rem 0 !important; font-size: .82rem; line-height: 1.4; }
+
+/* ==========================================================================
+   Search & Filters section: one compact, navy-headed style on every page
+   (same look as Employees). Applies to every .filter-card.
+   ========================================================================== */
+body .filter-card.filter-card > .card-header {
+  background: linear-gradient(90deg, #00203f 0%, #0b2d52 100%) !important;
+  color: #fff !important;
+  font-weight: 600;
+  font-size: .85rem !important;
+  letter-spacing: .02em;
+  border-bottom: 3px solid var(--hr-brass-500) !important;
+  padding: .3rem .85rem !important;
+}
+body .filter-card.filter-card > .card-header i { color: #f0d78c; margin-right: .5rem; vertical-align: -.125em; }
+body .filter-card.filter-card > .card-body { padding: .5rem .85rem .6rem !important; }
+body .filter-card.filter-card .row { --bs-gutter-x: .5rem; --bs-gutter-y: .5rem; }
+body .filter-card.filter-card .form-label { font-size: .66rem; margin-bottom: .15rem; }
+body .filter-card.filter-card .form-control,
+body .filter-card.filter-card .form-select { min-height: 2rem; font-size: .85rem; border-radius: .4rem; padding-top: .2rem; padding-bottom: .2rem; }
+body .filter-card.filter-card .btn:not(.btn-sm) { min-height: 2rem; padding-top: .2rem; padding-bottom: .2rem; font-size: .85rem; }
+body .filter-card.filter-card.mb-4 { margin-bottom: 1rem !important; }
+
+/* Pages with a filter section use the full content width (no extra side padding on the wrapper) */
+body main .container-fluid:has(.filter-card) { padding-left: 0 !important; padding-right: 0 !important; }
+
+/* ==========================================================================
+   SECTION HEADER STANDARD (Home, Employees and every other page)
+   Navy gradient, brass underline, white text, brass icon, compact height.
+   Headers that carry meaning (bg-success / bg-warning / bg-danger / bg-info) keep their colour.
+   ========================================================================== */
+body :is(.card, .filter-card, .grid-card, .section-card, .actions-card, .lms-panel):not(.login-card) > .card-header:not(.bg-success):not(.bg-warning):not(.bg-danger):not(.bg-info):not(.bg-dark) {
+  background: linear-gradient(90deg, #00203f 0%, #0b2d52 100%) !important;
+  color: #fff !important;
+  font-weight: 600;
+  font-size: .9rem;
+  letter-spacing: .02em;
+  border-bottom: 3px solid var(--hr-brass-500) !important;
+  padding: .4rem 1rem !important;
+}
+body :is(.card, .filter-card, .grid-card, .section-card, .actions-card, .lms-panel):not(.login-card) > .card-header i:not(.text-danger):not(.text-success) { color: #f0d78c !important; }
+body :is(.card, .filter-card, .grid-card, .section-card, .actions-card, .lms-panel):not(.login-card) > .card-header .text-muted { color: rgba(255,255,255,.7) !important; }
+body :is(.card, .filter-card, .grid-card, .section-card, .actions-card, .lms-panel):not(.login-card) > .card-header .btn-outline-secondary,
+body :is(.card, .filter-card, .grid-card, .section-card, .actions-card, .lms-panel):not(.login-card) > .card-header .btn-outline-dark { color: #fff; border-color: rgba(255,255,255,.55); }
+/* the tile cards on Home and Setup use the same header */
+body .setup-tile .setup-tile-header { background: linear-gradient(90deg, #00203f 0%, #0b2d52 100%) !important; border-bottom: 3px solid var(--hr-brass-500) !important; }
+
+/* ==========================================================================
+   Row actions column (Employees is the template): icon links Edit / Delete / View on every grid row
+   ========================================================================== */
+body table th.col-actions, body table td.col-actions { width: 5.5rem; white-space: nowrap; text-align: center; padding-left: .4rem; padding-right: .6rem; }
+body .row-action {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.9rem; height: 1.9rem; margin: 0 .1rem;
+  border-radius: .4rem; border: 1px solid transparent;
+  font-size: 1rem; text-decoration: none; transition: background .12s ease, color .12s ease, border-color .12s ease;
+}
+body .row-action-edit, body .row-action-view { color: #00203f; }
+body .row-action-edit:hover, body .row-action-edit:focus-visible,
+body .row-action-view:hover, body .row-action-view:focus-visible { background: #fff3c4; border-color: var(--hr-brass-500); color: #00203f; }
+body .row-action-delete { color: #b91c1c; }
+body .row-action-delete:hover, body .row-action-delete:focus-visible { background: #fdecec; border-color: #f5c2c7; color: #991b1b; }
+/* the first column of a grid has no select circle any more: keep a little room on the left */
+body table.employee-grid > thead > tr > th:first-child, body table.employee-grid > tbody > tr > td:first-child { padding-left: .9rem; }
+body .setup-tile .setup-tile-header { color: #fff; font-weight: 600; font-size: .9rem; letter-spacing: .02em; }
+body :is(.card, .filter-card, .grid-card, .section-card, .actions-card, .lms-panel):not(.login-card) > .card-header i.bi { margin-right: .5rem; vertical-align: -.125em; }
+
+/* Employee pick grids (select employees for a bulk action): checkbox column like the Employees grid */
+body table th.col-pick, body table td.col-pick { width: 2.5rem; text-align: center; padding-left: .9rem; padding-right: .3rem; }

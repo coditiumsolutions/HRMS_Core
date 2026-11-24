@@ -292,6 +292,7 @@
         <div class="row">
             <!-- Sidebar (20% width) -->
             <div class="col-2 sidebar">
+                @await Html.PartialAsync("_SidebarToggle")
                 <div class="sidebar-scroll">@await Html.PartialAsync("_DeductionsSidebar")</div>
                 @await Html.PartialAsync("_SidebarHome")
             </div>

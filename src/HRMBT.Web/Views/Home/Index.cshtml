@@ -35,20 +35,14 @@
             box-shadow: 0 0.5rem 1.35rem rgba(0, 32, 63, 0.12);
         }
         .setup-tile-header {
-            background: linear-gradient(90deg, #336b87 0%, #2a5a73 100%);
-            color: #fff;
-            font-weight: 600;
-            font-size: 0.9rem;
-            letter-spacing: 0.02em;
-            border-bottom: 2px solid #d4af37;
-            padding: 0.7rem 1rem;
+            padding: 0.45rem 0.8rem;
             display: flex;
             align-items: center;
-            gap: 0.65rem;
+            gap: 0.55rem;
         }
         .setup-tile-icon {
-            width: 2.35rem;
-            height: 2.35rem;
+            width: 1.9rem;
+            height: 1.9rem;
             border-radius: 0.4rem;
             background: rgba(212, 175, 55, 0.2);
             border: 1px solid rgba(240, 215, 140, 0.45);
@@ -56,11 +50,17 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.15rem;
+            font-size: 1rem;
             flex-shrink: 0;
         }
+        a.setup-tile { text-decoration: none; color: inherit; }
+        a.setup-tile:focus-visible { outline: 2px solid #d4af37; outline-offset: 2px; }
+        .setup-tile-pair { display: flex; gap: 1.25rem; }
+        .setup-tile-pair > div { flex: 1; }
+        .setup-tile-body { border-left: 3px solid #d4af37; }
+        .setup-tile-pair small { display: block; font-size: .72rem; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; color: #495057; }
         .setup-tile-body {
-            padding: 1.15rem 1.15rem 1.25rem;
+            padding: .6rem .85rem .7rem;
             display: flex;
             flex-direction: column;
             flex: 1;
@@ -68,16 +68,16 @@
         .setup-tile-body p {
             color: #6c757d;
             font-size: 0.875rem;
-            line-height: 1.5;
-            margin-bottom: 1.1rem;
+            line-height: 1.35;
+            margin-bottom: 0;
             flex: 1;
         }
         .setup-tile-stat {
-            font-size: 1.85rem;
+            font-size: 1.6rem;
             font-weight: 700;
-            color: #00203f;
+            color: #9a7b10;
             line-height: 1.1;
-            margin: 0 0 0.85rem 0;
+            margin: 0 0 .25rem 0;
             font-variant-numeric: tabular-nums;
         }
         .setup-tile-meta {
@@ -113,31 +113,17 @@
             border-radius: 0.75rem;
             box-shadow: 0 0.25rem 1rem rgba(0, 32, 63, 0.06);
             overflow: hidden;
-            margin-top: 0.25rem;
+            margin: 0 0 .9rem;
         }
-        .home-dashboard .actions-card .card-header {
-            background: linear-gradient(90deg, #336b87 0%, #2a5a73 100%);
-            color: #fff;
-            font-weight: 600;
-            font-size: 0.9rem;
-            letter-spacing: 0.02em;
-            border-bottom: 2px solid #d4af37;
-            padding: 0.7rem 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        .home-dashboard .actions-card .card-header i {
-            color: #f0d78c;
-        }
+        .home-dashboard .actions-card .card-header { display: flex; align-items: center; gap: 0.5rem; }
         .home-dashboard .actions-card .card-body {
-            padding: 1.15rem;
+            padding: .7rem .85rem;
         }
         .home-dashboard .qa-btn {
             display: flex;
             align-items: center;
             gap: 0.65rem;
-            padding: 0.75rem 0.9rem;
+            padding: .5rem .75rem;
             border-radius: 0.5rem;
             border: 1px solid #e9ecef;
             background: #f8fafc;
@@ -175,134 +161,6 @@
         <p>Overview of people, attendance, leave, and payroll at a glance.</p>
     </div>
 
-    <div class="row g-3 mb-4">
-        <div class="col-md-4 col-sm-6">
-            <div class="setup-tile">
-                <div class="setup-tile-header">
-                    <span class="setup-tile-icon" aria-hidden="true"><i class="bi bi-people-fill"></i></span>
-                    <span>Total Employees</span>
-                </div>
-                <div class="setup-tile-body">
-                    <div class="setup-tile-meta">
-                        <span><i class="bi bi-people"></i>Workforce</span>
-                    </div>
-                    <p class="setup-tile-stat">@ViewData["TotalEmployees"]</p>
-                    <p>All employee records in the system.</p>
-                    <div class="setup-tile-actions">
-                        <a class="btn btn-sm btn-grid-edit" asp-controller="Employee" asp-action="Index">
-                            <i class="bi bi-box-arrow-up-right me-1"></i>View all
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-4 col-sm-6">
-            <div class="setup-tile">
-                <div class="setup-tile-header">
-                    <span class="setup-tile-icon" aria-hidden="true"><i class="bi bi-person-check-fill"></i></span>
-                    <span>Active Employees</span>
-                </div>
-                <div class="setup-tile-body">
-                    <div class="setup-tile-meta">
-                        <span><i class="bi bi-check2-circle"></i>Active</span>
-                    </div>
-                    <p class="setup-tile-stat">@ViewData["ActiveEmployees"]</p>
-                    <p>Employees currently marked as active.</p>
-                    <div class="setup-tile-actions">
-                        <a class="btn btn-sm btn-grid-edit" asp-controller="Employee" asp-action="Index">
-                            <i class="bi bi-box-arrow-up-right me-1"></i>View active
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-4 col-sm-6">
-            <div class="setup-tile">
-                <div class="setup-tile-header">
-                    <span class="setup-tile-icon" aria-hidden="true"><i class="bi bi-calendar2-check-fill"></i></span>
-                    <span>Today's Attendance</span>
-                </div>
-                <div class="setup-tile-body">
-                    <div class="setup-tile-meta">
-                        <span><i class="bi bi-calendar-day"></i>Today</span>
-                    </div>
-                    <p class="setup-tile-stat">@ViewData["TodayAttendance"]</p>
-                    <p>Attendance records logged for today.</p>
-                    <div class="setup-tile-actions">
-                        <a class="btn btn-sm btn-grid-edit" asp-controller="Attendance" asp-action="Index">
-                            <i class="bi bi-box-arrow-up-right me-1"></i>View attendance
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-4 col-sm-6">
-            <div class="setup-tile">
-                <div class="setup-tile-header">
-                    <span class="setup-tile-icon" aria-hidden="true"><i class="bi bi-hourglass-split"></i></span>
-                    <span>Pending Leave Requests</span>
-                </div>
-                <div class="setup-tile-body">
-                    <div class="setup-tile-meta">
-                        <span><i class="bi bi-clock-history"></i>Pending</span>
-                    </div>
-                    <p class="setup-tile-stat">@ViewData["PendingLeaves"]</p>
-                    <p>Leave requests waiting for approval.</p>
-                    <div class="setup-tile-actions">
-                        <a class="btn btn-sm btn-grid-edit" asp-controller="LMS" asp-action="Index">
-                            <i class="bi bi-box-arrow-up-right me-1"></i>View leaves
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-4 col-sm-6">
-            <div class="setup-tile">
-                <div class="setup-tile-header">
-                    <span class="setup-tile-icon" aria-hidden="true"><i class="bi bi-cash-stack"></i></span>
-                    <span>Total Payroll Records</span>
-                </div>
-                <div class="setup-tile-body">
-                    <div class="setup-tile-meta">
-                        <span><i class="bi bi-wallet2"></i>Payroll</span>
-                    </div>
-                    <p class="setup-tile-stat">@ViewData["TotalPayrolls"]</p>
-                    <p>Payslip and payroll runs on record.</p>
-                    <div class="setup-tile-actions">
-                        <a class="btn btn-sm btn-grid-edit" asp-controller="Payroll" asp-action="Index">
-                            <i class="bi bi-box-arrow-up-right me-1"></i>View payroll
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-4 col-sm-6">
-            <div class="setup-tile">
-                <div class="setup-tile-header">
-                    <span class="setup-tile-icon" aria-hidden="true"><i class="bi bi-file-earmark-ruled-fill"></i></span>
-                    <span>Tax Rules</span>
-                </div>
-                <div class="setup-tile-body">
-                    <div class="setup-tile-meta">
-                        <span><i class="bi bi-percent"></i>Tax</span>
-                    </div>
-                    <p class="setup-tile-stat">@ViewData["TotalTaxRules"]</p>
-                    <p>Configured tax slabs and rules.</p>
-                    <div class="setup-tile-actions">
-                        <a class="btn btn-sm btn-grid-edit" asp-controller="Tax" asp-action="Index">
-                            <i class="bi bi-box-arrow-up-right me-1"></i>View tax rules
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <div class="actions-card">
         <div class="card-header">
             <i class="bi bi-lightning-charge-fill"></i>Quick Actions
@@ -334,6 +192,76 @@
                     </a>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-md-4 col-sm-6">
+            <a class="setup-tile" asp-controller="Employee" asp-action="Index">
+                <div class="setup-tile-header">
+                    <span class="setup-tile-icon" aria-hidden="true"><i class="bi bi-people-fill"></i></span>
+                    <span>Employees</span>
+                </div>
+                <div class="setup-tile-body">
+                    <div class="setup-tile-pair">
+                        <div><small>Total</small><p class="setup-tile-stat">@ViewData["TotalEmployees"]</p></div>
+                        <div><small>Active</small><p class="setup-tile-stat">@ViewData["ActiveEmployees"]</p></div>
+                    </div>
+                    <p>All records and those currently active.</p>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-md-4 col-sm-6">
+            <a class="setup-tile" asp-controller="Attendance" asp-action="Index">
+                <div class="setup-tile-header">
+                    <span class="setup-tile-icon" aria-hidden="true"><i class="bi bi-calendar2-check-fill"></i></span>
+                    <span>Today's Attendance</span>
+                </div>
+                <div class="setup-tile-body">
+                    <p class="setup-tile-stat">@ViewData["TodayAttendance"]</p>
+                    <p>Attendance records logged for today.</p>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-md-4 col-sm-6">
+            <a class="setup-tile" asp-controller="LMS" asp-action="Index">
+                <div class="setup-tile-header">
+                    <span class="setup-tile-icon" aria-hidden="true"><i class="bi bi-hourglass-split"></i></span>
+                    <span>Pending Leave Requests</span>
+                </div>
+                <div class="setup-tile-body">
+                    <p class="setup-tile-stat">@ViewData["PendingLeaves"]</p>
+                    <p>Leave requests waiting for approval.</p>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-md-4 col-sm-6">
+            <a class="setup-tile" asp-controller="Payroll" asp-action="Index">
+                <div class="setup-tile-header">
+                    <span class="setup-tile-icon" aria-hidden="true"><i class="bi bi-cash-stack"></i></span>
+                    <span>Total Payroll Records</span>
+                </div>
+                <div class="setup-tile-body">
+                    <p class="setup-tile-stat">@ViewData["TotalPayrolls"]</p>
+                    <p>Payslip and payroll runs on record.</p>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-md-4 col-sm-6">
+            <a class="setup-tile" asp-controller="Tax" asp-action="Index">
+                <div class="setup-tile-header">
+                    <span class="setup-tile-icon" aria-hidden="true"><i class="bi bi-file-earmark-ruled-fill"></i></span>
+                    <span>Tax Rules</span>
+                </div>
+                <div class="setup-tile-body">
+                    <p class="setup-tile-stat">@ViewData["TotalTaxRules"]</p>
+                    <p>Configured tax slabs and rules.</p>
+                </div>
+            </a>
         </div>
     </div>
 </div>

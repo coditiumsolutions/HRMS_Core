@@ -242,6 +242,7 @@
     <div class="container-fluid setup-shell g-0">
         <div class="row g-0">
             <nav class="col-12 col-md-3 col-lg-2 setup-sidebar">
+                @await Html.PartialAsync("_SidebarToggle")
                 <div class="sidebar-scroll">
                 <strong class="sidebar-title">Setup</strong>
                 <ul class="nav flex-column">

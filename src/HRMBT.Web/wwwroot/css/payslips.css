@@ -17,23 +17,7 @@
   overflow: hidden;
 }
 
-.payslip-page .section-card .card-header,
-.payslip-page .filter-card .card-header,
-.payslip-page .grid-card .card-header {
-  background: linear-gradient(90deg, #336b87 0%, #2a5a73 100%);
-  color: #fff;
-  font-weight: 600;
-  font-size: 0.82rem;
-  letter-spacing: 0.02em;
-  border-bottom: 2px solid #d4af37;
-  padding: 0.45rem 1rem;
-}
 
-.payslip-page .card-header i {
-  color: #f0d78c;
-  margin-right: 0.5rem;
-  vertical-align: -0.125em;
-}
 
 /* Generate payroll — compact square-corner action buttons (single row) */
 .payslip-page .payroll-run-actions {
@@ -62,10 +46,6 @@
   gap: 0.35rem;
 }
 
-.payslip-page .generate-payroll-compact .card-header {
-  font-size: 0.82rem;
-  padding: 0.4rem 0.75rem;
-}
 
 .payslip-page .btn-payroll-corner {
   border-radius: 0 !important;

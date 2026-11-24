@@ -54,21 +54,7 @@
   border-color: rgba(212, 175, 55, 0.35);
 }
 
-.employee-create-page .section-card .card-header {
-  background: linear-gradient(90deg, #336b87 0%, #2a5a73 100%);
-  color: #fff;
-  font-weight: 600;
-  font-size: 0.85rem;
-  letter-spacing: 0.02em;
-  border-bottom: 2px solid #d4af37;
-  padding: 0.5rem 1rem;
-}
 
-.employee-create-page .section-card .card-header i {
-  color: #f0d78c;
-  margin-right: 0.5rem;
-  vertical-align: -0.125em;
-}
 
 .employee-create-page .section-card .card-body {
   padding: 0.85rem 1rem;

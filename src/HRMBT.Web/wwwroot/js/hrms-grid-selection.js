@@ -1,4 +1,9 @@
 (function () {
+    // Selectable grid.
+    //  - Clicking a row highlights it (.is-selected); double-click opens it (details, else edit).
+    //  - Per-row Edit/Delete icons are plain links in an actions column, no script needed.
+    //  - Legacy: a grid that still has radio buttons (data-radio-class) and header Edit/Delete buttons
+    //    keeps working; the radio just mirrors the highlighted row.
     function initHrmsGridSelection(grid) {
         if (!grid || grid.dataset.hrmsGridInit === '1') return;
         grid.dataset.hrmsGridInit = '1';
@@ -15,9 +20,7 @@
         var deleteBtn = document.getElementById(grid.dataset.deleteBtnId || 'btnDeleteSelected');
         var radioClass = grid.dataset.radioClass || 'hrms-row-select';
         var radioSel = '.' + radioClass;
-
-        var radios = grid.querySelectorAll(radioSel);
-        if (!radios.length) return;
+        var rows = grid.querySelectorAll('tbody tr');
 
         function rowId(row) {
             return row.getAttribute('data-record-id')
@@ -46,60 +49,38 @@
             }
         }
 
-        function syncSelection() {
-            var selected = grid.querySelector(radioSel + ':checked');
-            grid.querySelectorAll('tbody tr').forEach(function (row) {
-                row.classList.toggle('is-selected', !!(selected && row.contains(selected)));
-            });
-            if (!selected) {
-                setActionEnabled(editBtn, false);
-                setActionEnabled(deleteBtn, false);
-                return;
-            }
-            var row = selected.closest('tr');
-            var id = selected.value || (row ? rowId(row) : null);
-            if (!id) {
-                setActionEnabled(editBtn, false);
-                setActionEnabled(deleteBtn, false);
-                return;
-            }
-            var canEdit = row ? rowCanMutate(row) : true;
-            setActionEnabled(editBtn, canEdit && !!editBase, urlFor(editBase, id));
-            setActionEnabled(deleteBtn, canEdit && !!deleteBase, urlFor(deleteBase, id));
+        function highlight(selectedRow) {
+            rows.forEach(function (row) { row.classList.toggle('is-selected', row === selectedRow); });
+            var radio = selectedRow && selectedRow.querySelector(radioSel);
+            if (radio) radio.checked = true;
+            var id = selectedRow ? rowId(selectedRow) : null;
+            var canEdit = selectedRow ? rowCanMutate(selectedRow) : false;
+            setActionEnabled(editBtn, !!id && canEdit && !!editBase, id ? urlFor(editBase, id) : '#');
+            setActionEnabled(deleteBtn, !!id && canEdit && !!deleteBase, id ? urlFor(deleteBase, id) : '#');
         }
 
         function openRead(row) {
             var id = rowId(row);
             if (!id) return;
-            if (detailsBase) {
-                window.location.href = urlFor(detailsBase, id);
-                return;
-            }
-            if (editBase) {
-                window.location.href = urlFor(editBase, id);
-            }
+            if (detailsBase) { window.location.href = urlFor(detailsBase, id); return; }
+            if (editBase) { window.location.href = urlFor(editBase, id); }
         }
 
-        radios.forEach(function (radio) {
-            radio.addEventListener('change', syncSelection);
-        });
-
-        grid.querySelectorAll('tbody tr').forEach(function (row) {
+        rows.forEach(function (row) {
             row.addEventListener('click', function (e) {
                 if (e.target.closest('a, button, input, label')) return;
-                var radio = row.querySelector(radioSel);
-                if (!radio) return;
-                radio.checked = true;
-                radio.dispatchEvent(new Event('change', { bubbles: true }));
+                highlight(row);
             });
-
             row.addEventListener('dblclick', function (e) {
                 if (e.target.closest('a, button, input, label')) return;
                 openRead(row);
             });
+            var radio = row.querySelector(radioSel);
+            if (radio) radio.addEventListener('change', function () { highlight(row); });
         });
 
-        syncSelection();
+        var checked = grid.querySelector(radioSel + ':checked');
+        highlight(checked ? checked.closest('tr') : null);
     }
 
     document.querySelectorAll('.hrms-selectable-grid').forEach(initHrmsGridSelection);

@@ -353,9 +353,7 @@
         <div class="row layout-row">
             <!-- Sidebar -->
             <div class="layout-sidebar sidebar" id="appSidebar">
-                <button type="button" class="sidebar-toggle" id="sidebarToggle" title="Collapse or expand sidebar" aria-label="Collapse or expand sidebar" aria-expanded="true" aria-controls="sidebarBody">
-                    <span id="sidebarToggleIcon">«</span>
-                </button>
+                @await Html.PartialAsync("_SidebarToggle")
                 <div class="sidebar-body" id="sidebarBody">
                     <div class="sidebar-scroll">
                     @if (ViewData["Module"]?.ToString() == "Payroll")
@@ -400,31 +398,6 @@
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script src="~/js/hrms-grid.js" asp-append-version="true"></script>
-    <script>
-        (function () {
-            var storageKey = 'hrms.sidebar.collapsed';
-            var body = document.body;
-            var toggle = document.getElementById('sidebarToggle');
-            var icon = document.getElementById('sidebarToggleIcon');
-            if (!toggle || !icon) return;
-
-            function applyCollapsed(collapsed) {
-                body.classList.toggle('sidebar-collapsed', collapsed);
-                toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-                icon.textContent = collapsed ? '»' : '«';
-                try { localStorage.setItem(storageKey, collapsed ? '1' : '0'); } catch (e) { }
-            }
-
-            try {
-                if (localStorage.getItem(storageKey) === '1')
-                    applyCollapsed(true);
-            } catch (e) { }
-
-            toggle.addEventListener('click', function () {
-                applyCollapsed(!body.classList.contains('sidebar-collapsed'));
-            });
-        })();
-    </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
