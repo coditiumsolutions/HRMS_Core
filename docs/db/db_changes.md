@@ -1,8 +1,8 @@
 # HRMS Database Schema - Proposed Changes (final draft)
-Version: 3.5-draft | Based on: db.md v1.9 (2026-11-16) | Date: 2026-11-23
+Version: 3.7-draft | Based on: db.md v1.9 (2026-11-16) | Date: 2026-11-24
 Database: HRBTK
 Server: Teezhost 16GB (production)
-Status: **FINAL DRAFT. Applied to the local development copy only (2026-11-23); production `HRBTK` is untouched and stays read-only until each script is reviewed and approved (db_standards.md S19).** The re-runnable scripts are in `scripts/database/redesign/` (01-04 expand, 06 contract); the development app is already adapted (value converters keep the legacy text shapes in code, Setup pages manage the new lists). Deviations found while applying: `UX_PayslipDetails_Payslip_Item` is created in phase 4 (after the `ItemType` type change); filtered indexes block `ALTER COLUMN` and column renames (SQL Server error 1934), so the scripts drop and recreate them around those steps; `UX_Attendance_Employee_ShiftDate` was filtered during the expand phase and is unfiltered after the contract phase. This draft implements the rules in db_standards.md (S1-S23) and the answered decisions in decisions.md (T1, T2, T3, T5, T6). Items that wait for an open decision are tagged ⏸ and name the decision (T4, T7, B1-B18). **Data status (2026-11-18):** the data in `HRBTK` is treated as test data. Row counts, "live checks" and findings in this file describe it for design purposes; they are not requirements (for example, the number of projects is not fixed, B3), and the checks are re-run on the real data before a script is applied.
+Status: **FINAL DRAFT. Applied to the local development copy only (2026-11-23; script 08 `EmployeeEvents`, 09 leave days one decimal, 10 legacy leave archive and 11 leave balances view v2 on 2026-11-24); production `HRBTK` is untouched and stays read-only until each script is reviewed and approved (db_standards.md S19).** The re-runnable scripts are in `scripts/database/redesign/` (01-04 expand, 06 contract); the development app is already adapted (value converters keep the legacy text shapes in code, Setup pages manage the new lists). Deviations found while applying: `UX_PayslipDetails_Payslip_Item` is created in phase 4 (after the `ItemType` type change); filtered indexes block `ALTER COLUMN` and column renames (SQL Server error 1934), so the scripts drop and recreate them around those steps; `UX_Attendance_Employee_ShiftDate` was filtered during the expand phase and is unfiltered after the contract phase. This draft implements the rules in db_standards.md (S1-S23) and the answered decisions in decisions.md (T1, T2, T3, T5, T6). Items that wait for an open decision are tagged ⏸ and name the decision (T4, T7, B1-B18). **Data status (2026-11-18):** the data in `HRBTK` is treated as test data. Row counts, "live checks" and findings in this file describe it for design purposes; they are not requirements (for example, the number of projects is not fixed, B3), and the checks are re-run on the real data before a script is applied.
 
 ## MAINTENANCE RULES:
     1. Bump Version and Date above whenever this file changes; when a change is applied, move it into db.md and add a Change History entry there
@@ -33,7 +33,7 @@ Column and key markers (first column of every column table, and at the start of 
 - **Booleans (S4, S10):** `bit NOT NULL` with a default, named `Is...`/`Has...`/`Requires...`. The one exception is `Employee.IsLeaveManagedOverride`, where NULL means "follow the project".
 - **Dates (S9):** whole days are `date` named `...Date`; moments are `datetime2(0)` named `...At`; times of day are `time(0)`. Server local time (PKT), defaults use `sysdatetime()`. No `datetime`, no text.
 - **Strings (S7):** `nvarchar(n)` for text people type; `varchar(n)` for codes and ASCII keys; `nvarchar(MAX)` only for unbounded text/JSON, never for a filtered, sorted or joined column.
-- **Numbers (S8):** money `decimal(18,2)`; percentages `decimal(5,2)`; days `decimal(5,2)`; minutes `int`; no `float`, no `money`.
+- **Numbers (S8):** money `decimal(18,2)`; percentages `decimal(5,2)`; leave days `decimal(5,1)` (one decimal: half days are 0.5, 2026-11-24); other days `decimal(5,2)`; minutes `int`; no `float`, no `money`.
 - **Status and type values (S11):** fixed sets are `varchar(n)` + `CHECK`. Lists with attributes are tables (Projects, Departments, Designations, LeaveTypes). `Configuration` holds single values and name-only dropdown lists.
 - **Audit columns (S13):** **set C** = `CreatedAt datetime2(0) NOT NULL DEFAULT sysdatetime()`, `CreatedBy nvarchar(100) NULL`. **set M** = set C + `ModifiedAt datetime2(0) NULL`, `ModifiedBy nvarchar(100) NULL`. Tables with existing audit columns (`CreatedDate`, `ModifiedOn`, `UploadedOn`...) keep them.
 - **Soft delete (S6, S14):** `IsActive` for lookups, master data and logins; `IsDeleted` for documents; transactional rows are cancelled or locked, never deleted. Rows that may really be deleted are decided case by case when the screen is built.
@@ -62,6 +62,8 @@ Column and key markers (first column of every column table, and at the start of 
 | Designations | NEW | Designation lookup with `Rank` (⏸ B4). |
 | Employee | CHANGED | Org FKs, leaving/return dates, pay basis, proper types, rowversion. |
 | EmployeeDocuments | CHANGED | Real FK, `DocumentType`, `FileHash`, `IsDeleted` NOT NULL. |
+| EmployeeEvents | NEW | Append-only timeline of key employment events: joined, promotion, transfer, resignation, termination, rejoin, other (B14, T1, T8, B19). |
+| EmployeeLegacyLeaveBalances | NEW | Read-only archive of the 7 per-year leave figures that used to sit on `Employee` (B18, 2026-11-24). |
 | EmployeeLeaves | TO BE REMOVED | Empty parallel leave model with no PK; folded into LeaveRequests. |
 | GazettedHolidays | CHANGED | Rebuilt (empty): `Id`, `HolidayName`, optional `ProjectId`, `IsOptional`. |
 | HalfDayRequests | NEW | Half-day approval with documentation and a per-case "must check out" flag (⏸ B1, B7). |
@@ -93,7 +95,9 @@ Count by status: NEW 13, CHANGED 17, UNCHANGED 1, TO BE REMOVED 1.
 - 2026-11-16: **Forgotten check-outs are told to HR, who note them.** `AttendanceCorrections`; `Attendance.CheckOutSource = 'HRCorrection'`; `DayStatus = 'MissingCheckout'` (⏸ B16).
 - 2026-11-16: **Attendance follows the schedule; some check in and out on two different days.** `Attendance.ShiftDate` + full `CheckInAt/CheckOutAt`; `Shifts.IsOvernight`; `ShiftAssignments`, `RosterOverrides`.
 - 2026-11-16: **Same leave quota for everyone, changeable per person per case.** `LeaveQuota` + `LeaveEntitlementOverrides`; view `vLeaveBalances` (⏸ B5).
+- 2026-11-24: **Leave Balance on the employee page is linked to the Leave Management System.** Remaining and carry-forward per leave type for the current year, plus one row per earlier year, all read from `vLeaveBalances` (v2) through one service that the LMS Balances page also uses. Leave is tracked in one decimal (half days = 0.5). The seven per-year columns that were on `Employee` are archived and dropped (B18).
 - 2026-11-17: **Employees can leave and return (T1).** `Employee.DateOfLeaving`, `Employee.DateOfReturn`, both nullable.
+- 2026-11-24: **Employee history: joining, promotion, transfer, resignation, termination, rejoin (HR, decision B14 in part).** `EmployeeEvents`, one row per event with the position before and after; the app records an event from Edit Employee and applies its effect to `Employee` in the same transaction. This also lets one person leave and return more than once (T1 limit removed).
 - 2026-11-17: **HR records edge cases (forgotten check-outs and the like) in notes on that day's attendance (S24, ⏸ T7).** `Notes` column on the HR tables for the current short note; `RecordNotes` for dated, signed notes with history. A note that changes a status or pay is a structured `AttendanceCorrections` row, not a note.
 
 ## Relationships (proposed)
@@ -115,6 +119,7 @@ New foreign keys (all no action unless stated; every FK column leads an index, s
 - 🟢 `AttendancePunches.EmployeeId` -> `Employee.uid`; `.UploadLogId` -> `AttendanceUploadLogs.Id`; `.AttendanceId` -> `Attendance.Id`
 - 🟢 `AttendanceCorrections.AttendanceId` -> `Attendance.Id`; `.RecordedByUserId` -> `Users.uid`
 - 🟢 `HalfDayRequests.EmployeeId` -> `Employee.uid`; `.DocumentId` -> `EmployeeDocuments.Id`; `.ApprovedByUserId` -> `Users.uid`; `.LeaveRequestId` -> `LeaveRequests.Id` (⏸ B1)
+- 🟢 `EmployeeEvents.EmployeeId` -> `Employee.uid`; `.FromProjectId` / `.ToProjectId` -> `Projects.Id`; `.FromDepartmentId` / `.ToDepartmentId` -> `Departments.Id`; `.FromDesignationId` / `.ToDesignationId` -> `Designations.Id` (all `NO ACTION`: lookups used by history are never hard-deleted, S6)
 - 🟢 `ShiftAssignments.EmployeeId` -> `Employee.uid`; `.ShiftId` -> `Shifts.Id`
 - 🟢 `RosterOverrides.EmployeeId` -> `Employee.uid`; `.ShiftId` -> `Shifts.Id`; `.SwapWithEmployeeId` -> `Employee.uid` (`FK_RosterOverrides_Employee_Swap`); `.ApprovedByUserId` -> `Users.uid`
 - 🟢 `GazettedHolidays.ProjectId` -> `Projects.Id`
@@ -335,7 +340,7 @@ Leave days carried from one leave year to the next, per employee per leave type.
 Rows on 2026-11-16: 0.
 - 2026-11-16: Empty, so the table is dropped and re-created in the new shape. This resolves the db.md mismatch with the EF entity (`Id`, `FromYear`, `ToYear`, `CarryForwardDays`, `Description`), now with `EmployeeId` int and `LeaveTypeId`. Used/remaining days are derived in `vLeaveBalances`, not stored (S18).
 - ⏸ B5: carry-forward cap and leave year (calendar assumed) are open; a `CK` for a cap is added once answered.
-- ⏸ B18: legacy per-year figures on `Employee` may be converted into rows here.
+- 2026-11-24 (B18): the legacy per-year figures were archived in `EmployeeLegacyLeaveBalances`, not converted into rows here. New rows come from the yearly rollover (see `LeaveTypes`).
 
 | Change | Column | Type | Null | Default | Notes |
 |---|---|---|---|---|---|
@@ -344,7 +349,7 @@ Rows on 2026-11-16: 0.
 | 🟢 NEW | **LeaveTypeId** | int | NOT NULL |  | FK -> LeaveTypes.Id. Replaces the entity's `LeaveTypeName`. |
 | 🟡 CHANGED | **FromYear** | int | NOT NULL |  | was `Year` int (part of PK). Leave year the days come from. |
 | 🟢 NEW | **ToYear** | int | NOT NULL |  | Leave year the days are added to. |
-| 🟡 CHANGED | **CarryForwardDays** | decimal(5,2) | NOT NULL |  | was `TotalLeaves` int. Half days; name matches the EF entity. |
+| 🟡 CHANGED | **CarryForwardDays** | decimal(5,1) | NOT NULL |  | was `TotalLeaves` int. Half days; name matches the EF entity. |
 | 🟢 NEW | **Description** | nvarchar(500) | NULL |  |  |
 | 🔴 DROP | LeavesUsed | int | NULL | 0 | Derived (S18); computed in vLeaveBalances. |
 | 🔴 DROP | LeavesRemaining | int | NULL | 0 | Derived (S18). |
@@ -448,8 +453,8 @@ Employee master. `uid` is the FK used by every table after this change; `Employe
 Rows on 2026-11-16: 848.
 - 2026-11-17: Live check: `EmployeeID` is numeric for all 848 rows and at most 6 characters; `EmployeeName` at most 33, `CNIC` 15, `MobileNo` 12; `FatherName` is empty on every row. The proposed lengths below are therefore safe. Names are text people type (S7), so they become `nvarchar`.
 - 2026-11-16: Org structure becomes FKs (Project -> Department -> Designation). The free-text columns stay until the app has switched, then are dropped. Backfilling needs the HR mappings (the 58 department strings from B2, and ⏸ B3, B4); `ProjectId` and `DepartmentId` become NOT NULL once every employee is mapped.
-- 2026-11-17 (T1): `DateOfLeaving` and `DateOfReturn` record leaving and returning. A second leave/return cycle is not representable; if it happens, the assignment history (⏸ B14) would carry it.
-- ⏸ B18: the 7 legacy per-year leave columns hold values for 828 of 848 employees in the test data. They are left as they are until B18 is answered (then converted or dropped; they are archived first only if the real data carries balances in them). Their `float` types break S8; they are fixed only when B18 is answered.
+- 2026-11-17 (T1): `DateOfLeaving` and `DateOfReturn` record leaving and returning. 2026-11-24: `Employee` always describes the **latest stint** only. A resignation or termination sets `DateOfLeaving` and **clears `DateOfReturn`** (so `CK_Employee_Dates` still holds when someone leaves a second time); the earlier leaving and return stay in `EmployeeEvents`, which carries every cycle.
+- 2026-11-24 (B18, decided by Rayder): the 7 legacy per-year leave columns (`CarryForwardLeaves`, `CarryForwardLeaves1`, `Year2022`, `Year2023`, `Year2023New`, `Year2024`, `AdjustedAjusted`) are copied into `EmployeeLegacyLeaveBalances` and dropped from `Employee` (script 10). In the test data they held values for 827 of 848 employees; Year2023 was always CarryForwardLeaves minus Year2022 and Year2024 always CarryForwardLeaves1 minus Year2023New, i.e. results typed in as numbers. The live balance is derived (below), never stored on `Employee` (S18). The Employees grid no longer filters or sorts by Year 2024.
 - 2026-11-16: All length/type tightenings need a `MAX(LEN(...))` / `TRY_CONVERT` check on the 848 rows first.
 
 | Change | Column | Type | Null | Default | Notes |
@@ -478,13 +483,6 @@ Rows on 2026-11-16: 848.
 | 🟢 NEW | **IsLeaveManagedOverride** | bit | NULL |  | NULL = follow Projects.HasLeaveManagement; 1/0 = exception for this person (S10 exception). |
 | 🟢 NEW | **PayBasis** | varchar(10) | NOT NULL | 'Monthly' | `Monthly` or `Hourly` (⏸ B6). |
 | 🟢 NEW | **HourlyRate** | decimal(18,2) | NULL |  | Optional per-person rate. NULL = derived from BasicSalary (⏸ B6). |
-| ⏸ HELD | CarryForwardLeaves | float | NULL |  | B18. Live values, kept until HR defines them. |
-| ⏸ HELD | Year2022 | float | NULL |  | B18. |
-| ⏸ HELD | Year2023 | float | NULL |  | B18. |
-| ⏸ HELD | AdjustedAjusted | int | NULL |  | B18. Empty on every row. |
-| ⏸ HELD | Year2024 | int | NULL |  | B18. Looks like a leave balance (14 for 512 employees, negatives down to -353), not a year. |
-| ⏸ HELD | CarryForwardLeaves1 | float | NULL |  | B18. |
-| ⏸ HELD | Year2023New | decimal(18,2) | NULL |  | B18. |
 |  | BasicSalary | decimal(18,2) | NULL |  | Payroll basis for gross and tax. |
 | 🟡 CHANGED | **ApplyTax** | bit | NOT NULL | 1 | was nvarchar(10) NULL. Live `1` (827), `Yes` (1), `0` (1), empty (19). `1`/`Yes` -> 1; `0`/empty -> 0 (matches today's payroll rule). Existing name kept (S4). |
 |  | GenStatus | nvarchar(50) | NULL |  |  |
@@ -530,6 +528,57 @@ Keys and indexes
 - 🟢 `IX_EmployeeDocuments_EmployeeId` - nonclustered, (EmployeeId) WHERE IsDeleted = 0.
 - 🟢 `UX_EmployeeDocuments_Employee_FileHash` - unique, nonclustered, (EmployeeId, FileHash) WHERE IsDeleted = 0 AND FileHash IS NOT NULL. The same file can't be attached twice to one employee; a deleted document can be uploaded again.
 
+## Table: dbo.EmployeeEvents [NEW]
+Key employment events per employee, shown as the Employee History tab and recorded from Edit Employee. An entry is never edited; a wrong one is **voided** with a reason (kept, shown struck through) and can then be deleted by an Admin. Script `08_employee_events.sql`.
+Rows after the backfill on the development copy: 843 `Joined` (848 employees, 5 without a joining date); no leavers in the test data.
+- 2026-11-24 (B14, T1): decided by Rayder. History is a timeline of events, each with the position before and after, not a table of effective-dated positions. `Employee` still holds the current position; the events explain how it got there. "Where was this person on a past date" is answered by walking the events back from the current position (B14 stays open for whether reports must store a snapshot).
+- 2026-11-24: **Recording an event also updates `Employee`, in the same transaction** (Rayder): `Joined` sets `DateOfJoining`; `Promotion` sets `DesignationId`; `Transfer` sets any of `ProjectId`, `DepartmentId`, `DesignationId` (a department change clears `SubDepartmentId`); `Resignation` / `Termination` set `DateOfLeaving`, clear `DateOfReturn` and set `EmployeeStatus` to `Resigned` / `Terminated`; `Rejoin` sets `DateOfReturn` and `EmployeeStatus = Active`; `Other` changes nothing. The service refuses combinations that cannot happen: a promotion or transfer for someone who has left, a rejoin for someone who has not, a second resignation without a rejoin, a date before the joining date, and (except `Other`) a date earlier than the latest live entry, so the timeline and the employee record cannot disagree.
+- 2026-11-24 (T8, decided): only the **latest** live entry can be voided, and voiding it **reverts** its effect on `Employee` (promotion/transfer restore the From position; resignation, termination and rejoin replay the remaining entries; fields changed by hand since are left alone). A voided entry stays visible, marked voided, until an **Admin deletes it** (hard delete, only for voided rows, the full row is written to `AuditLogs`); then it no longer appears in the history.
+- 2026-11-24: `Joined` is written when an employee is created (Employee Create) and by the backfill; HR records the other six types from Edit Employee. The backfill gives each employee with a `DateOfJoining` one `Joined` row carrying the **current** project, department and designation (the original position was never recorded; the remark says so), a `Resignation` / `Termination` row where `DateOfLeaving` is set (type from `EmployeeStatus`) and a `Rejoin` row where `DateOfReturn` is set; `CreatedBy = Migration`.
+- 2026-11-24: Not part of payroll or attendance processing yet. Processing keeps reading `Employee.DateOfJoining/DateOfLeaving/DateOfReturn` (B10); the events are the audit trail behind them.
+
+| Change | Column | Type | Null | Default | Notes |
+|---|---|---|---|---|---|
+| 🟢 NEW | **Id** | int | NOT NULL |  | PK, identity. |
+| 🟢 NEW | **EmployeeId** | int | NOT NULL |  | FK -> Employee.uid. |
+| 🟢 NEW | **EventType** | varchar(20) | NOT NULL |  | `Joined`, `Promotion`, `Transfer`, `Resignation`, `Termination`, `Rejoin`, `Other` (CHECK; more types are a CHECK change, B19). |
+| 🟢 NEW | **EventDate** | date | NOT NULL |  | The day the event took effect (last working day for a resignation or termination). |
+| 🟢 NEW | **FromProjectId** / **ToProjectId** | int | NULL |  | FK -> Projects.Id. From = the position when the event was recorded; To = set only when the event changes it. |
+| 🟢 NEW | **FromDepartmentId** / **ToDepartmentId** | int | NULL |  | FK -> Departments.Id. |
+| 🟢 NEW | **FromDesignationId** / **ToDesignationId** | int | NULL |  | FK -> Designations.Id. |
+| 🟢 NEW | **Remarks** | nvarchar(1000) | NULL |  | Reason, letter reference. Required for `Other`. |
+| 🟢 NEW | **IsVoided** | bit | NOT NULL | 0 | Voided entries stay in the table and on screen (S14). |
+| 🟢 NEW | **VoidReason** | nvarchar(500) | NULL |  | Required when voided (CK). |
+| 🟢 NEW | **VoidedAt** | datetime2(0) | NULL |  | Set with `IsVoided`. |
+| 🟢 NEW | **VoidedBy** | nvarchar(100) | NULL |  | Username. |
+| 🟢 NEW | **CreatedAt** | datetime2(0) | NOT NULL | sysdatetime() | When it was recorded. |
+| 🟢 NEW | **CreatedBy** | nvarchar(100) | NULL |  | Username of the recorder (`Migration` for backfilled rows). |
+| 🟢 NEW | **RequestId** | uniqueidentifier | NULL |  | S21 idempotency key from the form: a double click records one event. |
+
+Keys and indexes
+- 🟢 `PK_EmployeeEvents` - primary key, clustered, (Id).
+- 🟢 `IX_EmployeeEvents_Employee_Date` - nonclustered, (EmployeeId, EventDate, Id) INCLUDE (EventType, IsVoided). FK index (S16) that serves "this person's timeline".
+- 🟢 `UX_EmployeeEvents_Employee_Joined` - unique, nonclustered, (EmployeeId) WHERE EventType = 'Joined' AND IsVoided = 0. One live joining per person; a second stint is a `Rejoin`.
+- 🟢 `UX_EmployeeEvents_RequestId` - unique, nonclustered, (RequestId) WHERE RequestId IS NOT NULL.
+- 🟢 `FK_EmployeeEvents_Employee`, `_FromProject`, `_ToProject`, `_FromDepartment`, `_ToDepartment`, `_FromDesignation`, `_ToDesignation`.
+- 🟢 `CK_EmployeeEvents_Type` - EventType IN the seven values above.
+- 🟢 `CK_EmployeeEvents_Void` - IsVoided = 0 OR (VoidReason IS NOT NULL AND VoidedAt IS NOT NULL).
+
+## Table: dbo.EmployeeLegacyLeaveBalances [NEW]
+Read-only archive of the seven per-year leave figures that lived on `Employee` (decision B18, script 10, 2026-11-24). Nothing in the app reads or writes it; it exists so the old spreadsheet figures can still be looked up. One row per employee that had any value.
+Rows after the archive on the development copy: 827.
+
+| Change | Column | Type | Null | Default | Notes |
+|---|---|---|---|---|---|
+| 🟢 NEW | **EmployeeId** | int | NOT NULL |  | PK and FK -> Employee.uid. |
+| 🟢 NEW | **CarryForwardLeaves**, **CarryForwardLeaves1**, **Year2022**, **Year2023** | float | NULL |  | Original names and values, unchanged. |
+| 🟢 NEW | **Year2023New** | decimal(18,2) | NULL |  | Original. |
+| 🟢 NEW | **Year2024**, **AdjustedAjusted** | int | NULL |  | Original. |
+| 🟢 NEW | **ArchivedAt** | datetime2(0) | NOT NULL | sysdatetime() | When the row was archived. |
+
+Keys and indexes
+- 🟢 `PK_EmployeeLegacyLeaveBalances` - primary key, clustered, (EmployeeId); `FK_EmployeeLegacyLeaveBalances_Employee`.
+
 ## Table: dbo.EmployeeLeaves [TO BE REMOVED]
 Detailed leave records per employee (one of two parallel leave models). Empty in production and has no primary key.
 Rows on 2026-11-16: 0.
@@ -542,7 +591,7 @@ Rows on 2026-11-16: 0.
 | 🔴 DROP | LeaveTypeName | varchar(250) | NOT NULL |  | -> LeaveRequests.LeaveTypeId. |
 | 🔴 DROP | StartDate | date | NOT NULL |  | -> LeaveRequests.FromDate. |
 | 🔴 DROP | EndDate | date | NOT NULL |  | -> LeaveRequests.ToDate. |
-| 🔴 DROP | TotalDays | float | NULL |  | -> LeaveRequests.TotalDays decimal(5,2). |
+| 🔴 DROP | TotalDays | float | NULL |  | -> LeaveRequests.TotalDays decimal(5,1). |
 | 🔴 DROP | AddDays | int | NULL |  | Not carried over; meaning unclear. Use LeaveEntitlementOverrides for adjustments. |
 | 🔴 DROP | ExcludeDays | int | NULL |  | Not carried over; weekly offs/holidays are excluded when TotalDays is calculated. |
 | 🔴 DROP | Short_Adj | varchar(MAX) | NULL |  | Not carried over; meaning unclear. |
@@ -614,7 +663,7 @@ Keys and indexes
 Per-person, per-case changes to the standard leave quota. HR rule: everyone has the same quota, but HR may change it for one person in a specific case; each change keeps its reason and approver instead of editing a shared number. Append-only (set C only).
 Rows: new table.
 - ⏸ B5: leave year (calendar assumed), pro-rating and carry-forward cap are open.
-- ⏸ B18: legacy per-year figures on `Employee` may be converted into rows here.
+- 2026-11-24 (B18): the legacy per-year figures were archived, not converted into overrides.
 
 | Change | Column | Type | Null | Default | Notes |
 |---|---|---|---|---|---|
@@ -622,8 +671,8 @@ Rows: new table.
 | 🟢 NEW | **EmployeeId** | int | NOT NULL |  | FK -> Employee.uid. |
 | 🟢 NEW | **LeaveTypeId** | int | NOT NULL |  | FK -> LeaveTypes.Id. |
 | 🟢 NEW | **Year** | int | NOT NULL |  | Leave year (T5: int). |
-| 🟢 NEW | **AdjustmentDays** | decimal(5,2) | NULL |  | + adds days, - removes days. Several adjustments per year allowed (one per case). |
-| 🟢 NEW | **OverrideTotalDays** | decimal(5,2) | NULL |  | Replaces the standard quota entirely for this person/type/year. |
+| 🟢 NEW | **AdjustmentDays** | decimal(5,1) | NULL |  | + adds days, - removes days. Several adjustments per year allowed (one per case). |
+| 🟢 NEW | **OverrideTotalDays** | decimal(5,1) | NULL |  | Replaces the standard quota entirely for this person/type/year. |
 | 🟢 NEW | **Reason** | nvarchar(500) | NOT NULL |  |  |
 | 🟢 NEW | **ApprovedByUserId** | int | NOT NULL |  | FK -> Users.uid. |
 | 🟢 NEW | **CreatedAt** | datetime2(0) | NOT NULL | sysdatetime() |  |
@@ -650,7 +699,7 @@ Rows on 2026-11-16: 3 (Annual Leave 10, Casual Leave 10, Sick Leave 15, all for 
 | 🟡 CHANGED | **Id** | int | NOT NULL |  | Identity. was `UID`, not a key. Becomes the PK (EF already declares it); renamed at contract. |
 | 🟢 NEW | **LeaveTypeId** | int | NOT NULL |  | FK -> LeaveTypes.Id. Added NULL, backfilled from LeaveTypeName, then NOT NULL. |
 | 🔴 DROP | LeaveTypeName | varchar(50) | NOT NULL |  | Replaced by LeaveTypeId. |
-| 🟡 CHANGED | **TotalDays** | decimal(5,2) | NOT NULL |  | was `TotalLeaves` int NOT NULL. Half days. |
+| 🟡 CHANGED | **TotalDays** | decimal(5,1) | NOT NULL |  | was `TotalLeaves` int NOT NULL. Half days; one decimal (script 09). |
 | 🟡 CHANGED | **Year** | int | NOT NULL |  | was varchar(50) (T5). Live values convert. |
 | 🟢 NEW | **CreatedAt / CreatedBy / ModifiedAt / ModifiedBy** | datetime2(0) / nvarchar(100) | per set M |  | Set M. |
 
@@ -676,7 +725,7 @@ Rows on 2026-11-16: 24 (live statuses: `Applied` 7, `Approved` 17).
 | 🟡 CHANGED | **FromDate** | date | NOT NULL |  | was datetime2(7). Leave is whole days; check no live row has a time part first. |
 | 🟡 CHANGED | **ToDate** | date | NOT NULL |  | was datetime2(7). |
 | 🟢 NEW | **IsHalfDay** | bit | NOT NULL | 0 | Half-day leave (only for LeaveTypes.IsHalfDayAllowed = 1). ⏸ B1. |
-| 🟢 NEW | **TotalDays** | decimal(5,2) | NOT NULL |  | Days charged to the balance, after excluding weekly offs and holidays (⏸ B5). |
+| 🟢 NEW | **TotalDays** | decimal(5,1) | NOT NULL |  | Days charged to the balance, after excluding weekly offs and holidays (⏸ B5). |
 | 🟢 NEW | **Reason** | nvarchar(500) | NULL |  |  |
 | 🟢 NEW | **DocumentId** | int | NULL |  | FK -> EmployeeDocuments.Id. |
 | 🟡 CHANGED | **Status** | varchar(10) | NOT NULL | 'Pending' | was nvarchar(MAX) NULL. `Pending`, `Approved`, `Rejected`, `Cancelled`. |
@@ -696,6 +745,7 @@ Keys and indexes
 - 🟢 `IX_LeaveRequests_LeaveTypeId` - (LeaveTypeId); `IX_LeaveRequests_DocumentId` - (DocumentId) WHERE DocumentId IS NOT NULL; `IX_LeaveRequests_ApprovedByUserId` - (ApprovedByUserId) WHERE ApprovedByUserId IS NOT NULL.
 - 🟢 `FK_LeaveRequests_Employee`, `FK_LeaveRequests_LeaveTypes`, `FK_LeaveRequests_EmployeeDocuments`, `FK_LeaveRequests_Users`.
 - 🟢 `CK_LeaveRequests_Dates` - ToDate >= FromDate; `CK_LeaveRequests_HalfDay` - IsHalfDay = 0 OR (FromDate = ToDate AND TotalDays = 0.5).
+- 🟢 `CK_LeaveRequests_SingleYear` - YEAR(FromDate) = YEAR(ToDate) (2026-11-24, script 09). One request lies in one calendar year, so each request belongs to exactly one balance year; a leave over 31 December is entered as two requests. The LMS screens say so.
 - 🟢 `CK_LeaveRequests_Status` - Status IN ('Pending','Approved','Rejected','Cancelled').
 - 🟢 `UX_LeaveRequests_Open_Duplicate` - unique, nonclustered, (EmployeeId, FromDate, ToDate, LeaveTypeId) WHERE Status IN ('Pending','Approved'). S22: blocks an exact double submit. True overlaps are checked in the save transaction under `sp_getapplock` on the employee.
 
@@ -712,6 +762,8 @@ Rows: new table (seeded from those sources, de-duplicated and reviewed; the live
 | 🟢 NEW | **IsHalfDayAllowed** | bit | NOT NULL | 1 |  |
 | 🟢 NEW | **IsActive** | bit | NOT NULL | 1 |  |
 | 🟢 NEW | **SortOrder** | int | NOT NULL | 0 |  |
+| 🟢 NEW | **AllowsCarryForward** | bit | NOT NULL | 1 | 2026-11-24 (script 11): false = the year-end rollover skips this type. Unpaid and Compensation are seeded as 0. HR edits it in Setup -> Lists. Holds the carry-forward eligibility part of B5 in data. |
+| 🟢 NEW | **MaxCarryForwardDays** | decimal(5,1) | NULL |  | 2026-11-24 (script 11): most days the rollover carries into the next year; NULL = no cap (`CK_LeaveTypes_MaxCarryForward`: NULL or >= 0). |
 | 🟢 NEW | **CreatedAt / CreatedBy / ModifiedAt / ModifiedBy** | datetime2(0) / nvarchar(100) | per set M |  | Set M. |
 
 Keys and indexes
@@ -990,7 +1042,7 @@ Keys and indexes
 
 ## Views (proposed)
 - 🟢 `dbo.vEmployeeDirectory` - Employee joined to Projects, Departments, Designations. Columns: uid, EmployeeID, EmployeeName, ProjectName, DepartmentName, SubDepartmentName, DesignationName, EmployeeStatus, plus the sort keys `Projects.SortOrder`, `Departments.SortOrder`, `Designations.Rank`. Lists use either `ORDER BY p.SortOrder, d.SortOrder, g.Rank, e.EmployeeName` or, for department-first (HR's "all Admin staff, then by project"), `ORDER BY d.SortOrder, p.SortOrder, g.Rank, e.EmployeeName` (a view can't carry ORDER BY). Backed by `IX_Employee_Org` and `IX_Employee_Department_Project`.
-- 🟢 `dbo.vLeaveBalances` - per employee, leave type and year: `Entitled = COALESCE(OverrideTotalDays, LeaveQuota.TotalDays) + SUM(AdjustmentDays) + CarryforwardLeaves.CarryForwardDays (where ToYear = year)`, `Taken = SUM(TotalDays)` of `Approved` LeaveRequests in that year, `Pending` likewise, `Remaining = Entitled - Taken`. Only employees with `COALESCE(e.IsLeaveManagedOverride, p.HasLeaveManagement) = 1`. Derived, never stored (S18).
+- 🟢 `dbo.vLeaveBalances` (v2, script 11, 2026-11-24) - per employee, leave type and year. The rows are the **union** of every year that has any leave data for that employee and type: a `LeaveQuota` row, a `CarryforwardLeaves.ToYear`, a `LeaveEntitlementOverrides.Year`, or a Pending/Approved `LeaveRequests` year (so a year with leave taken but no quota still shows, with `BaseDays` 0 and a negative balance; history is never lost because a quota row is missing). Columns: `BaseDays = COALESCE(OverrideTotalDays, LeaveQuota.TotalDays, 0)`, `Adjustment = SUM(AdjustmentDays)`, `CarryForward = SUM(CarryForwardDays)` where `ToYear` = year, `Entitled = BaseDays + Adjustment + CarryForward`, `Taken = SUM(TotalDays)` of `Approved` requests whose `FromDate` is in the year, `Pending` likewise, `Remaining = Entitled - Taken`. Only employees with `COALESCE(e.IsLeaveManagedOverride, p.HasLeaveManagement) = 1`. Derived, never stored (S18). Read by one service (`LeaveBalanceService`) for both the employee Leave Balance tab and the LMS Balances page. The **year-end rollover** (LMS -> Leave Balance -> Year-end rollover) writes next year's `CarryforwardLeaves` rows from `Remaining` (never below zero, capped by `LeaveTypes.MaxCarryForwardDays`, skipping types with `AllowsCarryForward = 0`), marks them `Description = 'Year-end rollover'`, updates only such rows on a re-run, never touches hand-entered rows, and writes one `AuditLogs` row.
 
 ## Idempotency (standards S21-S23)
 Every table people or imports write to is replay-safe. The guard that makes a second identical write fail or update instead of duplicate:
@@ -1020,6 +1072,7 @@ Every table people or imports write to is replay-safe. The guard that makes a se
 | RosterOverrides | `UX_RosterOverrides_Employee_Date` |
 | ShiftAssignments | `UX_ShiftAssignments_Employee_From_Priority` + overlap check (S22) |
 | RecordNotes | `RequestId` unique filtered index (a note has no natural key) |
+| EmployeeEvents | `UX_EmployeeEvents_Employee_Joined` (one live joining per person) + `RequestId` unique filtered index |
 | AuditLogs | none, append-only by design |
 
 Concurrency (S15, `rowversion`): Employee, LeaveRequests, HalfDayRequests, Attendance, Payslips. A `rowversion` detects two people editing at once; it does **not** stop a replayed insert, which is what the keys above are for.
@@ -1054,16 +1107,18 @@ All live in decisions.md. The draft shows the assumption it made; nothing below 
 | B2 departments | decided 2026-11-18: one shared main-department list, independent of project, plus optional `SubDepartments`. Still open at go-live: HR's mapping of the names (`Administrator`, `Mess`, `Transportation`) | Departments, SubDepartments, Employee |
 | B3 projects | decided 2026-11-18: a dynamic HR-managed list, no fixed count; test-data seed for development, HR's list at go-live | Projects, Employee |
 | B4 designation rank | default 100, alphabetical until HR ranks | Designations |
-| B5 leave year, quotas | calendar year, no carry-forward cap | LeaveQuota, CarryforwardLeaves, LeaveEntitlementOverrides, vLeaveBalances |
+| B5 leave year, quotas | calendar year; carry-forward eligibility and cap are data on `LeaveTypes` (`AllowsCarryForward`, `MaxCarryForwardDays`, default no cap) | LeaveQuota, CarryforwardLeaves, LeaveEntitlementOverrides, vLeaveBalances |
 | B6 hourly pay | exact minutes; `HourlyRate` optional | Employee, Attendance, Payslips |
 | B7 half-day rule | cutoff/minimum columns nullable | Shifts, HalfDayRequests |
 | B8 schedule edge cases | generic base only | Shifts, ShiftAssignments, RosterOverrides |
 | B9 value lists, roles | proposed lists in the CHECKs | Employee, EmployeeDocuments, Users |
 | B13 approvals | Admin and HR only; a user may hold both (`UserRoles`) | UserRoles, all approval columns |
-| B14 transfer history | current position only, no history table | Employee |
+| B14 transfer history | partly decided 2026-11-24: `EmployeeEvents` timeline with before/after positions; whether reports must snapshot the position stays open | Employee, EmployeeEvents |
+| T8 voiding an event | decided 2026-11-24: latest entry only, reverts its effect; Admin may delete a voided entry | EmployeeEvents |
+| B19 event types | the seven in `CK_EmployeeEvents_Type`; HR may want more (suspension, probation confirmed, contract renewed) | EmployeeEvents |
 | B15 payslip unlock | no schema change | Payslips, AuditLogs |
 | B17 tax base | basic salary | TaxRules |
-| B18 legacy leave columns | kept as they are until HR defines them (test data today) | Employee |
+| B18 legacy leave columns | decided 2026-11-24: archived in `EmployeeLegacyLeaveBalances` and dropped from Employee | Employee, EmployeeLegacyLeaveBalances |
 
 ## Migration order
 **Script map (applied to the local development database on 2026-11-23; production steps in `prod_rollout.md`):**
@@ -1076,6 +1131,10 @@ All live in decisions.md. The draft shows the assumption it made; nothing below 
 | 4 | `04_attendance_payroll.sql` | Expand only; `Attendance.EmployeeUid`, `ShiftDate`, `Payslips.MonthNo`, `TaxRules.TaxYearStart` sit beside the old columns. |
 | 5 | (deployment) | The development app already reads only the new schema; see `prod_rollout.md` for the production deployment. |
 | 7 | `07_user_roles.sql` | Added 2026-11-23: creates `UserRoles`, copies `Users.Role`, drops `CK_Users_Role` and `Users.Role`. Independent of 06; needs 03. The app needs the new build (the old one reads `Users.Role`). |
+| 8 | `08_employee_events.sql` | Added 2026-11-24: creates `EmployeeEvents` and backfills one row per employee from `DateOfJoining` / `DateOfLeaving` / `DateOfReturn`. Additive and independent of 06 and 07; needs 02 (org FKs) and the `Designations`/`Projects`/`Departments` tables. The new app build needs it (Details, Edit and Create read and write the table); the old build ignores it. |
+| 9 | `09_leave_days_one_decimal.sql` | Added 2026-11-24: `decimal(5,1)` for the five leave-day columns (drops and recreates the dependent checks and indexes unchanged), plus `CK_LeaveRequests_SingleYear`. Needs 03. |
+| 10 | `10_employee_legacy_leave_archive.sql` | Added 2026-11-24: archives the 7 legacy leave columns into `EmployeeLegacyLeaveBalances`, checks the count, drops them from `Employee`. Run in the same window as the new build (the build no longer reads them). |
+| 11 | `11_leave_balances_view_v2.sql` | Added 2026-11-24: `vLeaveBalances` v2 (union of years, separate carry-forward) and `LeaveTypes.AllowsCarryForward` / `MaxCarryForwardDays`. Needs 03 and 09. |
 | 6 | `06_contract.sql` | Drops the legacy columns, renames the temporary ones, makes `ProjectId`/`DepartmentId` NOT NULL, removes the moved Configuration rows, drops `EmployeeLeaves`. |
 
 Production stays untouched until each script below has been reviewed and approved. Each phase is an EF migration or a **re-runnable** SQL script (S23: guard every change with `IF COL_LENGTH(...) IS NULL`, `IF OBJECT_ID(...) IS NULL` or `IF NOT EXISTS` on the index/constraint name; write backfills as "update where the new column IS NULL"; seed with `MERGE` on the natural key; run in a transaction with a rollback script; running twice changes nothing), **recorded in `__EFMigrationsHistory`** (or a `SchemaChangeLog` row), and preceded by a backup of `HRBTK` (S19). Create unique indexes **after** the backfill and after checking for duplicates (live checks are listed in the Idempotency section). `sqlcmd` runs against production only with your approval before each run.
@@ -1087,6 +1146,10 @@ Production stays untouched until each script below has been reviewed and approve
 4. **Attendance, schedule and payroll columns (all empty or additive).** Create `Shifts`, `ShiftAssignments`, `RosterOverrides`, `AttendancePunches`, `HalfDayRequests`, `AttendanceCorrections`, `RecordNotes` (and add the `Notes` columns, widening `Attendance.Comments` and `Allowances.Remarks` to 1000 first); **expand** `Attendance` (add the new columns beside the old ones; the app still writes the old ones until step 5); rebuild `GazettedHolidays` (empty); `AttendanceUploadLogs` types, backfilled `Status`, `FileHash`; `EmployeeDocuments.FileHash`; `Payslips.MonthNo` (backfill from the month name), `TaxPercentage` type, hourly columns, `RowVersion`, unique key; `TaxRules.TaxYearStart` (backfill `LEFT(TaxYear, 4)`); `Deductions.Amount` and `RequestId` (backfill Amount from the 11 `Fixed` rows); `Allowances.RequestId` and date types.
 5. **App switch.** Release the app version that reads and writes only the new columns and tables (org FKs, LeaveTypeId, int employee keys, `Id` primary keys, `MonthNo`/`TaxYearStart`, attendance processing, dropdowns from the new tables, `RequestId` hidden fields, file hashing, the tax-year lookup fix). Verify in production for an agreed period.
 6. **Contract (last, after a backup).** Drop the 🔴 columns (`Employee.Department/Designation/Project`, `Attendance.EmployeeID/EmployeeName/DepartmentName/AttendanceDate/TimeIn/TimeOut/Status`, `LeaveQuota.LeaveTypeName`, `LeaveRequests.LeaveType`, `Users.EmployeeId` (string), `CarryforwardLeaves.LeavesUsed/LeavesRemaining`, `Payslips.Month` (text), `TaxRules.TaxYear`), the moved Configuration rows and the `EmployeeLeaves` table; **then rename** the temporary columns (`EmployeeUid` -> `EmployeeId` in Users and Attendance, `MonthNo` -> `Month`, `Attendance.Comments` and `Allowances.Remarks` -> `Notes`) and the PKs (`AttendanceID`, `DepartmentID`, `LogId`, `UID` -> `Id`); make `Employee.ProjectId` and `Employee.DepartmentId` NOT NULL. 7. **User roles (2026-11-23).** Create `UserRoles`, copy `Users.Role` into it, drop `CK_Users_Role` and `Users.Role` (`07_user_roles.sql`). Run it after 03; it can run before or after 06. Then update db.md (v2.0) and its Change History.
+9. **Leave days in one decimal (2026-11-24).** `09_leave_days_one_decimal.sql`. After 03; before 11.
+10. **Legacy leave archive (2026-11-24).** `10_employee_legacy_leave_archive.sql`: archive, verify, drop the 7 `Employee` columns.
+11. **Leave balances v2 (2026-11-24).** `11_leave_balances_view_v2.sql`: the history-safe view and the carry-forward flags on `LeaveTypes`.
+8. **Employee history (2026-11-24).** Create `EmployeeEvents` and backfill it from the employee record (`08_employee_events.sql`). Run it after 02; it can run before or after 06 and 07, and must be in place before the new build is deployed.
 
 ## Appendix A. Constraint renames (S5, S16)
 Renamed with `sp_rename` in step 1; no data change.

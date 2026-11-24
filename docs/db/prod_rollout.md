@@ -1,5 +1,5 @@
 # Production rollout: applying the database redesign to HRBTK
-Version: 1.0 | Date: 2026-11-23
+Version: 1.2 | Date: 2026-11-24
 Applies to: production database `HRBTK` (SQL Server 2022, server "Teezhost 16GB", https://hr.coditium.com)
 Status: **Not run on production.** Everything below has been run only against a local copy of production (`TAZ\SQLEXPRESS`, test data): the full sequence once, then each script re-run to confirm it changes nothing the second time.
 
@@ -8,7 +8,7 @@ Source of truth for *what* changes: `db_changes.md`. This file is *how* to apply
 ## 1. What has been tested, and what has not
 | Tested on the local copy | Not tested |
 |---|---|
-| Scripts 01-04, 06 and 07 run clean in order; each re-runs with no changes (01-04 before 06; 06 and 07 again after themselves). | Production data volume and timing (the copy was 144 MB; expect a short run). |
+| Scripts 01-04, 06, 07, 08, 09, 10 and 11 run clean in order; each re-runs with no changes (01-04 before 06; 06 to 11 again after themselves). | Production data volume and timing (the copy was 144 MB; expect a short run). |
 | The app (Development environment) loads all pages and the create/edit/upload flows against the new schema. | The IIS deployment of the new build, and `appsettings.Production.json` on the server. |
 | Tax-year logic, unique/duplicate guards, concurrency tokens, file-hash checks. | Anything that depends on the **real** data (see section 3: the copy is test data). |
 
@@ -27,7 +27,9 @@ The copy used test data. Re-run these checks read-only on production and resolve
 - Department mapping (B2): the 58 distinct `Employee.Department` strings are split at the first ` - ` into department + sub-department, and `Admin` becomes `Administration`. Review `mig.EmployeeOrgMap` (created by script 02) with HR and correct it **before** the Employee update, or fix names in Setup afterwards. Open at go-live: whether `Administrator`, `Mess` and `Transportation` belong under Administration.
 - Designations (B4): rank defaults to 100; HR ranks them later in Setup.
 - Leave types (B11): seeded from the data; `Unpaid Leave` is marked unpaid, the rest paid. Payroll does not apply it yet.
-- Open items that do not block the rollout: T4, T7, B1, B5-B10, B12-B18 (see decisions.md).
+- Leave (scripts 09 to 11): script 09 rounds leave days to one decimal (no value is changed by it when all are whole or half days; check `SELECT COUNT(*) FROM dbo.LeaveRequests WHERE TotalDays <> ROUND(TotalDays, 1)` first) and adds `CK_LeaveRequests_SingleYear`, which **stops** if a request crosses 31 December: split such requests first (`SELECT Id, EmployeeId, FromDate, ToDate FROM dbo.LeaveRequests WHERE YEAR(FromDate) <> YEAR(ToDate)`). Script 10 drops seven `Employee` columns after archiving them; **the old build reads them, so 10 only runs together with the new build** (as with 06 and 07). The Leave Balance tab needs `LeaveQuota` rows for the current year, otherwise it says no quota is set (Setup them in Leave -> Leaves Quota before opening to users). HR sets carry-forward eligibility and cap per leave type in Setup -> Lists -> Leave types (default: everything carries forward except Unpaid and Compensation, no cap).
+- Employee history (script 08): the backfill writes the **current** project, department and designation into each `Joined` row because the original position was never recorded. Nothing to decide; HR can correct history later by voiding and re-recording. Employees without a `DateOfJoining` get no `Joined` row; employees with status `Resigned` / `Terminated` but no `DateOfLeaving` get no leaving row (list them before the window with `SELECT uid, EmployeeID FROM dbo.Employee WHERE EmployeeStatus IN ('Resigned','Terminated') AND DateOfLeaving IS NULL`, and set the dates in the app afterwards through Edit Employee).
+- Open items that do not block the rollout: T4, T7, T8, B1, B5-B10, B12-B17, B19 (see decisions.md; B18 is closed).
 
 **Checks that must be clean (or consciously handled)**
 | Check | Why / what the script does |
@@ -56,10 +58,14 @@ The copy used test data. Re-run these checks read-only on production and resolve
    ... 04_attendance_payroll.sql
    ... 06_contract.sql
    ... 07_user_roles.sql      (several roles per user; needs 03, independent of 06)
+   ... 08_employee_events.sql (employee history table + backfill; needs 02, independent of 06 and 07)
+   ... 09_leave_days_one_decimal.sql (leave days decimal(5,1), single-year requests; needs 03)
+   ... 10_employee_legacy_leave_archive.sql (archive then drop the 7 Employee leave columns; with the new build)
+   ... 11_leave_balances_view_v2.sql (vLeaveBalances v2, LeaveTypes carry-forward flags; needs 09)
    ```
    Script 06 is the point of no return for the old app (it drops the old columns). Take a second backup between 04 and 06 if you want a fallback that keeps the old columns.
 4. Verify the database (section 5), then publish the new build with `scripts\deploy\DeployToIIS.bat`, restore `wwwroot/uploads`, start the site.
-5. Smoke test as an Admin: login, employee list and edit, payroll for one employee, leave request, attendance upload, Setup -> Lists.
+5. Smoke test as an Admin: login, employee list and edit, **Edit Employee > Employee History (record a test promotion on a throw-away employee, then void it)**, payroll for one employee, leave request, attendance upload, Setup -> Lists.
 6. Open the site to users.
 
 There is no `05_*` script: step 5 in `db_changes.md` ("App switch") is the deployment above.
@@ -70,9 +76,14 @@ Run read-only; all should hold:
 SELECT COUNT(*) FROM dbo.Employee;                                   -- same as before the window
 SELECT COUNT(*) FROM dbo.Employee WHERE ProjectId IS NULL OR DepartmentId IS NULL;   -- 0
 SELECT COUNT(*) FROM sys.foreign_keys WHERE is_not_trusted = 1;     -- 0
-SELECT MigrationId FROM dbo.__EFMigrationsHistory WHERE MigrationId LIKE '202611230000%' ORDER BY 1;  -- phases 1-4, 6 and 7
+SELECT MigrationId FROM dbo.__EFMigrationsHistory WHERE MigrationId LIKE '2026112%' ORDER BY 1;  -- phases 1-4, 6, 7, 8, 9, 10 and 11
 SELECT COUNT(*) FROM dbo.UserRoles;                                 -- one row per user that had a role (6 users, 5 with a role on 2026-11-16)
 SELECT COUNT(*) FROM dbo.Users u WHERE NOT EXISTS (SELECT 1 FROM dbo.UserRoles r WHERE r.UserId = u.uid AND r.[Role] = 'Admin');  -- at least one Admin must exist: total users minus this must be >= 1
+SELECT COUNT(*) FROM dbo.Employee e WHERE e.DateOfJoining IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.EmployeeEvents v WHERE v.EmployeeId = e.uid AND v.EventType = 'Joined' AND v.IsVoided = 0);  -- 0
+SELECT COUNT(*) FROM sys.columns WHERE object_id = OBJECT_ID('dbo.Employee') AND name IN ('Year2022','Year2023','Year2023New','Year2024','CarryForwardLeaves','CarryForwardLeaves1','AdjustedAjusted');  -- 0 (columns dropped)
+SELECT COUNT(*) FROM dbo.EmployeeLegacyLeaveBalances;  -- the number of employees that had any of those values (827 on the test copy)
+SELECT COUNT(*) FROM sys.columns WHERE name IN ('TotalDays','CarryForwardDays','AdjustmentDays','OverrideTotalDays') AND OBJECT_NAME(object_id) IN ('LeaveRequests','LeaveQuota','CarryforwardLeaves','LeaveEntitlementOverrides') AND scale <> 1;  -- 0
+SELECT COUNT(*) FROM dbo.Employee e WHERE e.DateOfLeaving IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.EmployeeEvents v WHERE v.EmployeeId = e.uid AND v.EventType IN ('Resignation','Termination') AND v.IsVoided = 0);  -- 0
 ```
 Also compare row counts of the tables that existed before with the backup. Keep `mig.EmployeeOrgMap` and `mig.LeaveRequests_Orphans` until HR has signed off, then drop the `mig` schema.
 
@@ -85,4 +96,6 @@ Also compare row counts of the tables that existed before with the backup. Keep 
 - Update `db.md` to the new schema (v2.0, with a Change History entry). `db.md` describes production, so do this only once production has the new schema. The `update-db-docs` skill can regenerate it from a connection string.
 - Mark the applied items in `db_changes.md` as applied on production and move answered decisions as the maintenance rules in that file say.
 - Security: the build deployed in this window includes the security fixes (Setup requires Admin, neutral login, `Secure` cookie, logout POST, `/uploads` blocked). After deploying, check: anonymous `/Setup/Users` redirects to login; login works over https; documents still download. Optionally set `EmployeeDocuments:StorageBasePath` and copy `wwwroot/uploads` there. The old `sa` password in git history is **deferred** to the project owner and is separate from this rollout.
+- Leave Balance (employee page) is now live: open an employee, check the cards match Leave -> Leave Balance for the same year, and run Leave -> Leave Balance -> Year-end rollover as a **preview only** (do not Apply until HR confirms the rules).
+- Employee History is new for HR: show them Edit Employee > Employee History. Recording a promotion, transfer, resignation, termination or rejoin there also updates the employee; voiding the latest entry undoes that change, and only an Admin can delete a voided entry (decision T8).
 - Not part of this rollout (see `db_changes.md` and the app): attendance processing from punches, half-day / correction / roster / notes screens (tables exist, no pages yet), payroll use of the paid/unpaid flag.

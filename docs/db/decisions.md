@@ -1,11 +1,13 @@
 # HRMS Database - Pending Decisions
-Version: 2.4 | Date: 2026-11-18 | Related: db_standards.md, db_changes.md (v3.4-draft), db.md (v1.9)
+Version: 2.6 | Date: 2026-11-24 | Related: db_standards.md, db_changes.md (v3.4-draft), db.md (v1.9)
 
 ## How to use this file
 - Only **pending** decisions are listed here. Answered ones are removed and recorded where they apply (rules in db_standards.md, schema in db_changes.md).
 - Each decision has a **Suggested key** (★ = recommended) and an **Answer** block. Write the chosen letter (or "Other: ...") in `Answer`, then who and when; add free text in `Notes`.
 - Part A is technical (the dev team decides). Part B is business logic (HR / management decides); each B-item says what it affects in the schema so the answer can go straight into db_changes.md.
 - **Data status (2026-11-18):** the data now in `HRBTK` is **test data**. Counts and findings quoted below (employees, projects, leave balances, duplicates) describe it for design purposes only; they are not requirements, and the checks are re-run on real data before anything is applied.
+- 2026-11-24: the employee Leave Balance tab is built on the LMS tables; B18 is closed (see below); leave days are kept in one decimal.
+- 2026-11-24: employee history is built (`EmployeeEvents`, see B14, T1, T8, B19 below).
 - Removed on 2026-11-17 as decided: employee key (`uid` stays, `EmployeeID` is the business key; see S1 and S5) and the attendance migration approach (expand then contract; see S19).
 
 ---
@@ -24,6 +26,7 @@ Status: Closed
 **Answer:** A
 **Decided by / date:** Rayder / 17-11-2026
 **Notes:** There can also be edge cases of employees leaving then returning, so let's add a returning date aswell, both nullable till they are filled.
+**Update 2026-11-24:** `Employee` holds the latest leaving and return only. A resignation or termination recorded in Edit Employee sets `DateOfLeaving` and clears `DateOfReturn`; every earlier cycle stays in `EmployeeEvents`. So leaving and returning more than once is now supported.
 
 ---
 
@@ -134,6 +137,20 @@ Status: Open
 
 ---
 
+## T8. Voiding an employee event
+Status: Closed (2026-11-24)
+
+**Context.** `EmployeeEvents` is append-only (2026-11-24). A wrong entry is voided with a reason and stays visible. Recording an event also changes `Employee` (promotion sets the designation, resignation sets the leaving date and status...), so voiding raises the question of what happens to that change.
+
+**Suggested key**
+- A ★ (built) Voiding only hides the entry. The employee fields are corrected by hand on the Employee Info tab. Simple, and a void can never silently overwrite a later edit.
+- B Voiding the **latest** live entry also reverts its effect (promotion/transfer restore the From columns; resignation/termination restore the previous status and dates, which needs them stored on the event). Only the latest entry could be voided.
+
+**Answer:** B, built. **Decided by / date:** Rayder / 24-11-2026, after finding that voiding a promotion left the new designation in place.
+**Notes:** Only the latest live entry can be voided; voiding it reverts its effect (promotion and transfer restore the position stored in the From columns; resignation, termination and rejoin are undone by replaying the remaining entries; a field changed by hand since is left alone and reported). Admins can permanently delete a voided entry so it no longer shows in the history; the deletion is written to `AuditLogs` with the full row. Live entries cannot be deleted.
+
+---
+
 # Part B. Business logic questions (HR)
 
 ## B1. Half days: separate request or part of leave?
@@ -148,6 +165,7 @@ Status: Open
 - C Never charged to leave: remove `LeaveRequests.IsHalfDay`.
 
 **Answer:** ______  **Decided by / date:** ______  **Notes:** ______
+**2026-11-24:** a half day on a leave request is stored as `IsHalfDay = 1`, `TotalDays = 0.5` (`CK_LeaveRequests_HalfDay`) and counts against the balance in `vLeaveBalances`. The leave request screens do not offer the half-day option yet, and `HalfDayRequests` (attendance) is not linked to leave until this is answered.
 
 ---
 
@@ -229,6 +247,7 @@ Status: Open
 - A ★ Calendar year. B Fiscal year. C Per project.
 
 **Answer:** ______  **Decided by / date:** ______  **Notes (2-6):** ______
+**Built 2026-11-24 without waiting for the answers:** carry-forward eligibility and the cap are data on `LeaveTypes` (`AllowsCarryForward`, default 1 except Unpaid and Compensation; `MaxCarryForwardDays`, NULL = no cap) and the year-end rollover reads them, so HR's answer to question 4 is a Setup change, not a code change.
 
 ---
 
@@ -283,7 +302,7 @@ Status: Open
 Status: Open
 **Affects:** `Employee.EmployeeStatus`, `EmployeeDocuments.DocumentType`, `UserRoles.Role` CHECK constraint.
 
-- Employee statuses. Suggested: Active, Inactive, Resigned, Terminated.
+- Employee statuses. Suggested: Active, Inactive, Resigned, Terminated. (2026-11-24: Employee History sets `Resigned` and `Terminated` on a resignation or termination and `Active` on a rejoin.)
 - Document types. Suggested: CNIC, HalfDayProof, LeaveProof, MedicalCertificate, Other.
 - Roles beyond Admin and HR. Suggested: Supervisor (approves leave and half days).
 
@@ -351,8 +370,12 @@ Status: Open
 ---
 
 ## B14. Transfers between projects, departments and designations
-Status: Open
-**Affects:** `Employee`, possibly a new effective-dated assignment table; past reports.
+Status: Partly answered (2026-11-24); one question left for HR
+**Affects:** `Employee`, `EmployeeEvents`; past reports.
+
+**Answered 2026-11-24 (Rayder).** HR wants a history of key events (joining, promotion, transfer, resignation, termination, rejoin). Built as the `EmployeeEvents` timeline: each promotion or transfer stores the project, department and designation before and after, and is recorded from Edit Employee, which also updates the employee. This replaces the effective-dated `EmployeeAssignments` table suggested in A below (the events carry the same facts, and a position on a past date can be worked out from them).
+
+**Still open for HR.** Must attendance and payslip **reports** show where the person was at the time (needs a snapshot or a lookup through the events), or is the current position enough? Today reports use the current position.
 
 **Question.** When someone moves project or department, do old attendance and payslip reports have to show where they were at the time, or is the current position enough?
 
@@ -395,22 +418,24 @@ Status: Open
 ---
 
 ## B18. Legacy per-year leave figures on Employee
+Status: Closed (2026-11-24)
+**Decided by Rayder, 2026-11-24.** The seven columns (`CarryForwardLeaves`, `CarryForwardLeaves1`, `Year2022`, `Year2023`, `Year2023New`, `Year2024`, `AdjustedAjusted`) are copied once into the read-only `EmployeeLegacyLeaveBalances` and dropped from `Employee` (script 10; the archive is option A below). The data is test data, so no figure was checked for correctness. In it, Year2023 equalled CarryForwardLeaves minus Year2022 and Year2024 equalled CarryForwardLeaves1 minus Year2023New on every row: they were results typed in as numbers, not inputs. The employee Leave Balance tab now shows the live balance from the LMS tables (quota, carry-forward, adjustments, approved leave); the Employees grid no longer filters by Year 2024. Leave days are tracked in one decimal (`decimal(5,1)`, half days = 0.5).
+
+**Original question (kept for the record).** What does each column mean, which are still used, and which figures must be kept as history? Options were A archive then drop, B drop, C keep as they are.
+
+---
+
+## B19. Which key events does HR track?
 Status: Open
-**Affects:** `Employee` (7 columns), `CarryforwardLeaves`, `LeaveEntitlementOverrides`, leave balances. **Test data (2026-11-18), so nothing needs archiving yet** (see below).
+**Affects:** `EmployeeEvents.EventType` (`CK_EmployeeEvents_Type`), Employee History form.
 
-**What is in the database (2026-11-17, now treated as test data).** The values below show how the old columns were used; they are not figures to preserve. 828 of 848 employees have values in `CarryForwardLeaves`, `Year2022`, `Year2023`, `Year2023New` and `CarryForwardLeaves1`; `AdjustedAjusted` is empty. `Year2024` holds whole numbers: 14 for 512 employees, other positive values 0-13, and many negatives down to -353. It looks like a leave balance at the end of 2024 (14 = a full annual quota, negatives = leave taken beyond the quota), not a year. The Employee screens show these as "Year 2022", "Year 2023", "Year 2023 New", "Year 2024", "Carry Forward Leaves", "Carry Forward Leaves 1" and "Adjusted Ajusted".
-
-**Questions.**
-1. What does each column mean (balance at the end of that year? days taken? days carried?) and which ones are still used?
-2. Is `Year2024` the opening balance for the current leave system? Are negatives real?
-3. Which figures must be kept as history, and which are leftovers?
+**Question.** The history records Joined, Promotion, Transfer, Resignation, Termination, Rejoin and Other (2026-11-24). Does HR need more types as separate entries: suspension, probation confirmed, contract renewed or ended, salary revision, warning? Does a **salary revision** belong in this history (it would store amounts, so it would not be shown on grids, only on the employee's own page)?
 
 **Suggested key**
-- A ★ Since the current values are test data: keep the 7 columns untouched until HR says what real opening balances look like and how the old system used them. Then convert the confirmed figures into `CarryforwardLeaves` / `LeaveEntitlementOverrides` rows and drop the columns. If real data turns out to carry balances in these columns, archive them in a read-only `EmployeeLegacyLeaveBalances` table first (one row per employee, original column names).
-- B Drop the 7 columns with the other legacy columns, without archiving (only if HR confirms no real data uses them).
-- C Keep the columns as they are, permanently.
+- A ★ Keep the seven; HR uses `Other` with remarks until a pattern shows which types are needed, then types are added to the CHECK.
+- B HR lists the types now.
 
-**Answer:** ______  **Decided by / date:** ______  **Notes:** Re-check on the real data before dropping anything: if it carries opening balances in these columns, A applies in full.
+**Answer:** ______  **Decided by / date:** ______  **Notes:** ______
 
 ---
 
