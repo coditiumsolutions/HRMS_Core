@@ -466,7 +466,7 @@ table.payslip-grid > :not(caption) > * > * { padding-left: .35rem; padding-right
 
 @media (min-width: 768px) {
   body .layout-row,
-  body .container-fluid > .row { flex-wrap: nowrap; }
+  body .container-fluid > .row:has(> .sidebar) { flex-wrap: nowrap; }
 
   body .layout-sidebar,
   body .container-fluid > .row > .sidebar,

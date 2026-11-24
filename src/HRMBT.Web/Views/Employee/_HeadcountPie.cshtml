@@ -1,0 +1,32 @@
+﻿@model HRMBT.Web.Models.ViewModels.HeadcountPieVm
+@{
+    var labelsJson = System.Text.Json.JsonSerializer.Serialize(Model.Slices.Select(s => s.Name));
+    var valuesJson = System.Text.Json.JsonSerializer.Serialize(Model.Slices.Select(s => s.Count));
+}
+<div class="grid-card pie-card">
+    <div class="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
+        <span><i class="bi @Model.Icon"></i>@Model.Title</span>
+        <span class="small">@Model.Summary</span>
+    </div>
+    <div class="card-body">
+        <div class="row g-2 align-items-center">
+            <div class="col-md-4">
+                <div class="chart-pane"><canvas data-pie data-labels="@labelsJson" data-values="@valuesJson" aria-label="@Model.Title"></canvas></div>
+            </div>
+            <div class="col-md-8">
+                <ul class="dept-key" aria-label="@Model.Title key">
+                    @for (var i = 0; i < Model.Slices.Count; i++)
+                    {
+                        var sl = Model.Slices[i];
+                        var share = Model.Total == 0 ? 0 : Math.Round((sl.Count * 100.0) / Model.Total, 1);
+                        <li data-index="@i">
+                            <span class="swatch" data-swatch="@i"></span>
+                            <span class="key-name">@sl.Name</span>
+                            <span class="key-count">@Fmt.Int(sl.Count)<small>@Fmt.Percent((decimal)share)</small></span>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>

@@ -144,7 +144,17 @@ public class EmployeeController : Controller
         var employees = await _context.Employees.AsNoTracking().ToListAsync();
 
         var byDept = employees
-            .GroupBy(e => string.IsNullOrWhiteSpace(e.Department) ? "Unassigned" : e.Department!.Trim())
+            // All "... Dastarkhuwan" departments (one per site) are shown as a single "Dastarkhuwans" group.
+            .GroupBy(e => string.IsNullOrWhiteSpace(e.Department) ? "Unassigned"
+                : e.Department!.Contains("Dastarkhuwan", StringComparison.OrdinalIgnoreCase) ? "Dastarkhuwans"
+                : e.Department!.Trim())
+            .Select(g => new DepartmentEmployeeCount { Department = g.Key, Count = g.Count() })
+            .OrderByDescending(d => d.Count)
+            .ThenBy(d => d.Department)
+            .ToList();
+
+        var byProject = employees
+            .GroupBy(e => string.IsNullOrWhiteSpace(e.Project) ? "Unassigned" : e.Project!.Trim())
             .Select(g => new DepartmentEmployeeCount { Department = g.Key, Count = g.Count() })
             .OrderByDescending(d => d.Count)
             .ThenBy(d => d.Department)
@@ -172,7 +182,8 @@ public class EmployeeController : Controller
             OnLeaveEmployees = employees.Count(e => IsLeave(e.EmployeeStatus)),
             DepartmentCount = byDept.Count,
             ByDepartment = byDept,
-            TopDepartment = byDept.FirstOrDefault()
+            TopDepartment = byDept.FirstOrDefault(),
+            ByProject = byProject
         };
 
         return View(vm);
@@ -275,7 +286,7 @@ public class EmployeeController : Controller
             return NotFound();
         }
 
-        ViewBag.EmployeeDocuments = await _documentService.BuildViewModelAsync(employee.uid, canUpload: false);
+        ViewBag.EmployeeDocuments = await _documentService.BuildViewModelAsync(employee.uid, canUpload: true);
         ViewBag.EmployeeAllowances = await _context.Allowances
             .AsNoTracking()
             .Where(a => a.EmployeeId == employee.uid)
@@ -427,6 +438,7 @@ public class EmployeeController : Controller
             return NotFound();
         }
 
+        ViewBag.EmployeeDocuments = await _documentService.BuildViewModelAsync(employee.uid, canUpload: false);
         return View(employee);
     }
 
