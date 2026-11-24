@@ -5,11 +5,14 @@ using Microsoft.EntityFrameworkCore;
 using HRMBT.Web.Data;
 using HRMBT.Web.Services.Payroll;
 using HRMBT.Web.Services;
+using HRMBT.Web.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // MVC (runtime Razor compilation only in Development — avoids IIS publish issues)
 // Every unsafe request (POST/PUT/DELETE) must carry an antiforgery token, even if a new action forgets the attribute.
+builder.Services.AddRouting(options => options.LowercaseUrls = true);
+
 var mvcBuilder = builder.Services.AddControllersWithViews(options =>
     options.Filters.Add(new Microsoft.AspNetCore.Mvc.AutoValidateAntiforgeryTokenAttribute()));
 builder.Services.AddMemoryCache();
@@ -61,8 +64,8 @@ builder.Services.Configure<FormOptions>(options =>
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
-        options.LoginPath = "/Home/Login";
-        options.AccessDeniedPath = "/Home/AccessDenied";
+        options.LoginPath = "/login";
+        options.AccessDeniedPath = "/access-denied";
         options.ExpireTimeSpan = TimeSpan.FromHours(8);
         options.SlidingExpiration = true;
         options.Cookie.HttpOnly = true;
@@ -86,7 +89,7 @@ var app = builder.Build();
 // Middleware
 if (!app.Environment.IsDevelopment())
 {
-    app.UseExceptionHandler("/Home/Error");
+    app.UseExceptionHandler("/error");
     app.UseHsts();
     app.UseHttpsRedirection();
 }
@@ -104,13 +107,15 @@ app.Use(async (context, next) =>
 
 app.UseStaticFiles();
 
+// Old /Controller/Action/id URLs -> new attribute-route URLs (301)
+app.UseLegacyRouteRedirects();
+
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
-// MVC routing — open app at login; authenticated users browse from Home/Index
-app.MapControllerRoute(
-    name: "default",
-    pattern: "{controller=Home}/{action=Login}/{id?}");
+// Every controller uses attribute routes (lowercase, kebab-case, plural nouns): see docs/routes.md.
+// "/" is the dashboard; anonymous users are sent to /login by the fallback authorization policy.
+app.MapControllers();
 
 app.Run();

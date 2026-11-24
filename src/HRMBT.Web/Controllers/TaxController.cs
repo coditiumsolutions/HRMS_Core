@@ -7,6 +7,7 @@ using HRMBT.Web.Models;
 
 namespace HRMBT.Web.Controllers
 {
+[Route("tax-rules")]
     public class TaxController : Controller
     {
 
@@ -172,6 +173,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: Tax
+        [HttpGet("")]
         public async Task<IActionResult> Index(string? taxYear)
         {
             ViewData["Module"] = "Tax";
@@ -194,6 +196,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: Tax/Details/5
+        [HttpGet("{id}")]
         public async Task<IActionResult> Details(int? id)
         {
             ViewData["Module"] = "Tax";
@@ -206,6 +209,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: Tax/Create
+        [HttpGet("new")]
         public async Task<IActionResult> Create()
         {
             ViewData["Module"] = "Tax";
@@ -215,7 +219,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // POST: Tax/Create
-        [HttpPost]
+        [HttpPost("new")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("MinSalary,MaxSalary,TaxPercentage,TaxYear")] TaxRule taxRule)
         {
@@ -240,6 +244,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: Tax/Edit/5
+        [HttpGet("{id}/edit")]
         public async Task<IActionResult> Edit(int? id)
         {
             ViewData["Module"] = "Tax";
@@ -253,7 +258,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // POST: Tax/Edit/5
-        [HttpPost]
+        [HttpPost("{id}/edit")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("Id,MinSalary,MaxSalary,TaxPercentage,TaxYear")] TaxRule taxRule)
         {
@@ -293,6 +298,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: Tax/Delete/5
+        [HttpGet("{id}/delete")]
         public async Task<IActionResult> Delete(int? id)
         {
             ViewData["Module"] = "Tax";
@@ -305,7 +311,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // POST: Tax/Delete/5
-        [HttpPost, ActionName("Delete")]
+        [HttpPost("{id}/delete"), ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {

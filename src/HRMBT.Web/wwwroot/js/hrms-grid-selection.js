@@ -6,6 +6,11 @@
         var editBase = grid.dataset.editBase || '';
         var deleteBase = grid.dataset.deleteBase || '';
         var detailsBase = grid.dataset.detailsBase || '';
+        // Bases are URL templates containing __id__ (e.g. /employees/__id__/edit); a plain base still gets /id appended.
+        function urlFor(base, id) {
+            var enc = encodeURIComponent(id);
+            return base.indexOf('__id__') >= 0 ? base.replace('__id__', enc) : base + '/' + enc;
+        }
         var editBtn = document.getElementById(grid.dataset.editBtnId || 'btnEditSelected');
         var deleteBtn = document.getElementById(grid.dataset.deleteBtnId || 'btnDeleteSelected');
         var radioClass = grid.dataset.radioClass || 'hrms-row-select';
@@ -59,19 +64,19 @@
                 return;
             }
             var canEdit = row ? rowCanMutate(row) : true;
-            setActionEnabled(editBtn, canEdit && !!editBase, editBase + '/' + encodeURIComponent(id));
-            setActionEnabled(deleteBtn, canEdit && !!deleteBase, deleteBase + '/' + encodeURIComponent(id));
+            setActionEnabled(editBtn, canEdit && !!editBase, urlFor(editBase, id));
+            setActionEnabled(deleteBtn, canEdit && !!deleteBase, urlFor(deleteBase, id));
         }
 
         function openRead(row) {
             var id = rowId(row);
             if (!id) return;
             if (detailsBase) {
-                window.location.href = detailsBase + '/' + encodeURIComponent(id);
+                window.location.href = urlFor(detailsBase, id);
                 return;
             }
             if (editBase) {
-                window.location.href = editBase + '/' + encodeURIComponent(id);
+                window.location.href = urlFor(editBase, id);
             }
         }
 

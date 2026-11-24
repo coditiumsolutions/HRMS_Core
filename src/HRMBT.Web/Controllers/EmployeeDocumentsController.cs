@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace HRMBT.Web.Controllers;
 
+[Route("employee-documents")]
 public class EmployeeDocumentsController : Controller
 {
     private readonly IEmployeeDocumentService _documentService;
@@ -13,7 +14,7 @@ public class EmployeeDocumentsController : Controller
         _documentService = documentService;
     }
 
-    [HttpPost]
+    [HttpPost("upload")]
     [ValidateAntiForgeryToken]
     [RequestFormLimits(MultipartBodyLengthLimit = 104857600)]
     [RequestSizeLimit(104857600)]
@@ -50,7 +51,7 @@ public class EmployeeDocumentsController : Controller
         return RedirectToAction("Edit", "Employee", new { id = employeeId, tab = "attachments" });
     }
 
-    [HttpGet]
+    [HttpGet("{id}")]
     public async Task<IActionResult> Download(int id, CancellationToken cancellationToken)
     {
         var file = await _documentService.GetDownloadAsync(id, cancellationToken);
@@ -60,7 +61,7 @@ public class EmployeeDocumentsController : Controller
         return File(file.Stream, file.ContentType, file.DownloadFileName);
     }
 
-    [HttpPost]
+    [HttpPost("{id}/delete")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(int id, int employeeId, CancellationToken cancellationToken)
     {
@@ -76,7 +77,7 @@ public class EmployeeDocumentsController : Controller
             : "Document could not be deleted.";
 
         var referer = Request.Headers.Referer.ToString();
-        if (!string.IsNullOrEmpty(referer) && referer.Contains("/Employee/Details/", StringComparison.OrdinalIgnoreCase))
+        if (!string.IsNullOrEmpty(referer) && referer.Contains("/employees/", StringComparison.OrdinalIgnoreCase) && !referer.Contains("/edit", StringComparison.OrdinalIgnoreCase))
         {
             return RedirectToAction("Details", "Employee", new { id = employeeId, tab = "attachments" });
         }

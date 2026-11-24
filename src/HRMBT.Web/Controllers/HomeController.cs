@@ -40,6 +40,7 @@ public class HomeController : Controller
         _cache = cache;
     }
 
+    [HttpGet("/")]
     public async Task<IActionResult> Index()
     {
         ViewData["Module"] = "Home";
@@ -76,12 +77,14 @@ public class HomeController : Controller
     }
 
     /// <summary>Shown when a signed-in user lacks the role an area needs (cookie AccessDeniedPath).</summary>
+    [HttpGet("/access-denied")]
     public IActionResult AccessDenied()
     {
         Response.StatusCode = StatusCodes.Status403Forbidden;
         return View();
     }
 
+    [HttpGet("/privacy")]
     public IActionResult Privacy()
     {
         ViewData["Module"] = "Home";
@@ -89,7 +92,7 @@ public class HomeController : Controller
     }
 
     [AllowAnonymous]
-    [HttpGet]
+    [HttpGet("/login")]
     public IActionResult Login(string? returnUrl)
     {
         if (User.Identity?.IsAuthenticated == true)
@@ -101,7 +104,7 @@ public class HomeController : Controller
     }
 
     [AllowAnonymous]
-    [HttpPost]
+    [HttpPost("/login")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Login(LoginViewModel model, string? returnUrl)
     {
@@ -202,7 +205,7 @@ public class HomeController : Controller
 
     /// <summary>Development-only: open a DB connection and report success or the real SqlClient error.</summary>
     [AllowAnonymous]
-    [HttpGet]
+    [HttpGet("/db-health")]
     public async Task<IActionResult> DbHealth()
     {
         if (!_env.IsDevelopment())
@@ -223,7 +226,7 @@ public class HomeController : Controller
     }
 
     [AllowAnonymous]
-    [HttpPost]
+    [HttpPost("/logout")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Logout()
     {
@@ -233,6 +236,7 @@ public class HomeController : Controller
 
     [AllowAnonymous]
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+    [Route("/error")]
     public IActionResult Error()
     {
         ViewData["Module"] = "Home";

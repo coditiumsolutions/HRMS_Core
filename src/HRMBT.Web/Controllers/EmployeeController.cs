@@ -13,6 +13,7 @@ using System.Drawing;
 
 namespace HRMBT.Web.Controllers;
 
+[Route("employees")]
 public class EmployeeController : Controller
 {
     private readonly ApplicationDbContext _context;
@@ -25,6 +26,7 @@ public class EmployeeController : Controller
     }
 
     // GET: Employee
+    [HttpGet("")]
     public async Task<IActionResult> Index(string? department, string? designation, string? project, string? search, string? employeeName, string? employeeID, string? year2024, string? applyTax, string? sortBy = "EmployeeID", string? sortOrder = "asc", int page = 1, int pageSize = 20)
     {
         ViewData["Module"] = "Employees";
@@ -134,6 +136,7 @@ public class EmployeeController : Controller
     }
 
     // GET: Employee/Dashboard
+    [HttpGet("dashboard")]
     public async Task<IActionResult> Dashboard()
     {
         ViewData["Module"] = "Employees";
@@ -176,6 +179,7 @@ public class EmployeeController : Controller
     }
 
     // GET: Employee/ExportExcel
+    [HttpGet("export")]
     public async Task<IActionResult> ExportExcel(string? department, string? designation, string? search, string? employeeName, string? employeeID, string? year2024, string? applyTax, string? sortBy = "EmployeeID", string? sortOrder = "asc")
     {
         var query = _context.Employees.AsQueryable();
@@ -255,6 +259,7 @@ public class EmployeeController : Controller
     }
 
     // GET: Employee/Details/5
+    [HttpGet("{id}")]
     public async Task<IActionResult> Details(int? id)
     {
         ViewData["Module"] = "Employees";
@@ -289,6 +294,7 @@ public class EmployeeController : Controller
     }
 
     // GET: Employee/Create
+    [HttpGet("new")]
     public async Task<IActionResult> Create()
     {
         ViewData["Module"] = "Employees";
@@ -297,7 +303,7 @@ public class EmployeeController : Controller
     }
 
     // POST: Employee/Create
-    [HttpPost]
+    [HttpPost("new")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create([Bind("EmployeeID,EmployeeName,FatherName,DOB,CNIC,MobileNo,ProjectId,DepartmentId,SubDepartmentId,DesignationId,DateOfJoining,DateOfLeaving,DateOfReturn,EmployeeStatus,ModifiedBy,Details,Notes,CarryForwardLeaves,Year2022,Year2023,AdjustedAjusted,Year2024,CarryForwardLeaves1,Year2023New,BasicSalary,ApplyTax,GenStatus")] Employee employee)
     {
@@ -329,6 +335,7 @@ public class EmployeeController : Controller
     }
 
     // GET: Employee/Edit/5
+    [HttpGet("{id}/edit")]
     public async Task<IActionResult> Edit(int? id)
     {
         ViewData["Module"] = "Employees";
@@ -349,7 +356,7 @@ public class EmployeeController : Controller
     }
 
     // POST: Employee/Edit/5
-    [HttpPost]
+    [HttpPost("{id}/edit")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(int id, [Bind("RowVersion,uid,EmployeeID,EmployeeName,FatherName,DOB,CNIC,MobileNo,ProjectId,DepartmentId,SubDepartmentId,DesignationId,DateOfJoining,DateOfLeaving,DateOfReturn,EmployeeStatus,ModifiedBy,Details,Notes,CarryForwardLeaves,Year2022,Year2023,AdjustedAjusted,Year2024,CarryForwardLeaves1,Year2023New,BasicSalary,ApplyTax,GenStatus")] Employee employee)
     {
@@ -404,6 +411,7 @@ public class EmployeeController : Controller
 
     // GET: Employee/Delete/5
     [Authorize(Roles = "Admin")]
+    [HttpGet("{id}/delete")]
     public async Task<IActionResult> Delete(int? id)
     {
         ViewData["Module"] = "Employees";
@@ -423,7 +431,7 @@ public class EmployeeController : Controller
     }
 
     // POST: Employee/Delete/5
-    [HttpPost, ActionName("Delete")]
+    [HttpPost("{id}/delete"), ActionName("Delete")]
     [ValidateAntiForgeryToken]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> DeleteConfirmed(int id)

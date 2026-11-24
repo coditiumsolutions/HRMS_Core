@@ -3,9 +3,9 @@
 @{
     ViewData["Title"] = "Attendance Management";
     ViewData["Module"] = "Attendance";
-    var editBaseUrl = Url.Action("Edit", "Attendance");
-    var deleteBaseUrl = Url.Action("Delete", "Attendance");
-    var detailsBaseUrl = Url.Action("Details", "Attendance");
+    var editBaseUrl = Url.Action("Edit", "Attendance", new { id = "__id__" });
+    var deleteBaseUrl = Url.Action("Delete", "Attendance", new { id = "__id__" });
+    var detailsBaseUrl = Url.Action("Details", "Attendance", new { id = "__id__" });
 }
 
 @section Styles {

@@ -8,6 +8,7 @@ using HRMBT.Web.Models.ViewModels;
 
 namespace HRMBT.Web.Controllers
 {
+[Route("leave")]
     public class LMSController : Controller
     {
         private const string LeaveTypesConfigKey = "LeaveTypes";
@@ -115,6 +116,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: LMS — lists dbo.LeaveRequests joined with Employee for display.
+        [HttpGet("")]
         public async Task<IActionResult> Index(string? search, string? employeeId, string? status, string? leaveType)
         {
             ViewData["Module"] = "LMS";
@@ -168,6 +170,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: LMS/LeaveQuota — lists dbo.LeaveQuota (leave types and yearly quotas).
+        [HttpGet("quotas")]
         public async Task<IActionResult> LeaveQuota()
         {
             ViewData["Module"] = "LMS";
@@ -179,6 +182,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: LMS/CreateLeaveQuota
+        [HttpGet("quotas/new")]
         public async Task<IActionResult> CreateLeaveQuota()
         {
             ViewData["Module"] = "LMS";
@@ -191,7 +195,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // POST: LMS/CreateLeaveQuota
-        [HttpPost]
+        [HttpPost("quotas/new")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateLeaveQuota([Bind("LeaveTypeName,TotalLeaves,Year")] LeaveQuota model)
         {
@@ -212,6 +216,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: LMS/EditLeaveQuota/5
+        [HttpGet("quotas/{id}/edit")]
         public async Task<IActionResult> EditLeaveQuota(int? id)
         {
             ViewData["Module"] = "LMS";
@@ -225,7 +230,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // POST: LMS/EditLeaveQuota/5
-        [HttpPost]
+        [HttpPost("quotas/{id}/edit")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditLeaveQuota(int id, [Bind("UID,LeaveTypeName,TotalLeaves,Year")] LeaveQuota model)
         {
@@ -257,6 +262,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: LMS/DeleteLeaveQuota/5
+        [HttpGet("quotas/{id}/delete")]
         public async Task<IActionResult> DeleteLeaveQuota(int? id)
         {
             ViewData["Module"] = "LMS";
@@ -270,7 +276,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // POST: LMS/DeleteLeaveQuota/5
-        [HttpPost, ActionName("DeleteLeaveQuota")]
+        [HttpPost("quotas/{id}/delete"), ActionName("DeleteLeaveQuota")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteLeaveQuotaConfirmed(int id)
         {
@@ -287,6 +293,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: LMS/LeaveBalance — available (LeaveQuota) minus availed (LeaveRequests) for selected year.
+        [HttpGet("balances")]
         public async Task<IActionResult> LeaveBalance(string? year, string? department)
         {
             ViewData["Module"] = "LMS";
@@ -458,6 +465,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: LMS/Details/5
+        [HttpGet("{id}")]
         public async Task<IActionResult> Details(int? id)
         {
             ViewData["Module"] = "LMS";
@@ -475,6 +483,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: LMS/Create
+        [HttpGet("new")]
         public async Task<IActionResult> Create()
         {
             ViewData["Module"] = "LMS";
@@ -494,7 +503,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // POST: LMS/Create — persists dbo.LeaveRequests
-        [HttpPost]
+        [HttpPost("new")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("EmployeeId,LeaveType,FromDate,ToDate,Status")] LeaveRequest model)
         {
@@ -549,6 +558,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: LMS/Edit/5
+        [HttpGet("{id}/edit")]
         public async Task<IActionResult> Edit(int? id)
         {
             ViewData["Module"] = "LMS";
@@ -565,7 +575,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // POST: LMS/Edit/5
-        [HttpPost]
+        [HttpPost("{id}/edit")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("Id,EmployeeId,LeaveType,FromDate,ToDate,Status,RowVersion")] LeaveRequest model)
         {
@@ -633,6 +643,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: LMS/Delete/5
+        [HttpGet("{id}/delete")]
         public async Task<IActionResult> Delete(int? id)
         {
             ViewData["Module"] = "LMS";
@@ -650,7 +661,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // POST: LMS/Delete/5
-        [HttpPost, ActionName("Delete")]
+        [HttpPost("{id}/delete"), ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {

@@ -2,8 +2,8 @@
 
 @{
     ViewData["Title"] = "Leaves quota";
-    var editBaseUrl = Url.Action("EditLeaveQuota", "LMS");
-    var deleteBaseUrl = Url.Action("DeleteLeaveQuota", "LMS");
+    var editBaseUrl = Url.Action("EditLeaveQuota", "LMS", new { id = "__id__" });
+    var deleteBaseUrl = Url.Action("DeleteLeaveQuota", "LMS", new { id = "__id__" });
 }
 
 @section Styles {

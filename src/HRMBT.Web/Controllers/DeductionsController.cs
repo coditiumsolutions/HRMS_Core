@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HRMBT.Web.Controllers;
 
+[Route("deductions")]
 public class DeductionsController : Controller
 {
     private const string DeductionTypeConfigKey = "DeductionType";
@@ -244,6 +245,7 @@ public class DeductionsController : Controller
     }
 
     // GET: Deductions
+    [HttpGet("")]
     public async Task<IActionResult> Index(int? deptId = null, string? empSearch = null, bool? isActive = null, int page = 1)
     {
         ViewData["Module"] = "Deductions";
@@ -304,6 +306,7 @@ public class DeductionsController : Controller
     }
 
     // GET: Deductions/Add — bulk: filter employees, checkboxes, department + frequency + type from Configuration.
+    [HttpGet("bulk")]
     public async Task<IActionResult> Add(int? deptId = null, string? empSearch = null, int ePage = 1, int ePageSize = 20)
     {
         ViewData["Module"] = "Deductions";
@@ -381,7 +384,7 @@ public class DeductionsController : Controller
         return View(employeesPage);
     }
 
-    [HttpPost]
+    [HttpPost("bulk")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> BulkCreateDeductions(
         List<int>? selectedEmployeeIds,
@@ -528,6 +531,7 @@ public class DeductionsController : Controller
     }
 
     // GET: Deductions/Details/5
+    [HttpGet("{id}")]
     public async Task<IActionResult> Details(int? id)
     {
         ViewData["Module"] = "Deductions";
@@ -545,6 +549,7 @@ public class DeductionsController : Controller
     }
 
     // GET: Deductions/Create
+    [HttpGet("new")]
     public async Task<IActionResult> Create()
     {
         ViewData["Module"] = "Deductions";
@@ -563,7 +568,7 @@ public class DeductionsController : Controller
     }
 
     /// <summary>Lookup active employee by Employee ID (exact, then contains) for Create form search.</summary>
-    [HttpGet]
+    [HttpGet("employee-lookup")]
     public async Task<IActionResult> FindEmployee(string? q)
     {
         var term = (q ?? "").Trim();
@@ -604,7 +609,7 @@ public class DeductionsController : Controller
     }
 
     // POST: Deductions/Create
-    [HttpPost]
+    [HttpPost("new")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(
         [Bind("EmployeeId,DeductionType,DeductionName,Frequency,CalculationMethod,PercentageValue,IsMandatory,EffectiveDate,EndDate,IsActive,RequestId")]
@@ -679,6 +684,7 @@ public class DeductionsController : Controller
     }
 
     // GET: Deductions/Edit/5
+    [HttpGet("{id}/edit")]
     public async Task<IActionResult> Edit(int? id)
     {
         ViewData["Module"] = "Deductions";
@@ -694,7 +700,7 @@ public class DeductionsController : Controller
     }
 
     // POST: Deductions/Edit/5
-    [HttpPost]
+    [HttpPost("{id}/edit")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(int id,
         [Bind("Id,EmployeeId,DeductionType,DeductionName,Frequency,CalculationMethod,PercentageValue,IsMandatory,EffectiveDate,EndDate,IsActive,CreatedDate,CreatedBy")]
@@ -790,6 +796,7 @@ public class DeductionsController : Controller
     };
 
     // GET: Deductions/Delete/5
+    [HttpGet("{id}/delete")]
     public async Task<IActionResult> Delete(int? id)
     {
         ViewData["Module"] = "Deductions";
@@ -807,7 +814,7 @@ public class DeductionsController : Controller
     }
 
     // POST: Deductions/Delete/5
-    [HttpPost, ActionName("Delete")]
+    [HttpPost("{id}/delete"), ActionName("Delete")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteConfirmed(int id)
     {

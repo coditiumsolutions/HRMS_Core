@@ -1,8 +1,8 @@
 @model IReadOnlyList<HRMBT.Web.Models.HrConfiguration>
 @{
     ViewData["Title"] = "Configuration";
-    var editBaseUrl = Url.Action("EditConfig", "Setup");
-    var deleteBaseUrl = Url.Action("DeleteConfig", "Setup");
+    var editBaseUrl = Url.Action("EditConfig", "Setup", new { id = "__id__" });
+    var deleteBaseUrl = Url.Action("DeleteConfig", "Setup", new { id = "__id__" });
 
     static string TrimForTable(string? s, int max = 96)
     {

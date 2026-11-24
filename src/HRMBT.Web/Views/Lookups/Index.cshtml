@@ -101,7 +101,7 @@
                                         <td class="text-end">@r.Usage</td>
                                         <td class="text-end text-nowrap">
                                             <a class="btn btn-sm btn-grid-edit" asp-action="Edit" asp-route-kind="@Model.Kind" asp-route-id="@r.Id"><i class="bi bi-pencil me-1"></i>Edit</a>
-                                            <form asp-action="Toggle" method="post" class="d-inline">
+                                            <form asp-action="Toggle" asp-route-kind="@Model.Kind" asp-route-id="@r.Id" method="post" class="d-inline">
                                                 <input type="hidden" name="kind" value="@Model.Kind" />
                                                 <input type="hidden" name="id" value="@r.Id" />
                                                 <input type="hidden" name="departmentId" value="@Model.DepartmentFilterId" />
@@ -109,7 +109,7 @@
                                             </form>
                                             @if (r.Usage == 0)
                                             {
-                                                <form asp-action="Delete" method="post" class="d-inline" onsubmit="return confirm('Delete @(r.Name.Replace("'", "")) permanently?');">
+                                                <form asp-action="Delete" asp-route-kind="@Model.Kind" asp-route-id="@r.Id" method="post" class="d-inline" onsubmit="return confirm('Delete @(r.Name.Replace("'", "")) permanently?');">
                                                     <input type="hidden" name="kind" value="@Model.Kind" />
                                                     <input type="hidden" name="id" value="@r.Id" />
                                                     <input type="hidden" name="departmentId" value="@Model.DepartmentFilterId" />

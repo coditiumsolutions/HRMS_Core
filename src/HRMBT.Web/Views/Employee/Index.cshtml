@@ -30,9 +30,9 @@
         };
     }
 
-    var editBaseUrl = Url.Action("Edit", "Employee");
-    var deleteBaseUrl = Url.Action("Delete", "Employee");
-    var detailsBaseUrl = Url.Action("Details", "Employee");
+    var editBaseUrl = Url.Action("Edit", "Employee", new { id = "__id__" });
+    var deleteBaseUrl = Url.Action("Delete", "Employee", new { id = "__id__" });
+    var detailsBaseUrl = Url.Action("Details", "Employee", new { id = "__id__" });
 }
 
 @section Styles {

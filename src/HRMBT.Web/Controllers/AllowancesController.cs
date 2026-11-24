@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HRMBT.Web.Controllers;
 
+[Route("allowances")]
 public class AllowancesController : Controller
 {
     private const string AllowanceTypesConfigKey = "AllowanceTypes";
@@ -273,6 +274,7 @@ public class AllowancesController : Controller
 
     /// <summary>View allowance rows filtered by employee department and/or employee ID, name, or allowance type.</summary>
     // GET: Allowances
+    [HttpGet("")]
     public async Task<IActionResult> Index(int? deptId = null, string? empSearch = null, string? allowanceType = null, int page = 1)
     {
         ViewData["Module"] = "Allowances";
@@ -352,6 +354,7 @@ public class AllowancesController : Controller
     }
 
     // GET: Allowances/Add — bulk add: filter employees, select checkboxes, apply configured allowance.
+    [HttpGet("bulk")]
     public async Task<IActionResult> Add(int? deptId = null, int ePage = 1)
     {
         ViewData["Module"] = "Allowances";
@@ -401,7 +404,7 @@ public class AllowancesController : Controller
     }
 
     /// <summary>Add the same allowance (type, name, amount/percentage, dates) for each selected employee.</summary>
-    [HttpPost]
+    [HttpPost("bulk")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> BulkCreateAllowances(
         List<int>? selectedEmployeeIds,
@@ -577,7 +580,7 @@ public class AllowancesController : Controller
     }
 
     /// <summary>Unit fuel price from dbo.Configuration where ConfigKey = FuelPrice (0 if missing).</summary>
-    [HttpGet]
+    [HttpGet("fuel-price")]
     public async Task<IActionResult> FuelPrice()
     {
         var unit = await GetFuelUnitPriceFromConfigurationAsync();
@@ -585,6 +588,7 @@ public class AllowancesController : Controller
     }
 
     // GET: Allowances/Details/5
+    [HttpGet("{id}")]
     public async Task<IActionResult> Details(int? id)
     {
         ViewData["Module"] = "Allowances";
@@ -600,6 +604,7 @@ public class AllowancesController : Controller
     }
 
     // GET: Allowances/Create
+    [HttpGet("new")]
     public async Task<IActionResult> Create()
     {
         ViewData["Module"] = "Allowances";
@@ -621,7 +626,7 @@ public class AllowancesController : Controller
     }
 
     /// <summary>Lookup active employee by Employee ID (exact, then contains) for Create form search.</summary>
-    [HttpGet]
+    [HttpGet("employee-lookup")]
     public async Task<IActionResult> FindEmployee(string? q)
     {
         var term = (q ?? "").Trim();
@@ -662,7 +667,7 @@ public class AllowancesController : Controller
     }
 
     // POST: Allowances/Create
-    [HttpPost]
+    [HttpPost("new")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(
         [Bind("EmployeeId,AllowanceType,Name,Frequency,Amount,Quantity,IsPercentage,PercentageValue,EffectiveDate,EndDate,IsActive,Remarks,RequestId")] Allowance allowance,
@@ -733,6 +738,7 @@ public class AllowancesController : Controller
     }
 
     // GET: Allowances/Edit/5
+    [HttpGet("{id}/edit")]
     public async Task<IActionResult> Edit(int? id)
     {
         ViewData["Module"] = "Allowances";
@@ -749,7 +755,7 @@ public class AllowancesController : Controller
     }
 
     // POST: Allowances/Edit/5
-    [HttpPost]
+    [HttpPost("{id}/edit")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(int id, [Bind("Id,AllowanceType,Name,Frequency,Amount,Quantity,IsPercentage,PercentageValue,EffectiveDate,EndDate,IsActive,Remarks,CreatedDate,CreatedBy")] Allowance posted)
     {
@@ -846,6 +852,7 @@ public class AllowancesController : Controller
     }
 
     // GET: Allowances/Delete/5
+    [HttpGet("{id}/delete")]
     public async Task<IActionResult> Delete(int? id)
     {
         ViewData["Module"] = "Allowances";
@@ -861,7 +868,7 @@ public class AllowancesController : Controller
     }
 
     // POST: Allowances/Delete/5
-    [HttpPost, ActionName("Delete")]
+    [HttpPost("{id}/delete"), ActionName("Delete")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteConfirmed(int id)
     {

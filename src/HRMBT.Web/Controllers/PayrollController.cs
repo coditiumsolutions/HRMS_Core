@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 
 namespace HRMBT.Web.Controllers
 {
+[Route("payroll")]
     public class PayrollController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -35,6 +36,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: Payroll
+        [HttpGet("")]
         public async Task<IActionResult> Index(string? month, int? year, string? search, string? department, string? employeeId, string? employeeName, int page = 1, int pageSize = 20)
         {
             ViewData["Module"] = "Payroll";
@@ -101,6 +103,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: Payroll/GeneratePayslips
+        [HttpGet("run")]
         public async Task<IActionResult> GeneratePayslips()
         {
             ViewData["Module"] = "Payroll";
@@ -123,7 +126,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // POST: Payroll/GeneratePayslips
-        [HttpPost]
+        [HttpPost("run")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> GeneratePayslips(GeneratePayslipsVM model)
         {
@@ -197,6 +200,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: Payroll/Details/5
+        [HttpGet("{id}")]
         public async Task<IActionResult> Details(int? id)
         {
             ViewData["Module"] = "Payroll";
@@ -219,6 +223,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: Payroll/Search
+        [HttpGet("search")]
         public async Task<IActionResult> Search(string? month, int? year, string employeeId, string employeeName)
         {
             ViewData["Module"] = "Payroll";
@@ -263,6 +268,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: Payroll/GenerateIndividual
+        [HttpGet("run/single")]
         public IActionResult GenerateIndividual()
         {
             ViewData["Module"] = "Payroll";
@@ -274,7 +280,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // POST: Payroll/GenerateIndividual
-        [HttpPost]
+        [HttpPost("run/single")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> GenerateIndividual(GenerateIndividualVM model)
         {
@@ -348,6 +354,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: Payroll/Create
+        [HttpGet("new")]
         public IActionResult Create()
         {
             ViewData["Module"] = "Payroll";
@@ -358,7 +365,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // POST: Payroll/Create
-        [HttpPost]
+        [HttpPost("new")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(string employeeId, string? month, int? year)
         {
@@ -451,6 +458,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: Payroll/EmployeeDetail
+        [HttpGet("employees")]
         public async Task<IActionResult> EmployeeDetail(string department, int page = 1, int pageSize = 20)
         {
             ViewData["Module"] = "Payroll";
@@ -493,13 +501,14 @@ namespace HRMBT.Web.Controllers
 
         // GET: Payroll/GeneratePayroll
         // Reuses EmployeeDetail data/view so functionality stays identical.
+        [HttpGet("generate")]
         public Task<IActionResult> GeneratePayroll(string department, int page = 1, int pageSize = 20)
         {
             return EmployeeDetail(department, page, pageSize);
         }
 
         // POST: Payroll/GeneratePayrollForSelected
-        [HttpPost]
+        [HttpPost("generate/selected")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> GeneratePayrollForSelected(List<int> selectedEmployeeIds, string month, int year, string? sourceAction, string? department)
         {
@@ -617,6 +626,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: Payroll/PayrollStatus
+        [HttpGet("status")]
         public async Task<IActionResult> PayrollStatus(string year, string? month, string department, string payrollStatus, int page = 1, int pageSize = 20)
         {
             ViewData["Module"] = "Payroll";
@@ -755,6 +765,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: Payroll/Dashboard
+        [HttpGet("dashboard")]
         public async Task<IActionResult> Dashboard(string? month, int? year)
         {
             ViewData["Module"] = "Payroll";

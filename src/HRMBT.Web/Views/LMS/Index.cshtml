@@ -6,9 +6,9 @@
     var filterStatus = ViewBag.CurrentStatus as string;
     var filterLeaveType = ViewBag.CurrentLeaveType as string;
     var leaveTypesList = ViewBag.LeaveTypes as List<string>;
-    var editBaseUrl = Url.Action("Edit", "LMS");
-    var deleteBaseUrl = Url.Action("Delete", "LMS");
-    var detailsBaseUrl = Url.Action("Details", "LMS");
+    var editBaseUrl = Url.Action("Edit", "LMS", new { id = "__id__" });
+    var deleteBaseUrl = Url.Action("Delete", "LMS", new { id = "__id__" });
+    var detailsBaseUrl = Url.Action("Details", "LMS", new { id = "__id__" });
 }
 
 @section Styles {

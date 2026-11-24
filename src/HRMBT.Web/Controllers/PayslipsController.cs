@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HRMBT.Web.Controllers
 {
+[Route("payslips")]
     public class PayslipsController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -17,6 +18,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: /Payslips
+        [HttpGet("")]
         public async Task<IActionResult> Index(
             string? employeeQuery,
             string? department,
@@ -119,6 +121,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: /Payslips/Create
+        [HttpGet("new")]
         public async Task<IActionResult> Create()
         {
             ViewData["Module"] = "Payroll";
@@ -133,10 +136,11 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: /Payslips/Generate (alias for Create)
+        [HttpGet("generate")]
         public IActionResult Generate() => RedirectToAction(nameof(Create));
 
         // POST: /Payslips/Create
-        [HttpPost]
+        [HttpPost("new")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(PayslipCreateVM model)
         {
@@ -242,6 +246,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: /Payslips/Details/5
+        [HttpGet("{id}")]
         public async Task<IActionResult> Details(int? id)
         {
             ViewData["Module"] = "Payroll";
@@ -259,6 +264,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: /Payslips/Print/5
+        [HttpGet("{id}/print")]
         public async Task<IActionResult> Print(int? id)
         {
             ViewData["Module"] = "Payroll";
@@ -276,6 +282,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: /Payslips/Delete/5
+        [HttpGet("{id}/delete")]
         public async Task<IActionResult> Delete(int? id)
         {
             ViewData["Module"] = "Payroll";
@@ -292,7 +299,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // POST: /Payslips/DeleteConfirmed/5
-        [HttpPost, ActionName("Delete")]
+        [HttpPost("{id}/delete"), ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
@@ -320,7 +327,7 @@ namespace HRMBT.Web.Controllers
         // ---------- AJAX ----------
 
         // GET: /Payslips/EmployeesByDepartment?department=Finance
-        [HttpGet]
+        [HttpGet("lookup/employees-by-department")]
         public async Task<JsonResult> EmployeesByDepartment(string? department)
         {
             var query = _context.Employees.AsQueryable();
@@ -347,7 +354,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: /Payslips/EmployeeDetails?id=5
-        [HttpGet]
+        [HttpGet("lookup/employees/{id}")]
         public async Task<JsonResult> EmployeeDetails(int id)
         {
             var employee = await _context.Employees.FirstOrDefaultAsync(e => e.uid == id);

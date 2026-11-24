@@ -103,6 +103,7 @@
                                 {
                                     <form asp-controller="EmployeeDocuments"
                                           asp-action="Delete"
+                                          asp-route-id="@doc.DocumentId"
                                           method="post"
                                           class="d-inline"
                                           onsubmit="return confirm('Delete this document?');">

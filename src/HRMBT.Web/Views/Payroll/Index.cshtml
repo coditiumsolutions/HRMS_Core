@@ -6,8 +6,8 @@
     ViewData["Module"] = "Payroll";
     var selectedMonthFilter = ViewBag.Month as string;
     var editBaseUrl = "";
-    var deleteBaseUrl = Url.Action("Delete", "Payslips");
-    var detailsBaseUrl = Url.Action("Details", "Payroll");
+    var deleteBaseUrl = Url.Action("Delete", "Payslips", new { id = "__id__" });
+    var detailsBaseUrl = Url.Action("Details", "Payroll", new { id = "__id__" });
 }
 
 @section Styles {

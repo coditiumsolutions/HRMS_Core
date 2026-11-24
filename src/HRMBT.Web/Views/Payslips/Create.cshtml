@@ -386,7 +386,7 @@
                     return;
                 }
 
-                fetch('@Url.Action("EmployeeDetails", "Payslips")?id=' + encodeURIComponent(id), { credentials: 'same-origin' })
+                fetch('@Url.Action("EmployeeDetails", "Payslips", new { id = "__id__" })'.replace('__id__', encodeURIComponent(id)), { credentials: 'same-origin' })
                     .then(function (r) { return r.json(); })
                     .then(function (data) {
                         if (!data || !data.found) {

@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 namespace HRMBT.Web.Controllers;
 
 [Authorize]
+[Route("reports")]
 public class ReportsController : Controller
 {
     private readonly ApplicationDbContext _context;
@@ -76,13 +77,14 @@ public class ReportsController : Controller
             .ToListAsync();
     }
 
+    [HttpGet("")]
     public IActionResult Index()
     {
         SetModule();
         return RedirectToAction(nameof(SalariesSummary));
     }
 
-    [HttpGet]
+    [HttpGet("salaries")]
     public async Task<IActionResult> SalariesSummary(string? month, int? year, string? department)
     {
         SetModule();
@@ -142,7 +144,7 @@ public class ReportsController : Controller
         return View(vm);
     }
 
-    [HttpGet]
+    [HttpGet("employees")]
     public async Task<IActionResult> EmployeeSummary(string? department)
     {
         SetModule();
@@ -182,7 +184,7 @@ public class ReportsController : Controller
         return View(vm);
     }
 
-    [HttpGet]
+    [HttpGet("allowances")]
     public async Task<IActionResult> AllowancesSummary(
         string? allowanceType,
         string? allowanceName,
@@ -250,7 +252,7 @@ public class ReportsController : Controller
         return View(vm);
     }
 
-    [HttpGet]
+    [HttpGet("deductions")]
     public async Task<IActionResult> DeductionsSummary(
         string? deductionType,
         string? deductionName,
@@ -317,6 +319,7 @@ public class ReportsController : Controller
         return View(vm);
     }
 
+    [HttpGet("taxes")]
     public IActionResult TaxesSummary()
     {
         SetModule();

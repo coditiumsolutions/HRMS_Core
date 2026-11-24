@@ -11,6 +11,7 @@ using System.IO;
 
 namespace HRMBT.Web.Controllers
 {
+[Route("attendance")]
     public class AttendanceController : Controller
     {
         private const string LeaveTypesConfigKey = "LeaveTypes";
@@ -48,6 +49,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: Attendance Dashboard
+        [HttpGet("")]
         public async Task<IActionResult> Index()
         {
             ViewData["Module"] = "Attendance";
@@ -56,6 +58,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: Attendance/Details/5
+        [HttpGet("{id}")]
         public async Task<IActionResult> Details(int? id)
         {
             ViewData["Module"] = "Attendance";
@@ -74,6 +77,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: Attendance/Create
+        [HttpGet("new")]
         public async Task<IActionResult> Create(string department, int page = 1, int pageSize = 20)
         {
             ViewData["Module"] = "Attendance";
@@ -113,7 +117,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // POST: Attendance/Create
-        [HttpPost]
+        [HttpPost("new")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(
             [FromForm] List<string> selectedEmployeeIds, 
@@ -230,6 +234,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: Attendance/OffDay — bulk leave rows in dbo.LeaveRequests (off-day / single day).
+        [HttpGet("off-days")]
         public async Task<IActionResult> OffDay(string? department, int page = 1, int pageSize = 20)
         {
             ViewData["Module"] = "Attendance";
@@ -261,7 +266,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // POST: Attendance/OffDay
-        [HttpPost]
+        [HttpPost("off-days")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> OffDay(
             [FromForm] List<string>? selectedEmployeeIds,
@@ -411,6 +416,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: Attendance/Edit/5
+        [HttpGet("{id}/edit")]
         public async Task<IActionResult> Edit(int? id)
         {
             ViewData["Module"] = "Attendance";
@@ -429,7 +435,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // POST: Attendance/Edit/5
-        [HttpPost]
+        [HttpPost("{id}/edit")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, Attendance attendance)
         {
@@ -473,6 +479,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: Attendance/Delete/5
+        [HttpGet("{id}/delete")]
         public async Task<IActionResult> Delete(int? id)
         {
             ViewData["Module"] = "Attendance";
@@ -491,7 +498,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // POST: Attendance/Delete/5
-        [HttpPost, ActionName("Delete")]
+        [HttpPost("{id}/delete"), ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
@@ -501,6 +508,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: Upload Excel Form
+        [HttpGet("upload")]
         public IActionResult Upload()
         {
             ViewData["Module"] = "Attendance";
@@ -508,7 +516,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // POST: Process Excel
-        [HttpPost]
+        [HttpPost("upload")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Upload(IFormFile excelFile)
         {
@@ -533,6 +541,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: Monthly Attendance Report
+        [HttpGet("monthly-report")]
         public async Task<IActionResult> MonthlyReport(int month, int year, string? department)
         {
             ViewData["Module"] = "Attendance";
@@ -583,6 +592,7 @@ namespace HRMBT.Web.Controllers
         }
 
         // GET: Attendance/AttendanceByDepartment
+        [HttpGet("by-department")]
         public async Task<IActionResult> AttendanceByDepartment(DateTime? date)
         {
             ViewData["Module"] = "Attendance";

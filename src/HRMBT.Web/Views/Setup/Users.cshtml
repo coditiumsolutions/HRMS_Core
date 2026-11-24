@@ -1,8 +1,8 @@
 @model IReadOnlyList<HRMBT.Web.Models.AppUser>
 @{
     ViewData["Title"] = "Users";
-    var editBaseUrl = Url.Action("EditUser", "Setup");
-    var deleteBaseUrl = Url.Action("DeleteUser", "Setup");
+    var editBaseUrl = Url.Action("EditUser", "Setup", new { id = "__id__" });
+    var deleteBaseUrl = Url.Action("DeleteUser", "Setup", new { id = "__id__" });
 }
 
 @section Styles {

@@ -3,9 +3,9 @@
 @{
     ViewData["Title"] = "Allowances";
     ViewData["Module"] = "Allowances";
-    var editBaseUrl = Url.Action("Edit", "Allowances");
-    var deleteBaseUrl = Url.Action("Delete", "Allowances");
-    var detailsBaseUrl = Url.Action("Details", "Allowances");
+    var editBaseUrl = Url.Action("Edit", "Allowances", new { id = "__id__" });
+    var deleteBaseUrl = Url.Action("Delete", "Allowances", new { id = "__id__" });
+    var detailsBaseUrl = Url.Action("Details", "Allowances", new { id = "__id__" });
 }
 
 @section Styles {

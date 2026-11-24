@@ -253,7 +253,7 @@
     @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
     <script>
         (function () {
-            var findUrl = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(findUrl ?? "/Allowances/FindEmployee"));
+            var findUrl = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(findUrl ?? "/allowances/employee-lookup"));
             var codeInput = document.getElementById('employeeCode');
             var uidInput = document.getElementById('EmployeeId');
             var statusEl = document.getElementById('employeeLookupStatus');

@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 namespace HRMBT.Web.Controllers;
 
 [Authorize(Roles = "Admin")]
+[Route("setup")]
 public class SetupController : Controller
 {
     private readonly ApplicationDbContext _context;
@@ -19,24 +20,26 @@ public class SetupController : Controller
         _context = context;
     }
 
+    [HttpGet("")]
     public IActionResult Index()
     {
         return View();
     }
 
+    [HttpGet("config")]
     public async Task<IActionResult> Config()
     {
         var rows = await _context.HrConfigurations.AsNoTracking().OrderBy(c => c.ConfigKey).ToListAsync();
         return View(rows);
     }
 
-    [HttpGet]
+    [HttpGet("config/new")]
     public IActionResult CreateConfig()
     {
         return View(new ConfigEditVm());
     }
 
-    [HttpPost]
+    [HttpPost("config/new")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CreateConfig(ConfigEditVm model)
     {
@@ -54,7 +57,7 @@ public class SetupController : Controller
         return RedirectToAction(nameof(Config));
     }
 
-    [HttpGet]
+    [HttpGet("config/{id}/edit")]
     public async Task<IActionResult> EditConfig(int id)
     {
         var row = await _context.HrConfigurations.AsNoTracking().FirstOrDefaultAsync(c => c.UID == id);
@@ -70,7 +73,7 @@ public class SetupController : Controller
         return View(vm);
     }
 
-    [HttpPost]
+    [HttpPost("config/{id}/edit")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> EditConfig(int id, ConfigEditVm model)
     {
@@ -91,7 +94,7 @@ public class SetupController : Controller
         return RedirectToAction(nameof(Config));
     }
 
-    [HttpGet]
+    [HttpGet("config/{id}/delete")]
     public async Task<IActionResult> DeleteConfig(int id)
     {
         var row = await _context.HrConfigurations.AsNoTracking().FirstOrDefaultAsync(c => c.UID == id);
@@ -100,7 +103,7 @@ public class SetupController : Controller
         return View(row);
     }
 
-    [HttpPost, ActionName("DeleteConfig")]
+    [HttpPost("config/{id}/delete"), ActionName("DeleteConfig")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteConfigConfirmed(int id)
     {
@@ -116,19 +119,20 @@ public class SetupController : Controller
         return RedirectToAction(nameof(Config));
     }
 
+    [HttpGet("users")]
     public async Task<IActionResult> Users()
     {
         var users = await _context.AppUsers.AsNoTracking().OrderBy(u => u.Username).ToListAsync(); // roles are auto-included
         return View(users);
     }
 
-    [HttpGet]
+    [HttpGet("users/new")]
     public IActionResult CreateUser()
     {
         return View(new SetupUserFormVm());
     }
 
-    [HttpPost]
+    [HttpPost("users/new")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CreateUser(SetupUserFormVm model)
     {
@@ -176,7 +180,7 @@ public class SetupController : Controller
         return RedirectToAction(nameof(Users));
     }
 
-    [HttpGet]
+    [HttpGet("users/{id}/edit")]
     public async Task<IActionResult> EditUser(int id)
     {
         var user = await _context.AppUsers.FirstOrDefaultAsync(u => u.Uid == id);
@@ -193,7 +197,7 @@ public class SetupController : Controller
         return View(vm);
     }
 
-    [HttpPost]
+    [HttpPost("users/{id}/edit")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> EditUser(int id, SetupUserFormVm model)
     {
@@ -252,7 +256,7 @@ public class SetupController : Controller
         return RedirectToAction(nameof(Users));
     }
 
-    [HttpGet]
+    [HttpGet("users/{id}/delete")]
     public async Task<IActionResult> DeleteUser(int id)
     {
         var user = await _context.AppUsers.AsNoTracking().FirstOrDefaultAsync(u => u.Uid == id);
@@ -261,7 +265,7 @@ public class SetupController : Controller
         return View(user);
     }
 
-    [HttpPost, ActionName("DeleteUser")]
+    [HttpPost("users/{id}/delete"), ActionName("DeleteUser")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteUserConfirmed(int id)
     {

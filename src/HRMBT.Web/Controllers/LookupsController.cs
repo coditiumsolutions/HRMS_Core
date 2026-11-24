@@ -13,6 +13,7 @@ namespace HRMBT.Web.Controllers;
 /// A row that is in use is deactivated, never deleted (db_standards S6, S14).
 /// </summary>
 [Authorize(Roles = "Admin,HR")]
+[Route("setup/lists")]
 public class LookupsController : Controller
 {
     private static readonly string[] Kinds = { "projects", "departments", "subdepartments", "designations", "leavetypes" };
@@ -26,7 +27,7 @@ public class LookupsController : Controller
 
     // ---------- list ----------
 
-    [HttpGet]
+    [HttpGet("{kind?}")]
     public async Task<IActionResult> Index(string? kind, int? departmentId)
     {
         kind = NormalizeKind(kind);
@@ -120,7 +121,7 @@ public class LookupsController : Controller
 
     // ---------- create ----------
 
-    [HttpGet]
+    [HttpGet("{kind}/new")]
     public async Task<IActionResult> Create(string? kind, int? departmentId)
     {
         kind = NormalizeKind(kind);
@@ -130,7 +131,7 @@ public class LookupsController : Controller
         return View("Edit", vm);
     }
 
-    [HttpPost]
+    [HttpPost("{kind}/new")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(LookupFormVm model)
     {
@@ -181,7 +182,7 @@ public class LookupsController : Controller
 
     // ---------- edit ----------
 
-    [HttpGet]
+    [HttpGet("{kind}/{id}/edit")]
     public async Task<IActionResult> Edit(string? kind, int id)
     {
         kind = NormalizeKind(kind);
@@ -192,7 +193,7 @@ public class LookupsController : Controller
         return View(vm);
     }
 
-    [HttpPost]
+    [HttpPost("{kind}/{id}/edit")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(LookupFormVm model)
     {
@@ -277,7 +278,7 @@ public class LookupsController : Controller
 
     // ---------- activate / deactivate / delete ----------
 
-    [HttpPost]
+    [HttpPost("{kind}/{id}/toggle")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Toggle(string? kind, int id, int? departmentId)
     {
@@ -319,7 +320,7 @@ public class LookupsController : Controller
         return RedirectToAction(nameof(Index), new { kind, departmentId });
     }
 
-    [HttpPost]
+    [HttpPost("{kind}/{id}/delete")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(string? kind, int id, int? departmentId)
     {
