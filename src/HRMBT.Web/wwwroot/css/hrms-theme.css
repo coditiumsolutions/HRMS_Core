@@ -587,6 +587,8 @@ body .sidebar-toggle { right: .45rem; top: .55rem; }
 
 /* "Home" is the last item of the link list: it scrolls with the page, nothing is pinned or measured by script */
 body .sidebar-scroll { flex: 0 0 auto; }
+/* the collapse button is absolutely positioned: the sidebars must be its containing block */
+body .sidebar, body .setup-sidebar, body .layout-sidebar { position: relative; }
 body .sidebar-home { flex: 0 0 auto; margin-top: .4rem; padding-top: .4rem; }
 
 /* ==========================================================================
@@ -615,6 +617,7 @@ body main > h1:first-child, body main > h2:first-child, body main > h3:first-chi
 
 /* Collapse button: same on every layout (Main, Setup, Deductions) */
 body .sidebar-toggle { position: absolute; z-index: 5; width: 1.4rem; height: 1.4rem; padding: 0; border-radius: 50%; border: 1px solid var(--hr-brass-500); background: var(--hr-navy-800); color: var(--hr-brass-400); font-size: .7rem; line-height: 1; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+body .sidebar-toggle #sidebarToggleIcon { font-size: 1.25rem; font-weight: 700; line-height: 1; margin-top: -.12em; }
 body .sidebar-toggle:hover { background: var(--hr-navy-700); color: #fff; }
 
 /* Compact second top bar (brand + user info) on every layout */
@@ -679,6 +682,9 @@ body .row-action {
   border-radius: .4rem; border: 1px solid transparent;
   font-size: 1rem; text-decoration: none; transition: background .12s ease, color .12s ease, border-color .12s ease;
 }
+body button.row-action { background: transparent; cursor: pointer; padding: 0; }
+body table td.col-actions form { display: inline; margin: 0; }
+body table th.col-actions--3, body table td.col-actions--3 { width: 7.5rem; }
 body .row-action-edit, body .row-action-view { color: #00203f; }
 body .row-action-edit:hover, body .row-action-edit:focus-visible,
 body .row-action-view:hover, body .row-action-view:focus-visible { background: #fff3c4; border-color: var(--hr-brass-500); color: #00203f; }
