@@ -60,10 +60,10 @@ Alternative: the Visual Studio publish profile `src/HRMBT.Web/Properties/Publish
 - Take a SQL Server backup of `HRBTK` before any schema change. No backup job is documented.
 
 ## Release checklist
-1. Back up `HRBTK` and copy `wwwroot/uploads/employees/` somewhere safe (the script wipes the deploy folder, **including uploaded employee documents**).
+1. Back up `HRBTK`. Employee documents: `DeployToIIS.bat` now copies `wwwroot/uploads` to `C:\HRMSBackups\uploads_<timestamp>` before it wipes the deploy folder and restores it after publishing (it aborts without deleting anything if the copy fails). The safer setup is `EmployeeDocuments:StorageBasePath` in `appsettings.Production.json` (see the example file), so documents never sit in the deploy folder; copy the existing `wwwroot/uploads/employees` there once.
 2. Apply any pending SQL changes and update `db.md` (version, date, change history).
 3. Run `scripts/deploy/DeployToIIS.bat`.
-4. Restore the uploads folder into the new deploy folder.
+4. Check the script printed `[OK] Documents restored` (or that `StorageBasePath` is in use). Rows flagged "File missing" in an employee's Attachments tab mean a document file is not on the server.
 5. Smoke test: open `https://hr.coditium.com`, sign in, open Employees, Payroll dashboard, one payslip print view, one document download.
 6. Check the IIS stdout/event log for startup errors.
 
@@ -74,7 +74,7 @@ Alternative: the Visual Studio publish profile `src/HRMBT.Web/Properties/Publish
 | P0 | Credentials for several servers, including `sa`, are committed in `appsettings.json` and git history. Rotate and move to server-side secrets. |
 | P0 | `/Setup` (user and configuration management) is anonymous; see `docs/analysis/04-security.md`. |
 | P1 | HTTP (port 80) is not redirected to HTTPS and the auth cookie is not marked `Secure`; add HTTPS redirection / an IIS rewrite rule. |
-| P1 | The deploy script deletes uploaded documents and has no rollback or downtime strategy. |
+| P1 | No rollback or downtime strategy. (Documents are now backed up and restored by the deploy script; move them out with `StorageBasePath` for good.) |
 | P1 | `DeployToIIS.bat` now prints the real URL (`https://hr.coditium.com`) and checks, but the deploy path (`C:\HRMSDeploy`) is still hard-coded and the script still wipes the deploy folder. |
 | P2 | No health-check endpoint, no structured logging, no documented backup or restore procedure. |
 | P2 | Unrecorded details to confirm on the server: IIS site/app-pool names, deploy folder path, where the connection string lives, .NET hosting bundle version, backup schedule. |

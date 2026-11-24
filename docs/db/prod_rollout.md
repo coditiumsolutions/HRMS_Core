@@ -47,7 +47,7 @@ The copy used test data. Re-run these checks read-only on production and resolve
 
 ## 4. The window (suggested order)
 1. Announce the downtime; stop the IIS site `HRMS` (or put up `app_offline.htm`).
-2. Full backup of `HRBTK` (+ copy the current publish folder, and `wwwroot/uploads`: **`DeployToIIS.bat` wipes the deploy folder including uploads**, so back them up and restore them after publishing).
+2. Full backup of `HRBTK` (+ copy the current publish folder, and `wwwroot/uploads`: `DeployToIIS.bat` now backs up and restores the uploads itself (check it prints both `[OK]` lines); copy them by hand as well before the window). After the schema changes run `scripts/database/tools/backfill-document-hashes.ps1` so the 8 existing documents get a `FileHash` (the unique per-employee hash index and the duplicate check ignore rows without one).
 3. Run, one at a time, checking the output and exit code after each:
    ```
    sqlcmd -S <server> -d HRBTK -U <user> -P <pwd> -C -b -I -i scripts\database\redesign\01_lookups_and_keys.sql

@@ -51,6 +51,23 @@ echo Step 3.5: Stopping HRMS app (IIS)...
 powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; Import-Module WebAdministration; if (Test-Path 'IIS:\AppPools\HRMS') { Stop-WebAppPool -Name 'HRMS' }; if (Test-Path 'IIS:\Sites\HRMS') { Stop-Website -Name 'HRMS' }"
 taskkill /F /IM HRMBT.Web.exe >nul 2>&1
 
+REM Step 3.7: Back up employee documents before the deploy folder is wiped (they live in wwwroot\uploads unless EmployeeDocuments:StorageBasePath points elsewhere)
+echo Step 3.7: Backing up employee documents...
+set UPLOADS_SRC=%DEPLOY_PATH%\wwwroot\uploads
+set UPLOADS_BACKUP=
+if exist "%UPLOADS_SRC%\employees" (
+    for /f %%i in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd_HHmmss"') do set STAMP=%%i
+    set UPLOADS_BACKUP=C:\HRMSBackups\uploads_%STAMP%
+    robocopy "%UPLOADS_SRC%" "%UPLOADS_BACKUP%" /E /COPY:DAT /R:2 /W:2 /NFL /NDL /NJH /NJS /NP >nul
+    if %ERRORLEVEL% GEQ 8 (
+        echo [ERROR] Could not back up %UPLOADS_SRC% to %UPLOADS_BACKUP%. Nothing was deleted.
+        exit /b 1
+    )
+    echo [OK] Documents copied to %UPLOADS_BACKUP%
+) else (
+    echo No wwwroot\uploads\employees folder found ^(nothing to back up; fine if StorageBasePath is used^)
+)
+
 REM Step 4: Publish to deployment folder
 echo Step 4: Publishing to %DEPLOY_PATH%...
 if exist "%DEPLOY_PATH%" (
@@ -67,6 +84,17 @@ dotnet publish "%PROJECT_PATH%HRMBT.Web.csproj" --configuration Release --output
 if %ERRORLEVEL% NEQ 0 (
     echo Publish failed!
     exit /b 1
+)
+
+REM Step 4.5: Put the employee documents back
+if defined UPLOADS_BACKUP (
+    echo Step 4.5: Restoring employee documents...
+    robocopy "%UPLOADS_BACKUP%" "%DEPLOY_PATH%\wwwroot\uploads" /E /COPY:DAT /R:2 /W:2 /NFL /NDL /NJH /NJS /NP >nul
+    if %ERRORLEVEL% GEQ 8 (
+        echo [ERROR] Documents could not be restored. They are safe in %UPLOADS_BACKUP%; copy them to %DEPLOY_PATH%\wwwroot\uploads by hand.
+        exit /b 1
+    )
+    echo [OK] Documents restored ^(backup kept in %UPLOADS_BACKUP%^)
 )
 
 REM Step 5: Verify web.config (ASP.NET Core Module)
@@ -105,6 +133,6 @@ echo   - IIS bindings: https on 443 with the hr.coditium.com certificate, http o
 echo   - App pool: HRMS (No Managed Code, 64-bit^)
 echo   - Firewall: allow TCP 80 and 443 inbound
 echo   - ASP.NET Core 8 Hosting Bundle installed
-echo   - REMINDER: this script wipes %DEPLOY_PATH% including wwwroot\uploads - back them up first
+echo   - Employee documents: copied to C:\HRMSBackups before the wipe and restored after publish. Better: set EmployeeDocuments:StorageBasePath ^(appsettings.Production.json^) to a folder outside %DEPLOY_PATH%
 echo.
 echo Deploy script finished.

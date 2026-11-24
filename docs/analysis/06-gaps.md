@@ -107,7 +107,7 @@ Priority: **P0** fix now · **P1** next sprint · **P2** planned · **P3** nice 
 - Warnings: the build is at 0 warnings and 0 errors (2026-11-23).
 
 ## Operations
-- `DeployToIIS.bat` wipes the deploy folder including uploaded employee documents on every release; no backup or rollback: **Open** (the rollout runbook covers a manual backup and restore of uploads).
+- `DeployToIIS.bat` wiped the deploy folder including uploaded employee documents on every release: **Fixed in the script** (backup to `C:\HRMSBackups`, restore after publish; abort if the backup fails). Still open: no database or app rollback; set `StorageBasePath` so documents live outside the site.
 - Secrets: **Done in the files** (per-environment git-ignored settings), **open in git history** (see Security).
 - Environment safety: with `ASPNETCORE_ENVIRONMENT` unset the app runs as Production and uses the production connection string. Launch profiles (default = Development, `Production` on port 5129) and README warnings are in place; the Production profile has not been started to verify it.
 - No scheduled jobs (attendance sync, backups), no email/notifications, no report export beyond the Excel employee list: **Open**.
