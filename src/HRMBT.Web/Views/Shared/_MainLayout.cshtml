@@ -357,6 +357,7 @@
                     <span id="sidebarToggleIcon">«</span>
                 </button>
                 <div class="sidebar-body" id="sidebarBody">
+                    <div class="sidebar-scroll">
                     @if (ViewData["Module"]?.ToString() == "Payroll")
                     {
                         @await Html.PartialAsync("_PayrollSidebar")
@@ -373,6 +374,8 @@
                     {
                         @await Html.PartialAsync("_Sidebar")
                     }
+                    </div>
+                    @await Html.PartialAsync("_SidebarHome")
                 </div>
             </div>
 
@@ -389,7 +392,7 @@
         <div class="footer-inner">
             <p class="footer-left">&copy; 2026. All Rights Reserved.</p>
             <p class="footer-center">HR Management System | Internal Use Only</p>
-            <p class="footer-right">Developed &amp; Maintained by IT Department</p>
+            <p class="footer-right">Developed &amp; Maintained by BTK Software Department</p>
         </div>
     </footer>
 

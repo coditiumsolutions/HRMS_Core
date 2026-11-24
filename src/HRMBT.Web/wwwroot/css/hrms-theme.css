@@ -512,3 +512,117 @@ body .setup-sidebar .nav-link.active { background: rgba(217, 184, 76, .14); bord
 body .setup-sidebar .text-muted { color: rgba(255, 255, 255, .6) !important; }
 body .setup-main { padding: var(--hr-s5) 1.25rem var(--hr-s6); }
 body .setup-shell { background: transparent; }
+
+/* ==========================================================================
+   Sidebar rhythm: roomier links, section titles with a short rule beneath.
+   Applies to every sidebar (Main, Setup, Deductions, Payroll, Attendance).
+   ========================================================================== */
+body .sidebar .sidebar-title,
+body .setup-sidebar .sidebar-title {
+  display: block;
+  position: relative;
+  font-family: var(--hr-font-body);
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--hr-brass-400) !important;
+  margin: 0 0 .6rem !important;
+  padding: .1rem .8rem .5rem;
+}
+/* short brass rule under the title, then a faint full-width hairline behind it */
+body .sidebar .sidebar-title::after,
+body .setup-sidebar .sidebar-title::after {
+  content: "";
+  position: absolute;
+  left: .8rem; right: .2rem; bottom: 0;
+  height: 1px;
+  background: linear-gradient(90deg, var(--hr-brass-400) 0, var(--hr-brass-400) 2.25rem, rgba(255, 255, 255, .14) 2.25rem, rgba(255, 255, 255, .14) 100%);
+}
+/* the old loose <hr> under titles is replaced by the rule above */
+body .sidebar .sidebar-title + hr { display: none; }
+
+body .sidebar .nav-link,
+body .setup-sidebar .nav-link {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  padding: .5rem .8rem;
+  margin-bottom: .15rem;
+  line-height: 1.3;
+}
+body .sidebar .nav-link > span:first-child { margin-right: 0 !important; width: 1.25rem; text-align: center; flex: none; }
+body .sidebar .nav-link:focus-visible,
+body .setup-sidebar .nav-link:focus-visible { outline: 2px solid var(--hr-brass-400); outline-offset: 2px; }
+
+/* Sub-section title inside a list (Setup > Lists): same look, a little air above */
+body .sidebar .sidebar-title--sub,
+body .setup-sidebar .sidebar-title--sub { margin-top: 1.1rem !important; }
+
+/* Sidebar is a column; the Home link sits at the bottom whatever the link count */
+body .layout-sidebar,
+body .setup-sidebar,
+body .container-fluid > .row > .sidebar { display: flex; flex-direction: column; }
+body .sidebar .sidebar-body { flex: 1 1 auto; display: flex; flex-direction: column; }
+body .setup-sidebar > .nav { flex: 0 0 auto; }
+body .sidebar-home {
+  margin-top: auto;
+  padding-top: .6rem;
+  border-top: 1px solid rgba(255, 255, 255, .14);
+}
+body .sidebar-home .nav-link { margin-bottom: 0; color: var(--hr-brass-400) !important; font-weight: 600; }
+body .sidebar-home .nav-link:hover { color: #fff !important; }
+body .sidebar .sidebar-title + .nav,
+body .sidebar .sidebar-title + nav { margin-top: 0; }
+
+/* One screen tall and pinned while scrolling (height is set by the script in _SidebarHome) */
+@media (min-width: 768px) {
+  body .layout-sidebar,
+  body .setup-sidebar,
+  body .container-fluid > .row > .sidebar {
+    position: sticky; top: 0; align-self: flex-start; overflow: hidden;
+  }
+}
+@media print { body .sidebar-home { display: none; } }
+
+/* The sidebar scrolls on its own now, so the collapse button sits inside it instead of hanging over the edge */
+body .layout-sidebar .sidebar-toggle { right: .45rem; top: .55rem; }
+
+/* Links scroll inside their own region; the Home link below never moves */
+body .sidebar-scroll { flex: 1 1 0; min-height: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.25) transparent; }
+body .sidebar-home { flex: 0 0 auto; margin-top: 0; background: var(--hr-navy-900); position: relative; }
+body .sidebar-home::before { content: ""; position: absolute; left: 0; right: 0; top: -1.1rem; height: 1.1rem; background: linear-gradient(180deg, transparent, var(--hr-navy-900)); pointer-events: none; }
+body .sidebar .sidebar-body { overflow: hidden; }
+
+/* Page fills the screen: top bars, content (grows), footer at the bottom. No fixed min-heights. */
+body.hr-sidebar-page { min-height: 100vh; display: flex; flex-direction: column; }
+body.hr-sidebar-page > .hr-fill { flex: 1 0 auto; display: flex; flex-direction: column; width: 100%; }
+body.hr-sidebar-page > .hr-fill > .row { flex: 1 1 auto; }
+body.hr-sidebar-page .sidebar,
+body.hr-sidebar-page .layout-sidebar,
+body.hr-sidebar-page .setup-sidebar { min-height: 0; }
+body.hr-sidebar-page .home-dashboard { min-height: 0; margin: 0; }
+
+/* ==========================================================================
+   Blank-gap pass: one small top and bottom margin around page content.
+   Pages used to stack main padding + a page wrapper's own padding + a
+   min-height of one screen, giving 50-80px above and large empty bands below.
+   ========================================================================== */
+body .main-content { padding-top: .9rem; padding-bottom: 1rem; }
+body .setup-main   { padding-top: .9rem; padding-bottom: 1rem; }
+
+body .employee-list-page,
+body .payslip-page,
+body .home-dashboard,
+body main > .py-3,
+body main > .py-4,
+body main > .py-5 {
+  min-height: 0 !important;
+  margin-top: 0; margin-bottom: 0;
+  padding-top: 0 !important;
+  padding-bottom: .5rem !important;
+}
+/* the employee form keeps room for its fixed Save bar */
+body .employee-create-page { min-height: 0 !important; padding-top: 0 !important; }
+body main > .container-fluid.py-3, body main > .container-fluid.py-4 { padding-top: 0 !important; }
+body main > h1:first-child, body main > h2:first-child, body main > h3:first-child { margin-top: 0; }

@@ -292,7 +292,8 @@
         <div class="row">
             <!-- Sidebar (20% width) -->
             <div class="col-2 sidebar">
-                @await Html.PartialAsync("_DeductionsSidebar")
+                <div class="sidebar-scroll">@await Html.PartialAsync("_DeductionsSidebar")</div>
+                @await Html.PartialAsync("_SidebarHome")
             </div>
             
             <!-- Main Content (80% width) -->
@@ -308,7 +309,7 @@
         <div class="footer-inner">
             <p class="footer-left">&copy; 2026. All Rights Reserved.</p>
             <p class="footer-center">HR Management System | Internal Use Only</p>
-            <p class="footer-right">Developed &amp; Maintained by IT Department</p>
+            <p class="footer-right">Developed &amp; Maintained by BTK Software Department</p>
         </div>
     </footer>
 

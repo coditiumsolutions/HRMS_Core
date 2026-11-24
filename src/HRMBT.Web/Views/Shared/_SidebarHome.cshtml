@@ -1,0 +1,35 @@
+@{
+    var homeCtrl = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+    var homeAct = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
+    var onHome = string.Equals(homeCtrl, "Home", StringComparison.OrdinalIgnoreCase)
+              && string.Equals(homeAct, "Index", StringComparison.OrdinalIgnoreCase);
+}
+@if (!onHome)
+{
+    <div class="sidebar-home">
+        <a class="nav-link" asp-controller="Home" asp-action="Index">← Home</a>
+    </div>
+}
+<script>
+    (function () {
+        // Sidebar = one screen tall below the top bars, minus whatever part of the footer is on screen,
+        // so "← Home" stays at the bottom of the view and no empty band appears above the footer.
+        var sb = document.querySelector('.layout-sidebar, .setup-sidebar, .container-fluid > .row > .sidebar');
+        if (!sb) return;
+        var row = sb.parentElement, shell = row.parentElement, footer = document.querySelector('.site-footer');
+        var mq = window.matchMedia('(min-width: 768px)');
+        document.body.classList.add('hr-sidebar-page');
+        shell.classList.add('hr-fill');
+        function fit() {
+            if (!mq.matches) { sb.style.height = ''; return; }
+            sb.style.height = '0px';                       // let the page size itself without the sidebar
+            var top = Math.max(0, row.getBoundingClientRect().top);
+            var footVisible = footer ? Math.max(0, window.innerHeight - footer.getBoundingClientRect().top) : 0;
+            sb.style.height = Math.max(0, window.innerHeight - top - footVisible) + 'px';
+        }
+        fit();
+        window.addEventListener('scroll', fit, { passive: true });
+        window.addEventListener('resize', fit);
+        window.addEventListener('load', fit);
+    })();
+</script>
