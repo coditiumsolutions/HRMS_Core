@@ -697,3 +697,92 @@ body :is(.card, .filter-card, .grid-card, .section-card, .actions-card, .lms-pan
 
 /* Employee pick grids (select employees for a bulk action): checkbox column like the Employees grid */
 body table th.col-pick, body table td.col-pick { width: 2.5rem; text-align: center; padding-left: .9rem; padding-right: .3rem; }
+
+/* The page wrapper's own gradient ended in a visible lighter band under the content; let the page background show through */
+body .employee-list-page, body .payslip-page { background: transparent; }
+/* icon spacing in the toolbar-style section header (Payroll status) */
+body .toolbar-card > .toolbar-header i.bi { margin-right: .5rem; vertical-align: -.125em; color: #f0d78c; }
+/* status pills stay on one line inside grids */
+body table .status-pill { white-space: nowrap; }
+
+/* Compact page header card (Payroll run / search / single): one slim row, title and hint inline */
+body .payslip-page .breadcrumb { margin-bottom: .4rem !important; }
+body .payslip-page nav[aria-label="breadcrumb"] { margin-bottom: .4rem !important; }
+body .payslip-page .page-header-card { padding: .5rem 1rem !important; margin-bottom: .75rem !important; }
+body .payslip-page .page-header-card .row { --bs-gutter-y: 0; }
+body .payslip-page .page-header-card h1 { font-size: 1.1rem !important; margin: 0 !important; display: inline-block; vertical-align: middle; }
+body .payslip-page .page-header-card h1 i { font-size: 1rem; margin-right: .4rem !important; }
+body .payslip-page .page-header-card p { display: inline-block; vertical-align: middle; margin: 0 0 0 .75rem !important; font-size: .82rem; }
+body .payslip-page .page-header-card .badge { padding: .25rem .6rem !important; font-size: .72rem; }
+body .payslip-page .page-header-card .btn { padding: .2rem .7rem; font-size: .82rem; }
+
+/* ==========================================================================
+   Dropdowns. Tier 1: short lists stay native selects, with the popup themed where the browser can
+   (appearance: base-select: Chrome/Edge 135+, Safari; Firefox and touch devices keep the OS list).
+   Tier 2: long lists become a searchable box (hrms-select.js, Tom Select).
+   ========================================================================== */
+@media (hover: hover) and (pointer: fine) {
+  @supports (appearance: base-select) {
+    body select:is(.form-select, .form-control):not([multiple]):not([size]) {
+      appearance: base-select;
+      display: flex; align-items: center; justify-content: space-between; gap: .5rem;
+      background-image: none;
+      cursor: pointer;
+    }
+    body select:is(.form-select, .form-control)::picker-icon {
+      content: "";
+      width: .5rem; height: .5rem; margin-right: .1rem;
+      border-right: 2px solid var(--hr-ink-3, #6c757d); border-bottom: 2px solid var(--hr-ink-3, #6c757d);
+      transform: translateY(-.15rem) rotate(45deg);
+      transition: transform .15s ease;
+    }
+    body select:is(.form-select, .form-control):open::picker-icon { transform: translateY(.1rem) rotate(225deg); }
+
+    body select:is(.form-select, .form-control)::picker(select) {
+      appearance: base-select;
+      box-sizing: border-box;
+      min-width: anchor-size(width);
+      max-height: min(20rem, 55vh);
+      margin: .2rem 0;
+      padding: .3rem;
+      background: #fff;
+      border: 1px solid rgba(0, 32, 63, .18);
+      border-radius: .55rem;
+      box-shadow: 0 .6rem 1.6rem rgba(0, 32, 63, .20);
+      overflow-y: auto; scrollbar-width: thin;
+      position-try-fallbacks: flip-block;   /* opens upward when there is no room below */
+    }
+    body select:is(.form-select, .form-control) option {
+      display: flex; align-items: center; gap: .5rem;
+      padding: .4rem .65rem;
+      border-radius: .35rem;
+      font-size: .9rem; line-height: 1.3;
+      color: var(--hr-ink-1, #1f2a37);
+      cursor: pointer;
+    }
+    body select:is(.form-select-sm) option { font-size: .85rem; padding: .3rem .6rem; }
+    body select:is(.form-select, .form-control) option:hover,
+    body select:is(.form-select, .form-control) option:focus-visible { background: #fff8e1; outline: none; }
+    body select:is(.form-select, .form-control) option:checked { background: #e8eef5; font-weight: 600; color: #00203f; }
+    body select:is(.form-select, .form-control) option::checkmark { order: 1; margin-left: auto; color: #b8860b; font-weight: 700; }
+    body select:is(.form-select, .form-control) option:disabled { opacity: .45; cursor: not-allowed; }
+  }
+}
+
+/* Searchable select (Tom Select) in the app's input look */
+body .ts-wrapper.form-select, body .ts-wrapper.form-control { padding: 0; }
+body .ts-wrapper .ts-control { min-height: 100%; border-color: var(--hr-line, #ced4da); border-radius: inherit; box-shadow: none; font-size: inherit; }
+body .ts-wrapper.form-select-sm .ts-control { padding: .25rem .6rem; font-size: .85rem; }
+body .ts-wrapper.focus .ts-control { border-color: var(--hr-brass-500, #d4af37); box-shadow: 0 0 0 .2rem rgba(212, 175, 55, .25); }
+body .ts-wrapper .ts-control input { font-size: inherit; }
+body .ts-wrapper.single .ts-control::after { border-color: var(--hr-ink-3, #6c757d) transparent transparent; }
+body .ts-dropdown { background: #fff; z-index: 3000; margin-top: .2rem; border: 1px solid rgba(0, 32, 63, .18); border-radius: .55rem; box-shadow: 0 .6rem 1.6rem rgba(0, 32, 63, .20); overflow: hidden; font-size: .9rem; }
+body .ts-dropdown.ts-flip { margin-top: 0; }
+body .ts-dropdown .ts-dropdown-content { max-height: min(20rem, 55vh); padding: .3rem; }
+body .ts-dropdown .option, body .ts-dropdown .no-results { padding: .4rem .65rem; border-radius: .35rem; }
+body .ts-dropdown .option:hover, body .ts-dropdown .active { background: #fff8e1; color: var(--hr-ink-1, #1f2a37); }
+body .ts-dropdown .option.selected { background: #e8eef5; font-weight: 600; color: #00203f; }
+body .ts-dropdown .no-results { color: #6c757d; }
+body .filter-card .ts-wrapper { min-width: 8.5rem; }
+body .filter-card .ts-wrapper .ts-control { min-height: 2rem; font-size: .85rem; padding-top: .2rem; padding-bottom: .2rem; border-radius: .4rem; }
+body .ts-wrapper.is-invalid .ts-control, body .ts-wrapper.input-validation-error .ts-control { border-color: var(--hr-danger, #dc3545); }

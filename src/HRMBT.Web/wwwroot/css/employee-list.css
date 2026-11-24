@@ -508,3 +508,12 @@ body .employee-list-page table.employee-grid > thead > tr > th { padding-top: 0.
 /* Text inside a grid card (description above the table, note below it) */
 .employee-list-page .grid-card .grid-note { margin: 0; padding: .6rem .9rem; font-size: .85rem; color: #6c757d; }
 .employee-list-page .grid-card .grid-note--foot { border-top: 1px solid #f1f3f5; }
+
+/* Payroll dashboard KPI tiles */
+.employee-list-page .pay-kpi { background: #fff; border: 1px solid rgba(0, 32, 63, .08); border-left: 4px solid var(--pk, #00203f); border-radius: .6rem; padding: .7rem 1rem; box-shadow: 0 .25rem 1rem rgba(0, 32, 63, .06); height: 100%; }
+.employee-list-page .pay-kpi-label { font-size: .72rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: #6c757d; }
+.employee-list-page .pay-kpi-value { font-size: 1.6rem; font-weight: 700; color: #00203f; line-height: 1.2; }
+.employee-list-page .pay-kpi--navy { --pk: #00203f; }
+.employee-list-page .pay-kpi--green { --pk: #1f7a3a; }
+.employee-list-page .pay-kpi--amber { --pk: #d4af37; }
+.employee-list-page .pay-kpi--teal { --pk: #4a7a94; }

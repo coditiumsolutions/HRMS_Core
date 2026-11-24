@@ -6,98 +6,60 @@
     ViewData["Module"] = "Payroll";
 }
 
-<div class="container-fluid">
-    <!-- Header -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <h1>Payroll Dashboard</h1>
-            <p class="text-muted">Summary statistics for @Model.Month @Model.Year</p>
+@section Styles {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" crossorigin="anonymous" />
+    <link rel="stylesheet" href="~/css/employee-list.css" asp-append-version="true" />
+}
+
+<div class="employee-list-page py-3">
+<div class="container-fluid px-0">
+    <div class="filter-card filter-card-tight mb-3">
+        <div class="card-header">
+            <span><i class="bi bi-speedometer2"></i>Payroll Dashboard <span class="text-muted small ms-1">@Model.Month @Model.Year</span></span>
+        </div>
+        <div class="card-body">
+            <form asp-action="Dashboard" method="get" class="row g-2 align-items-end">
+                <div class="col-sm-4 col-lg-3">
+                    <label for="month" class="form-label">Month</label>
+                    <select name="month" id="month" class="form-select form-select-sm" onchange="this.form.submit()">
+                        @foreach (var mName in PayrollMonthHelper.AllMonthNames)
+                        {
+                            <option value="@mName" selected="@(string.Equals(Model.Month, mName, StringComparison.OrdinalIgnoreCase))">@mName</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-sm-3 col-lg-2">
+                    <label for="year" class="form-label">Year</label>
+                    <input type="number" name="year" id="year" class="form-control form-control-sm" value="@Model.Year" min="2000" max="2100" onchange="this.form.submit()" />
+                </div>
+            </form>
         </div>
     </div>
 
-    <!-- Month/Year Filter -->
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-body">
-                    <form asp-action="Dashboard" method="get" class="row g-3">
-                        <div class="col-md-3">
-                            <label for="month" class="form-label">Month</label>
-                            <select name="month" id="month" class="form-control" onchange="this.form.submit()">
-                                @foreach (var mName in PayrollMonthHelper.AllMonthNames)
-                                {
-                                    <option value="@mName" selected="@(string.Equals(Model.Month, mName, StringComparison.OrdinalIgnoreCase))">@mName</option>
-                                }
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label for="year" class="form-label">Year</label>
-                            <input type="number" name="year" id="year" class="form-control" 
-                                   value="@Model.Year" min="2000" max="2100" onchange="this.form.submit()" />
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- KPI Cards -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card text-center border-primary">
-                <div class="card-body">
-                    <h5 class="card-title text-primary">Total Employees</h5>
-                    <h2 class="card-text text-primary">@Model.TotalEmployees</h2>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card text-center border-success">
-                <div class="card-body">
-                    <h5 class="card-title text-success">Payroll Generated</h5>
-                    <h2 class="card-text text-success">@Model.EmployeesWithPayrollGenerated</h2>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card text-center border-warning">
-                <div class="card-body">
-                    <h5 class="card-title text-warning">Payroll Not Generated</h5>
-                    <h2 class="card-text text-warning">@Model.EmployeesWithoutPayroll</h2>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card text-center border-info">
-                <div class="card-body">
-                    <h5 class="card-title text-info">Total Payroll Amount</h5>
-                    <h2 class="card-text text-info">@Fmt.Amount(Model.TotalPayrollAmount)</h2>
-                </div>
-            </div>
-        </div>
+    <div class="row g-3 mb-3">
+        <div class="col-6 col-lg-3"><div class="pay-kpi pay-kpi--navy"><div class="pay-kpi-label">Total employees</div><div class="pay-kpi-value">@Model.TotalEmployees</div></div></div>
+        <div class="col-6 col-lg-3"><div class="pay-kpi pay-kpi--green"><div class="pay-kpi-label">Payroll generated</div><div class="pay-kpi-value">@Model.EmployeesWithPayrollGenerated</div></div></div>
+        <div class="col-6 col-lg-3"><div class="pay-kpi pay-kpi--amber"><div class="pay-kpi-label">Payroll not generated</div><div class="pay-kpi-value">@Model.EmployeesWithoutPayroll</div></div></div>
+        <div class="col-6 col-lg-3"><div class="pay-kpi pay-kpi--teal"><div class="pay-kpi-label">Total payroll amount</div><div class="pay-kpi-value">@Fmt.Amount(Model.TotalPayrollAmount)</div></div></div>
     </div>
 
     <!-- Charts Row -->
     <div class="row">
         <!-- Payroll Status Pie Chart -->
-        <div class="col-md-6 mb-4">
-            <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">Payroll Status Distribution</h5>
-                </div>
-                <div class="card-body">
+        <div class="col-lg-6 mb-3">
+            <div class="grid-card">
+                <div class="card-header"><span><i class="bi bi-bar-chart"></i>Payroll Status Distribution</span></div>
+                <div class="card-body grid-form">
                     <canvas id="payrollStatusChart" style="max-height: 300px;"></canvas>
                 </div>
             </div>
         </div>
 
         <!-- Payroll Amount Bar Chart -->
-        <div class="col-md-6 mb-4">
-            <div class="card">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0">Payroll Overview</h5>
-                </div>
-                <div class="card-body">
+        <div class="col-lg-6 mb-3">
+            <div class="grid-card">
+                <div class="card-header"><span><i class="bi bi-bar-chart"></i>Payroll Overview</span></div>
+                <div class="card-body grid-form">
                     <canvas id="payrollOverviewChart" style="max-height: 300px;"></canvas>
                 </div>
             </div>
@@ -107,29 +69,26 @@
     <!-- Additional Charts Row -->
     <div class="row">
         <!-- Employee Count Comparison -->
-        <div class="col-md-6 mb-4">
-            <div class="card">
-                <div class="card-header bg-info text-white">
-                    <h5 class="mb-0">Employee Payroll Status</h5>
-                </div>
-                <div class="card-body">
+        <div class="col-lg-6 mb-3">
+            <div class="grid-card">
+                <div class="card-header"><span><i class="bi bi-bar-chart"></i>Employee Payroll Status</span></div>
+                <div class="card-body grid-form">
                     <canvas id="employeeStatusChart" style="max-height: 300px;"></canvas>
                 </div>
             </div>
         </div>
 
         <!-- Donut Chart for Payroll Status -->
-        <div class="col-md-6 mb-4">
-            <div class="card">
-                <div class="card-header bg-warning text-dark">
-                    <h5 class="mb-0">Payroll Completion Rate</h5>
-                </div>
-                <div class="card-body">
+        <div class="col-lg-6 mb-3">
+            <div class="grid-card">
+                <div class="card-header"><span><i class="bi bi-bar-chart"></i>Payroll Completion Rate</span></div>
+                <div class="card-body grid-form">
                     <canvas id="completionRateChart" style="max-height: 300px;"></canvas>
                 </div>
             </div>
         </div>
     </div>
+</div>
 </div>
 
 @section Scripts {
