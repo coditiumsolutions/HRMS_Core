@@ -1,7 +1,7 @@
 # Production rollout: applying the database redesign to HRBTK
-Version: 1.2 | Date: 2026-11-24
+Version: 1.3 | Date: 2026-11-24
 Applies to: production database `HRBTK` (SQL Server 2022, server "Teezhost 16GB", https://hr.coditium.com)
-Status: **Not run on production.** Everything below has been run only against a local copy of production (`TAZ\SQLEXPRESS`, test data): the full sequence once, then each script re-run to confirm it changes nothing the second time.
+Status: **Run on production on 2026-11-24** (all ten scripts, in one session, after a verified full backup). Below sections 1-7 stay as the plan that was followed; section 8 records what happened. Before that, everything had been run only against a local copy (`TAZ\SQLEXPRESS`, test data).
 
 Source of truth for *what* changes: `db_changes.md`. This file is *how* to apply it. Scripts live in `scripts/database/redesign/`.
 
@@ -99,3 +99,12 @@ Also compare row counts of the tables that existed before with the backup. Keep 
 - Leave Balance (employee page) is now live: open an employee, check the cards match Leave -> Leave Balance for the same year, and run Leave -> Leave Balance -> Year-end rollover as a **preview only** (do not Apply until HR confirms the rules).
 - Employee History is new for HR: show them Edit Employee > Employee History. Recording a promotion, transfer, resignation, termination or rejoin there also updates the employee; voiding the latest entry undoes that change, and only an Admin can delete a voided entry (decision T8).
 - Not part of this rollout (see `db_changes.md` and the app): attendance processing from punches, half-day / correction / roster / notes screens (tables exist, no pages yet), payroll use of the paid/unpaid flag.
+
+## 8. Result of the production run (2026-11-24)
+- **Pre-flight (read-only):** the production data matched the test copy exactly (848 employees, 6 users, 24 leave requests, 99 payslips, 58 distinct department strings, 8 project values). No blocking finding; the one expected item was 1 leave request pointing at a missing employee. Express edition: backups cannot use `COMPRESSION`.
+- **Backups (on the server, default folder `C:\Program Files\Microsoft SQL Server\MSSQL15.SQLEXPRESS\MSSQL\Backup`):** `HRBTK_pre_redesign_20261124.bak` (`COPY_ONLY, CHECKSUM`, `RESTORE VERIFYONLY` passed) and `HRBTK_after04_20261124.bak` (between 04 and 06). Copy them off the server and keep them until HR signs off.
+- **Scripts:** 01, 02, 03, 04, 06, 07, 08, 09, 10, 11 each finished without error (`sqlcmd -b -I`, remote server, credentials from `appsettings.Production.json`, never written to a file). Re-running 01 and 06-11 changed nothing. Re-running 02-04 after 06 fails with "Invalid column name" (the old columns are gone); that is expected and harmless, so those three are only re-runnable before 06.
+- **Section 5 checks:** 848 employees; no employee without project or department; 0 untrusted foreign keys; 10 redesign rows in `__EFMigrationsHistory`; 5 `UserRoles` (6 users, 4 Admin rows); 0 employees with a join date but no `Joined` event; legacy leave columns gone; archive 828 rows; leave day scale 1 everywhere; 23 leave requests (1 moved to `mig.LeaveRequests_Orphans`); 99 payslips, 132 lines, 23 allowances, 11 deductions, 8 documents unchanged; `vLeaveBalances` 1,582 rows; 8 projects, 48 departments, 10 sub-departments, 209 designations.
+- **App test:** the new build (Development environment, connection string for production passed through the environment, no files changed) logged in and loaded employees, employee edit/new, history and leave tabs, Setup (users, config, five lists), payroll (home, run, search, status, dashboard), payslips, allowances, deductions, leave, leave balances, quotas, attendance and salary reports with no errors in the log. Nothing was written to production during the test.
+- **Still to do by hand:** deploy the new build with `scripts\deploy\DeployToIIS.bat` and restore `wwwroot/uploads`; run `scripts/database/tools/backfill-document-hashes.ps1` for the 8 documents; enter `LeaveQuota` rows for new years; HR to review `mig.EmployeeOrgMap` and the department/sub-department split, then drop the `mig` schema; copy the backup files off the server.
+- **Done after the run (2026-11-24):** `farhan` now holds Admin and HR (row added to `UserRoles`).

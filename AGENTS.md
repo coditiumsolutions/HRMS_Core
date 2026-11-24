@@ -27,10 +27,10 @@ There are no tests or linters configured. `dotnet ef` is available via the `Micr
 
 ## Database
 
-- Production DB is `HRBTK` (SQL Server 2022). `db.md` is the hand-maintained schema document (verified against the live DB); keep its version/date/Change History current whenever the schema changes. `docs/db-schema-export.txt` is a raw dump to diff against it.
-- **Migrations are not trustworthy.** Six repo migrations were applied by hand and are missing from `__EFMigrationsHistory`, and one recorded migration has no file. Do not run `dotnet ef database update` against production without reading the "Known issues" in `db.md`. Schema changes have been applied via SQL in `scripts/database/`.
-- Several EF entities do not match the live tables (`CarryforwardLeaves`, `GazettedHolidays`; `Configuration`, `EmployeeLeaves`, `LeaveQuota` have no PK in the DB). Check `db.md` before touching them.
-- Employees are identified two ways: `Employee.uid` (int) is the FK for payroll tables; `Employee.EmployeeID` (string, unique) is the key used by Attendance, EmployeeLeaves, Users with no FK. Department/Project/Designation are free-text strings on `Employee`.
+- Production DB is `HRBTK` (SQL Server 2022 Express) and has the **redesigned schema since 2026-11-24** (33 tables in `dbo`, scripts in `scripts/database/redesign/`). `db.md` (v2.0) is the schema document, generated from the live DB; keep its version/date/Change History current whenever the schema changes. `docs/db-schema-export.txt` is a raw dump to diff against it.
+- **Migrations are not trustworthy.** Six older repo migrations were applied by hand and are missing from `__EFMigrationsHistory`, and one recorded migration has no file. Do not run `dotnet ef database update` against production without reading the "Known issues" in `db.md`. Schema changes are applied via re-runnable SQL in `scripts/database/redesign/` (back up first, `sqlcmd -b -I`).
+- Entities follow the new schema (`Models/`, `Data/ApplicationDbContext.cs`); `db.md` and `docs/db/db_changes.md` explain each column.
+- Employees are identified two ways: `Employee.uid` (int) is the FK used by every table (payroll, leave, attendance, users); `Employee.EmployeeID` (string, unique) is the business key shown to users. Project, department, sub-department and designation are foreign keys to managed lists.
 
 ## Architecture
 
@@ -48,7 +48,7 @@ Config-driven dropdowns (Department, Designation, Project, LeaveTypes, Allowance
 
 ## Database redesign (development)
 
-- The redesigned schema (`docs/db/db_changes.md`, standards in `db_standards.md`, decisions in `decisions.md`) is applied to the **local development database only**. Scripts: `scripts/database/redesign/` (01-04 expand, 06 contract, 07 user roles, 08 employee history, 09 leave days one decimal, 10 legacy leave archive, 11 leave balances view v2; run in order, back up first, `sqlcmd -b -I`). Production `HRBTK` still has the old schema, and `db.md` still describes production. How to apply the redesign to production: `docs/db/prod_rollout.md` (one maintenance window, database and app together; back up first).
+- The redesigned schema (`docs/db/db_changes.md`, standards in `db_standards.md`, decisions in `decisions.md`) is applied to the dev copy and, since 2026-11-24, to production `HRBTK` (how it was done and the results: `docs/db/prod_rollout.md`). Scripts: `scripts/database/redesign/` (01-04 expand, 06 contract, 07 user roles, 08 employee history, 09 leave days one decimal, 10 legacy leave archive, 11 leave balances view v2; run in order, back up first, `sqlcmd -b -I`). New schema changes are written as new re-runnable scripts, tested on the dev copy first.
 - The app code targets the redesigned schema. Legacy shapes are kept in code through EF value converters and facade properties (payslip month name, tax year label, `Employee.Department`/`Project`/`Designation` names, attendance `TimeIn`/`TimeOut`/`Status`, deduction `PercentageValue`); in LINQ queries use the real columns/navigations (`e.DepartmentInfo!.DepartmentName`, `a.AttendanceDate`, `d.Percentage`/`d.Amount`).
 - Projects, departments, sub-departments, designations and leave types are managed under Setup -> Lists (`LookupsController`, Admin or HR role). Nothing about them is hard-coded.
 - Always run the app with `ASPNETCORE_ENVIRONMENT=Development` when testing; without it the app reads `appsettings.Production.json` and connects to the production server.
