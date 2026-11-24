@@ -166,6 +166,7 @@ namespace HRMBT.Web.Data
 
             modelBuilder.Entity<LeaveType>(entity =>
             {
+                entity.Property(x => x.MaxCarryForwardDays).HasColumnType("decimal(5,1)");
                 entity.Property(x => x.CreatedAt).HasColumnType("datetime2(0)").ValueGeneratedOnAdd();
                 entity.Property(x => x.ModifiedAt).HasColumnType("datetime2(0)");
                 entity.ToTable("LeaveTypes", "dbo");
