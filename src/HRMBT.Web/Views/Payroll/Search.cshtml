@@ -122,8 +122,6 @@
                                     <th>Employee ID</th>
                                     <th>Employee</th>
                                     <th>Period</th>
-                                    <th class="text-end">Gross</th>
-                                    <th class="text-end">Net</th>
                                     <th>Gen Status</th>
                                     <th class="text-end" style="width:120px;">Actions</th>
                                 </tr>
@@ -143,8 +141,6 @@
                                             <div class="fw-semibold">@(item.Employee?.EmployeeName ?? "—")</div>
                                         </td>
                                         <td class="text-nowrap">@item.Month @item.Year</td>
-                                        <td class="text-end salary">@Fmt.Amount(item.GrossSalary)</td>
-                                        <td class="text-end salary">@Fmt.Amount(item.NetSalary)</td>
                                         <td>@(string.IsNullOrWhiteSpace(item.Employee?.GenStatus) ? "—" : item.Employee!.GenStatus)</td>
                                         <td class="text-end">
                                             <div class="row-actions">

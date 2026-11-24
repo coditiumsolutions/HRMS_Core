@@ -34,7 +34,7 @@
         }
 
         <div class="filter-card filter-card-compact mb-3">
-            <div class="card-header"><span><i class="bi bi-funnel"></i>Search &amp; filters</span></div>
+            <div class="card-header"><span><i class="bi bi-funnel"></i>Search &amp; Filters</span></div>
             <div class="card-body p-2 p-lg-3">
                 <form asp-action="Index" method="get" class="row g-2 align-items-end" onsubmit="document.getElementById('dedPageInput').value = '1';">
                     <input type="hidden" name="page" id="dedPageInput" value="1" />
@@ -70,13 +70,6 @@
         <div class="grid-card mb-4">
             <div class="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
                 <span><i class="bi bi-table"></i>Deductions</span>
-                @if (Model != null && Model.Any())
-                {
-                    <div class="grid-selection-actions">
-                        <a href="#" id="btnEditSelected" class="btn btn-sm btn-grid-edit disabled" aria-disabled="true" tabindex="-1"><i class="bi bi-pencil me-1"></i>Edit</a>
-                        <a href="#" id="btnDeleteSelected" class="btn btn-sm btn-grid-delete disabled" aria-disabled="true" tabindex="-1"><i class="bi bi-trash me-1"></i>Delete</a>
-                    </div>
-                }
             </div>
             <div class="card-body p-0">
                 @if (Model == null || !Model.Any())
@@ -93,55 +86,33 @@
                     <div class="table-wrap table-responsive">
                         <table class="employee-grid hrms-selectable-grid" id="deductionsGrid"
                                data-edit-base="@editBaseUrl"
-                               data-delete-base="@deleteBaseUrl"
-                               data-details-base="@detailsBaseUrl"
-                               data-radio-class="hrms-row-select">
+                               data-details-base="@detailsBaseUrl">
                             <thead>
                                 <tr>
-                                    <th class="col-select" scope="col"><span class="visually-hidden">Select</span></th>
                                     <th>Name</th>
                                     <th>Type</th>
                                     <th>Frequency</th>
-                                    <th class="text-end col-salary">Value</th>
                                     <th>Employee</th>
                                     <th>Department</th>
                                     <th>Effective</th>
                                     <th>End</th>
-                                    <th class="text-end" style="width:7.5rem;">Actions</th>
+                                    <th class="col-actions text-center" data-align="none" scope="col">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach (var item in Model)
                                 {
-                                    var isPct = string.Equals(item.CalculationMethod, "Percentage", StringComparison.OrdinalIgnoreCase);
                                     <tr data-record-id="@item.Id" title="Double-click to open">
-                                        <td class="col-select">
-                                            <input type="radio" class="form-check-input hrms-row-select" name="selectedDeduction" value="@item.Id" aria-label="Select deduction @item.Id" />
-                                        </td>
                                         <td>@item.DeductionName</td>
                                         <td>@item.DeductionType</td>
                                         <td>@(string.IsNullOrWhiteSpace(item.Frequency) ? "—" : item.Frequency)</td>
-                                        <td class="text-end salary col-salary">
-                                            @if (isPct)
-                                            {
-                                                @(Fmt.Percent(item.PercentageValue))
-                                            }
-                                            else
-                                            {
-                                                @(Fmt.Money(item.PercentageValue))
-                                            }
-                                        </td>
                                         <td>@(item.Employee?.EmployeeName ?? "—")</td>
                                         <td>@(item.Employee?.Department ?? "—")</td>
                                         <td class="text-nowrap">@Fmt.ShortDate(item.EffectiveDate)</td>
                                         <td class="text-nowrap">@(item.EndDate.HasValue ? Fmt.ShortDate(item.EndDate.Value) : "—")</td>
-                                        <td class="text-end text-nowrap">
-                                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-grid-edit" title="Edit">
-                                                <i class="bi bi-pencil"></i>
-                                            </a>
-                                            <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-grid-delete" title="Delete">
-                                                <i class="bi bi-trash"></i>
-                                            </a>
+                                        <td class="col-actions">
+                                            <a class="row-action row-action-edit" asp-controller="Deductions" asp-action="Edit" asp-route-id="@item.Id" title="Edit deduction" aria-label="Edit deduction"><i class="bi bi-pencil-square"></i></a>
+                                            <a class="row-action row-action-delete" asp-controller="Deductions" asp-action="Delete" asp-route-id="@item.Id" title="Delete deduction" aria-label="Delete deduction"><i class="bi bi-trash3"></i></a>
                                         </td>
                                     </tr>
                                 }

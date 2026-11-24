@@ -134,61 +134,42 @@
                             <table class="employee-grid">
                                 <thead>
                                     <tr>
-                                        <th style="width: 40px;">
-                                            <input type="checkbox" id="selectAllCheckbox" onclick="toggleAll(this)" />
+                                        <th class="col-pick" data-align="none" scope="col">
+                                            <input type="checkbox" id="selectAllCheckbox" onclick="toggleAll(this)" aria-label="Select all" />
                                         </th>
-                                        <th>Employee ID</th>
-                                        <th>Employee Name</th>
+                                        <th class="col-emp-id">Emp ID</th>
+                                        <th>Employee</th>
                                         <th>Department</th>
-                                        <th>Designation</th>
-                                        <th>Mobile No</th>
-                                        <th>Date of Joining</th>
+                                        <th>Project</th>
                                         <th>Status</th>
-                                        <th class="text-end">Basic Salary</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @foreach (var item in Model)
                                     {
+                                        var isActive = string.Equals(item.EmployeeStatus, "Active", StringComparison.OrdinalIgnoreCase);
                                         <tr>
-                                            <td>
-                                                @if (item.EmployeeStatus == "Active")
+                                            <td class="col-pick">
+                                                @if (isActive)
                                                 {
-                                                    <input type="checkbox" name="selectedEmployeeIds" value="@item.EmployeeID" class="employee-checkbox" />
+                                                    <input type="checkbox" name="selectedEmployeeIds" value="@item.EmployeeID" class="employee-checkbox" aria-label="Select @item.EmployeeName" />
                                                 }
                                                 else
                                                 {
                                                     <span class="text-muted" title="Employee is not active">-</span>
                                                 }
                                             </td>
-                                            <td>@Html.DisplayFor(modelItem => item.EmployeeID)</td>
-                                            <td>@Html.DisplayFor(modelItem => item.EmployeeName)</td>
-                                            <td>@Html.DisplayFor(modelItem => item.Department)</td>
-                                            <td>@Html.DisplayFor(modelItem => item.Designation)</td>
-                                            <td>@Html.DisplayFor(modelItem => item.MobileNo)</td>
+                                            <td class="col-emp-id"><span class="text-muted small emp-id-cell" title="@item.EmployeeID">@item.EmployeeID</span></td>
                                             <td>
-                                                @if (item.DateOfJoining.HasValue)
-                                                {
-                                                    @Fmt.ShortDate(item.DateOfJoining.Value)
-                                                }
+                                                <div class="emp-name">@item.EmployeeName</div>
+                                                <div class="emp-meta">@(string.IsNullOrWhiteSpace(item.Designation) ? "—" : item.Designation)</div>
                                             </td>
+                                            <td>@item.Department@if (!string.IsNullOrWhiteSpace(item.SubDepartment)) { <div class="text-muted small">@item.SubDepartment</div> }</td>
+                                            <td>@(string.IsNullOrWhiteSpace(item.Project) ? "—" : item.Project)</td>
                                             <td>
-                                                @if (!string.IsNullOrEmpty(item.EmployeeStatus))
+                                                @if (!string.IsNullOrWhiteSpace(item.EmployeeStatus))
                                                 {
-                                                    @if (item.EmployeeStatus.ToLower() == "active")
-                                                    {
-                                                        <span class="status-pill status-active">@item.EmployeeStatus</span>
-                                                    }
-                                                    else
-                                                    {
-                                                        <span class="status-pill status-default">@item.EmployeeStatus</span>
-                                                    }
-                                                }
-                                            </td>
-                                            <td class="text-end salary">
-                                                @if (item.BasicSalary.HasValue)
-                                                {
-                                                    @Fmt.Amount(item.BasicSalary.Value)
+                                                    <span class="status-pill @(isActive ? "status-active" : "status-default")">@item.EmployeeStatus</span>
                                                 }
                                             </td>
                                         </tr>

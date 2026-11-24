@@ -7,6 +7,7 @@ public class LmsLeaveRowVm
     public int EmployeeUid { get; set; }
     public string EmployeeCode { get; set; } = string.Empty;
     public string? EmployeeName { get; set; }
+    public string? EmployeeDesignation { get; set; }
     public string LeaveType { get; set; } = string.Empty;
     public DateTime FromDate { get; set; }
     public DateTime ToDate { get; set; }

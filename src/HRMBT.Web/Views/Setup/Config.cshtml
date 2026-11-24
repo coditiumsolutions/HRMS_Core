@@ -46,13 +46,6 @@
         <div class="grid-card mb-4">
             <div class="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
                 <span><i class="bi bi-table"></i>Configuration rows</span>
-                @if (Model != null && Model.Any())
-                {
-                    <div class="grid-selection-actions">
-                        <a href="#" id="btnEditSelected" class="btn btn-sm btn-grid-edit disabled" aria-disabled="true" tabindex="-1"><i class="bi bi-pencil me-1"></i>Edit</a>
-                        <a href="#" id="btnDeleteSelected" class="btn btn-sm btn-grid-delete disabled" aria-disabled="true" tabindex="-1"><i class="bi bi-trash me-1"></i>Delete</a>
-                    </div>
-                }
             </div>
             <div class="card-body">
                 @if (Model == null || !Model.Any())
@@ -70,15 +63,13 @@
                 {
                     <div class="table-wrap table-responsive">
                         <table class="employee-grid hrms-selectable-grid" id="setupConfigGrid"
-                               data-edit-base="@editBaseUrl"
-                               data-delete-base="@deleteBaseUrl"
-                               data-radio-class="hrms-row-select">
+                               data-edit-base="@editBaseUrl">
                             <thead>
                                 <tr>
-                                    <th class="col-select" scope="col"><span class="visually-hidden">Select</span></th>
                                     <th>UID</th>
                                     <th>Key</th>
                                     <th>Value</th>
+                                    <th class="col-actions text-center" data-align="none" scope="col">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -87,12 +78,13 @@
                                     var fullVal = c.ConfigValue;
                                     var shortVal = TrimForTable(fullVal);
                                     <tr data-record-id="@c.UID" title="Double-click to open">
-                                        <td class="col-select">
-                                            <input type="radio" class="form-check-input hrms-row-select" name="selectedConfig" value="@c.UID" aria-label="Select configuration @c.ConfigKey" />
-                                        </td>
                                         <td>@c.UID</td>
                                         <td>@(c.ConfigKey ?? "—")</td>
                                         <td class="small" title="@fullVal">@shortVal</td>
+                                        <td class="col-actions">
+                                            <a class="row-action row-action-edit" asp-controller="Setup" asp-action="EditConfig" asp-route-id="@c.UID" title="Edit config row" aria-label="Edit config row"><i class="bi bi-pencil-square"></i></a>
+                                            <a class="row-action row-action-delete" asp-controller="Setup" asp-action="DeleteConfig" asp-route-id="@c.UID" title="Delete config row" aria-label="Delete config row"><i class="bi bi-trash3"></i></a>
+                                        </td>
                                     </tr>
                                 }
                             </tbody>

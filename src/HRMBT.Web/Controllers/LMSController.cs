@@ -154,6 +154,7 @@ namespace HRMBT.Web.Controllers
                     EmployeeUid = x.lr.EmployeeId,
                     EmployeeCode = x.e != null ? x.e.EmployeeID : "?",
                     EmployeeName = x.e != null ? x.e.EmployeeName : null,
+                    EmployeeDesignation = x.e != null && x.e.DesignationInfo != null ? x.e.DesignationInfo.Name : null,
                     LeaveType = x.lr.LeaveTypeInfo!.Name,
                     FromDate = x.lr.FromDate,
                     ToDate = x.lr.ToDate,

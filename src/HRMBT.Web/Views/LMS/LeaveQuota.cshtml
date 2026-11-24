@@ -38,13 +38,6 @@
         <div class="grid-card mb-4">
             <div class="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
                 <span><i class="bi bi-table"></i>Leave quotas</span>
-                @if (Model != null && Model.Any())
-                {
-                    <div class="grid-selection-actions">
-                        <a href="#" id="btnEditSelected" class="btn btn-sm btn-grid-edit disabled" aria-disabled="true" tabindex="-1"><i class="bi bi-pencil me-1"></i>Edit</a>
-                        <a href="#" id="btnDeleteSelected" class="btn btn-sm btn-grid-delete disabled" aria-disabled="true" tabindex="-1"><i class="bi bi-trash me-1"></i>Delete</a>
-                    </div>
-                }
             </div>
             <div class="card-body">
                 <p class="text-muted small px-3 pt-3 mb-0">
@@ -54,29 +47,28 @@
                 {
                     <div class="table-wrap table-responsive">
                         <table class="employee-grid hrms-selectable-grid" id="leaveQuotaGrid"
-                               data-edit-base="@editBaseUrl"
-                               data-delete-base="@deleteBaseUrl"
-                               data-radio-class="hrms-row-select">
+                               data-edit-base="@editBaseUrl">
                             <thead>
                                 <tr>
-                                    <th class="col-select" scope="col"><span class="visually-hidden">Select</span></th>
                                     <th>@Html.DisplayNameFor(m => m.First().UID)</th>
                                     <th>@Html.DisplayNameFor(m => m.First().LeaveTypeName)</th>
                                     <th class="text-end">@Html.DisplayNameFor(m => m.First().TotalLeaves)</th>
                                     <th>@Html.DisplayNameFor(m => m.First().Year)</th>
+                                    <th class="col-actions text-center" data-align="none" scope="col">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach (var row in Model)
                                 {
                                     <tr data-record-id="@row.UID" title="Double-click to open">
-                                        <td class="col-select">
-                                            <input type="radio" class="form-check-input hrms-row-select" name="selectedLeaveQuota" value="@row.UID" aria-label="Select quota @row.LeaveTypeName" />
-                                        </td>
                                         <td>@row.UID</td>
                                         <td>@row.LeaveTypeName</td>
                                         <td class="text-end">@row.TotalLeaves</td>
                                         <td>@row.Year</td>
+                                        <td class="col-actions">
+                                            <a class="row-action row-action-edit" asp-controller="LMS" asp-action="EditLeaveQuota" asp-route-id="@row.UID" title="Edit leave quota" aria-label="Edit leave quota"><i class="bi bi-pencil-square"></i></a>
+                                            <a class="row-action row-action-delete" asp-controller="LMS" asp-action="DeleteLeaveQuota" asp-route-id="@row.UID" title="Delete leave quota" aria-label="Delete leave quota"><i class="bi bi-trash3"></i></a>
+                                        </td>
                                     </tr>
                                 }
                             </tbody>

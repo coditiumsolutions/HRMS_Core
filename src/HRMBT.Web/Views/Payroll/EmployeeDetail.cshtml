@@ -134,8 +134,6 @@
                                     <th class="col-payroll-id">Emp ID</th>
                                     <th>Employee</th>
                                     <th>Department</th>
-                                    <th class="text-end">Basic Salary</th>
-                                    <th class="text-end">Gross Salary</th>
                                     <th class="col-generation-status">Generation Status</th>
                                 </tr>
                             </thead>
@@ -159,12 +157,6 @@
                                             <div class="fw-semibold">@item.EmployeeName</div>
                                         </td>
                                         <td>@item.Department</td>
-                                        <td class="text-end salary">
-                                            @(item.BasicSalary.HasValue ? Fmt.Amount(item.BasicSalary.Value) : "—")
-                                        </td>
-                                        <td class="text-end salary">
-                                            @(grossByUid.TryGetValue(item.uid, out var grossVal) ? Fmt.Amount(grossVal) : "—")
-                                        </td>
                                         <td class="col-generation-status">@(string.IsNullOrWhiteSpace(item.GenStatus) ? "—" : item.GenStatus)</td>
                                     </tr>
                                 }
