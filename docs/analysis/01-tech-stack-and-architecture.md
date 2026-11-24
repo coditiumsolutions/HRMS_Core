@@ -4,7 +4,7 @@ last_verified: 2026-11-23
 verified_against: main @ 7aa2685 plus the uncommitted security and user-roles changes (code), and the redesigned development database (scripts 01-04, 06, 07 applied)
 outdated_since: 2026-11-23
 outdated_sections: [Dependency injection (unchanged but incomplete)]
-reason: Controller list (Debug removed, Lookups added), solution layout, request pipeline (antiforgery filter, HTTPS redirect, /uploads block, memory cache for login throttle) and Configuration were updated on 2026-11-23. The pipeline and DI sections still match Program.cs. Models and services gained entities and rules from the database redesign (see 03-data-structures.md and ../db/db_changes.md).
+reason: Routing section updated 2026-11-24 (attribute routes, /login, /error, legacy redirects). Controller list (Debug removed, Lookups added), solution layout, request pipeline (antiforgery filter, HTTPS redirect, /uploads block, memory cache for login throttle) and Configuration were updated on 2026-11-23. The pipeline and DI sections still match Program.cs. Models and services gained entities and rules from the database redesign (see 03-data-structures.md and ../db/db_changes.md).
 see_also: ../deployment.md, ../db/db_changes.md
 ---
 # 1. Tech Stack & Architecture
@@ -59,14 +59,14 @@ scripts/ (deploy/, database/{schema,fixes,tools,redesign})  db.md  docs/db/
 | `FormOptions.MultipartBodyLengthLimit` = 100 MB | – |
 
 ## Request pipeline
-`UseExceptionHandler("/Home/Error")` + `UseHsts()` + `UseHttpsRedirection()` (non-Dev) → a middleware that returns 404 for `/uploads` → `UseStaticFiles` → `UseRouting` → `UseAuthentication` → `UseAuthorization` → conventional route `{controller=Home}/{action=Login}/{id?}`. The cookie handler has `AccessDeniedPath = /Home/AccessDenied`. `ApplicationDbContext.SaveChanges` is overridden to fill the attendance and deduction facade columns.
+`UseExceptionHandler("/error")` + `UseHsts()` + `UseHttpsRedirection()` (non-Dev) → a middleware that returns 404 for `/uploads` → `UseStaticFiles` → legacy-URL redirects (`LegacyRouteRedirects`, 301) → `UseRouting` → `UseAuthentication` → `UseAuthorization` → `MapControllers()` (attribute routes only, lowercase URLs; see `../routes.md`). The cookie handler has `LoginPath = /login` and `AccessDeniedPath = /access-denied`. `ApplicationDbContext.SaveChanges` is overridden to fill the attendance and deduction facade columns.
 Absent: forwarded-headers, rate limiting, response compression, health checks, structured logging.
 
 ## Configuration
 `appsettings.json` holds **no connection string** (empty `DefaultConnection`; the app throws at startup if none is set). Real values come from git-ignored `appsettings.Development.json` / `appsettings.Production.json` (templates `*.example.json`) or the `ConnectionStrings__DefaultConnection` environment variable; with `ASPNETCORE_ENVIRONMENT` unset the app runs as Production. `appsettings.json` also has `AllowedHosts: *` and the `EmployeeDocuments` options (upload root `uploads/employees`, 10 MB/file, 10 files/upload, allowed extensions pdf/doc/docx/xls/xlsx/png/jpg/jpeg). Business settings (e.g. `FuelPrice`) live in the DB table `Configuration` and are edited through Setup. Projects, departments, sub-departments, designations and leave types are their own tables, edited under Setup → Lists (`LookupsController`).
 
 ## Typical request flow (generate payslips)
-1. Browser → `POST /Payroll/GeneratePayslips` (anti-forgery token).
+1. Browser → `POST /payroll/run` (anti-forgery token).
 2. Cookie auth validates → controller checks locked payslips for the month.
 3. `PayrollCalculationService.GeneratePayslip(...)` loads employee, active allowances, active/effective deductions, fuel-price config and tax slabs → computes gross/tax/net → writes `Payslips` + `PayslipDetails` in one `SaveChanges`.
 4. Redirect with `TempData` message; Razor renders the list.

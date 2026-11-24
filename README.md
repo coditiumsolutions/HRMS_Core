@@ -14,7 +14,7 @@ This project is implemented as a server-rendered ASP.NET Core MVC application wi
 
 - No React application is used in this repository.
 - No Node.js frontend build pipeline is required for build or runtime.
-- Routing is controller/view based via `MapControllerRoute` in `Program.cs`.
+- Routing is attribute-based (lowercase, kebab-case URLs); the URL map is in `docs/routes.md`.
 
 ## Configuration (connection strings are not committed)
 

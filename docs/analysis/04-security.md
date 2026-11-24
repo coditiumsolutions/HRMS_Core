@@ -4,6 +4,7 @@ last_verified: 2026-11-23
 verified_against: main @ 7aa2685 plus the uncommitted security and user-roles changes (code), and the redesigned development database (scripts 01-04, 06, 07 applied)
 supersedes_snapshot: 2026-11-16 (commit 2843f59)
 see_also: ../deployment.md, ../db/prod_rollout.md
+note_urls: URLs in this file use the attribute routes of 2026-11-24 (old /Home/Login style paths redirect); production still uses the old paths until the next deployment. See ../routes.md.
 note: Each finding carries a status as of the verified date. Production still runs the older build; "Fixed" items exist only in this repository (uncommitted at the verified date) until the next deployment.
 summary: {fixed: 12, partly: 3, deferred: 1}   # 16 tasks
 deployed_to_production: false
@@ -29,7 +30,7 @@ tasks:
 
 ## Authentication
 - **Scheme:** ASP.NET Core cookie authentication (`CookieAuthenticationDefaults`).
-- **Login:** `POST /Home/Login` (anti-forgery validated). Looks up `Users` by case-insensitive username, verifies password via `LoginPasswordHasher.Verify`, then `SignInAsync`.
+- **Login:** `POST /login` (anti-forgery validated). Looks up `Users` by case-insensitive username, verifies password via `LoginPasswordHasher.Verify`, then `SignInAsync`.
 - **Cookie settings:** `HttpOnly` (verified in the `Set-Cookie` header), `SameSite=Lax`, `Secure` outside Development (`SameAsRequest` locally), 8-hour expiry with sliding expiration, `IsPersistent = true`. The antiforgery cookie is also HttpOnly by default.
 - **Claims:** `Name`, `display_name`, `login_at`, and one `Role` claim per row in `UserRoles` (a user can hold `Admin`, `HR`, both or none; the database CHECK allows only those two). Login also requires `Users.IsActive` (users are disabled, not deleted).
 - **Logout:** `POST /Home/Logout` with an antiforgery token (changed 2026-11-23; was a state-changing GET).
@@ -43,9 +44,9 @@ tasks:
 
 | Route group | Access |
 |-------------|--------|
-| `/Home/Login`, `/Home/Logout` (POST), `/Home/Error`, `/Home/DbHealth` (Development only) | Anonymous |
-| `/Setup/*` (users + configuration) | `Admin` (was anonymous before 2026-11-23) |
-| `/Home/Index`, `/Home/Privacy` | Any logged-in user |
+| `/login`, `/logout` (POST), `/error`, `/db-health` (Development only) | Anonymous |
+| `/setup/*` (users + configuration) | `Admin` (was anonymous before 2026-11-23) |
+| `/` (dashboard), `/privacy` | Any logged-in user |
 | `/Home/AccessDenied` | Target of the cookie handler (403) |
 | `/Lookups/*` (projects, departments, sub-departments, designations, leave types) | `Admin` or `HR` |
 | Employee, EmployeeDocuments, Attendance, LMS, Payroll, Payslips, Allowances, Deductions, Tax, Reports | Any logged-in user (fallback policy) |
@@ -59,7 +60,7 @@ tasks:
 - **Documents:** requests under `/uploads` return 404 (middleware before `UseStaticFiles`).
 - **Output encoding:** Razor auto-encodes; no raw HTML rendering seen in review of controllers.
 - **Transport:** `UseHsts` and `UseHttpsRedirection` outside Development; production URL is `https://hr.coditium.com`.
-- **Error handling:** custom `/Home/Error` in production; login errors are neutral.
+- **Error handling:** custom `/error` in production; login errors are neutral.
 - **Audit:** `AuditLogs` records IP/user but only for payslip locking and allowance/deduction changes (`AllowancesController`, `DeductionsController`). Employee, leave, attendance and user changes are not audited. New: `ModifiedBy`/`ModifiedOn` on the main edit screens and `RowVersion` (optimistic concurrency) on `Employee`, `Attendance`, `LeaveRequests`, `Payslips`.
 
 ## Security findings

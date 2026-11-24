@@ -40,6 +40,8 @@ Controllers call `ApplicationDbContext` directly (`Data/ApplicationDbContext.cs`
 - `Payroll/PayslipLockService` - editing an allowance/deduction locks all of that employee's unlocked payslips and writes an `AuditLogs` row. There is no unlock path.
 - `AttendanceService` (EPPlus Excel/CSV import), `EmployeeDocumentService` (files under `wwwroot/uploads/employees/{uid}/`, soft delete), `AuditLogService`, `LoginPasswordHasher` (PBKDF2; still accepts legacy SHA-256/plain text).
 
+Routing: attribute routes only, lowercase kebab-case plural URLs (`/employees/143/edit`, `/leave/quotas`, `/payroll/run`); employees in URLs are `uid`; old `/Controller/Action/id` URLs 301-redirect. Every new action needs an `[HttpGet("...")]`/`[HttpPost("...")]` template, and links/forms need `asp-route-id` (a hidden field does not build the URL). Map and rules: `docs/routes.md`.
+
 Navigation: each controller sets `ViewData["Module"]`, and `Views/Shared/_Sidebar.cshtml` picks its menu from that key. Layouts: `_MainLayout` (default via `_ViewStart`), `_LoginLayout`, plus `_SetupLayout`/`_DeductionsLayout` for specific modules.
 
 Config-driven dropdowns (Department, Designation, Project, LeaveTypes, AllowanceNames, ...) come from rows in the `Configuration` table, edited under Setup.
