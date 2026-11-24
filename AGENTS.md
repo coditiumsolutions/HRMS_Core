@@ -21,7 +21,7 @@ There are no tests or linters configured. `dotnet ef` is available via the `Micr
 
 - `appsettings.json` has **no connection string**. The app throws at startup if `ConnectionStrings:DefaultConnection` is empty.
 - Real values live in git-ignored `src/HRMBT.Web/appsettings.Development.json` / `appsettings.Production.json`; create them from the committed `*.example.json`. The env var `ConnectionStrings__DefaultConnection` overrides both. `.env` (git-ignored) only stores old reference strings and is not read by the app.
-- `DeployToIIS.bat` aborts if `appsettings.Production.json` is missing, because `dotnet publish` must copy it. The script also **wipes the deploy folder, including `wwwroot/uploads`**.
+- `DeployToIIS.bat` aborts if `appsettings.Production.json` is missing, because `dotnet publish` must copy it. The script wipes the deploy folder but copies `wwwroot/uploads` to `C:\HRMSBackups` first and restores it after publishing; prefer `EmployeeDocuments:StorageBasePath` (outside the site).
 - Never reintroduce credentials into committed files (the old `sa` password is still in git history).
 - The repo path contains `[D]`: in PowerShell use `-LiteralPath` and avoid `Resolve-Path`, which treats brackets as wildcards.
 
@@ -68,7 +68,7 @@ Config-driven dropdowns (Department, Designation, Project, LeaveTypes, Allowance
 
 ## UI display
 
-- Show numbers, dates and times in views through `Infrastructure/Fmt` (`Fmt.Amount`, `Fmt.Int`, `Fmt.Number`, `Fmt.Percent`, `Fmt.Range`, `Fmt.ShortDate`, `Fmt.LongDate`, `Fmt.Time`, `Fmt.DateAndTime`, `Fmt.DateRange`), never `ToString("N2")`/`ToString("yyyy-MM-dd")` in a view. `<input type="date">` values stay ISO. Formats: dates DD/MM/YYYY, times 12-hour, date-times time first (`02:05 PM 23/11/2026`). Colours/spacing come from `wwwroot/css/hrms-theme.css` tokens; tables are aligned by `wwwroot/js/hrms-grid.js`. Standard and examples: `docs/ui_standards.md`, including the section-header, Search & Filters and grid standard (Home and Employees are the templates; grids show Emp ID plus name over designation, and never any salary figure; do not restate header colours or filter padding in views).
+- Show numbers, dates and times in views through `Infrastructure/Fmt` (`Fmt.Amount`, `Fmt.Int`, `Fmt.Number`, `Fmt.Percent`, `Fmt.Range`, `Fmt.ShortDate`, `Fmt.LongDate`, `Fmt.Time`, `Fmt.DateAndTime`, `Fmt.DateRange`), never `ToString("N2")`/`ToString("yyyy-MM-dd")` in a view. `<input type="date">` values stay ISO. Formats: dates DD/MM/YYYY, times 12-hour, date-times time first (`02:05 PM 23/11/2026`). Colours/spacing come from `wwwroot/css/hrms-theme.css` tokens; tables are aligned by `wwwroot/js/hrms-grid.js`. Standard and examples: `docs/ui_standards.md`, including the section-header, Search & Filters and grid standard (Home and Employees are the templates; pages about one employee use the dossier standard (`employee-dossier.css`, `_DossierHero`); grids show Emp ID plus name over designation, and never any salary figure; do not restate header colours or filter padding in views).
 
 ## Docs
 

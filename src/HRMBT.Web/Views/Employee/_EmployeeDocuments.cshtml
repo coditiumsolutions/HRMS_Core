@@ -31,6 +31,10 @@
                 <form asp-controller="EmployeeDocuments" asp-action="Upload" method="post" enctype="multipart/form-data" id="employeeDocumentsUploadForm" class="emp-documents-upload-form">
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="employeeId" value="@Model.EmployeeId" />
+                    @if (ViewData["DocReturn"] is string docReturn)
+                    {
+                        <input type="hidden" name="returnTo" value="@docReturn" />
+                    }
                     <div class="mb-3">
                         <label for="employeeDocumentFiles" class="form-label">Select files (multiple allowed)</label>
                         <input type="file"
@@ -86,19 +90,30 @@
                             <td>
                                 <i class="fa-solid fa-file-lines text-muted me-2"></i>
                                 <span class="fw-medium">@doc.OriginalFileName</span>
+                                @if (doc.FileMissing)
+                                {
+                                    <span class="badge bg-warning text-dark ms-2" title="The record exists but the file is not on the server. Upload it again.">File missing</span>
+                                }
                             </td>
                             <td class="d-none d-md-table-cell text-uppercase small text-muted">@doc.FileExtension.TrimStart('.')</td>
                             <td class="d-none d-lg-table-cell">@doc.FileSizeDisplay</td>
                             <td class="d-none d-md-table-cell">@doc.UploadedOnDisplay</td>
                             <td class="text-end text-nowrap">
-                                <a asp-controller="EmployeeDocuments"
-                                   asp-action="Download"
-                                   asp-route-id="@doc.DocumentId"
-                                   class="btn btn-sm btn-outline-primary"
-                                   title="Download">
-                                    <i class="fa-solid fa-download"></i>
-                                    <span class="d-none d-xl-inline ms-1">Download</span>
-                                </a>
+                                @if (doc.FileMissing)
+                                {
+                                    <span class="btn btn-sm btn-outline-secondary disabled" title="File not on the server"><i class="fa-solid fa-ban"></i><span class="d-none d-xl-inline ms-1">Unavailable</span></span>
+                                }
+                                else
+                                {
+                                    <a asp-controller="EmployeeDocuments"
+                                       asp-action="Download"
+                                       asp-route-id="@doc.DocumentId"
+                                       class="btn btn-sm btn-outline-primary"
+                                       title="Download">
+                                        <i class="fa-solid fa-download"></i>
+                                        <span class="d-none d-xl-inline ms-1">Download</span>
+                                    </a>
+                                }
                                 @if (Model.CanUpload)
                                 {
                                     <form asp-controller="EmployeeDocuments"

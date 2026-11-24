@@ -1,0 +1,66 @@
+﻿@model HRMBT.Web.Models.Employee?
+@* Employee identity band shared by Details, Edit, Create and Delete.
+   ViewData: PhotoId (int?), HeroTag (small brass pill, e.g. "Editing"), HeroNew (bool, for the Create page), HeroDanger (bool). *@
+@{
+    var isNew = ViewData["HeroNew"] as bool? == true || Model == null;
+    var photoId = ViewData["PhotoId"] as int?;
+    var tag = ViewData["HeroTag"] as string;
+    var danger = ViewData["HeroDanger"] as bool? == true;
+    var name = Model?.EmployeeName;
+    var initials = string.Concat((name ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(w => char.ToUpperInvariant(w[0])));
+    if (initials.Length == 0) initials = "?";
+    var meta = Model == null ? "" : string.Join("  ·  ", new[] { Model.Designation, Model.Department, Model.Project }.Where(x => !string.IsNullOrWhiteSpace(x)));
+    var statusClass = (Model?.EmployeeStatus ?? "").Trim().ToLowerInvariant() switch
+    {
+        "active" => "status-active",
+        "inactive" or "terminated" or "resigned" => "status-inactive",
+        "pending" or "probation" => "status-pending",
+        "on leave" or "leave" => "status-leave",
+        _ => "status-default"
+    };
+}
+<header class="dossier-hero @(isNew ? "dossier-hero--new" : "") @(danger ? "dossier-hero--danger" : "")">
+    @if (isNew)
+    {
+        <span class="dossier-avatar" aria-hidden="true"><i class="fa-solid fa-user-plus"></i></span>
+    }
+    else if (photoId.HasValue)
+    {
+        <img class="dossier-avatar dossier-avatar--photo" src="@Url.Action("Download", "EmployeeDocuments", new { id = photoId.Value })" alt="@name" />
+    }
+    else
+    {
+        <span class="dossier-avatar" aria-hidden="true">@initials</span>
+    }
+    <div class="dossier-id">
+        <h1 class="dossier-name">@(isNew ? "New employee" : (string.IsNullOrWhiteSpace(name) ? "Employee" : name))</h1>
+        <div class="dossier-meta">
+            @if (isNew)
+            {
+                <span class="dossier-meta-text">Fill in the tabs below, then save.</span>
+            }
+            else
+            {
+                @if (!string.IsNullOrWhiteSpace(Model!.EmployeeID))
+                {
+                    <span class="dossier-chip">ID&nbsp;@Model.EmployeeID</span>
+                }
+                <span class="dossier-meta-text">@(string.IsNullOrWhiteSpace(meta) ? "No department or designation recorded" : meta)</span>
+            }
+        </div>
+    </div>
+    @if (!isNew)
+    {
+        <div class="dossier-side">
+            @if (!string.IsNullOrWhiteSpace(tag))
+            {
+                <span class="dossier-mode">@tag</span>
+            }
+            <span class="status-pill @statusClass">@(string.IsNullOrWhiteSpace(Model!.EmployeeStatus) ? "—" : Model.EmployeeStatus)</span>
+            @if (Model.DateOfJoining.HasValue)
+            {
+                <span class="dossier-joined">Joined @Fmt.ShortDate(Model.DateOfJoining)</span>
+            }
+        </div>
+    }
+</header>

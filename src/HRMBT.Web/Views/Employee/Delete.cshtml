@@ -1,51 +1,53 @@
-@model HRMBT.Web.Models.Employee
+﻿@model HRMBT.Web.Models.Employee
 
 @{
     ViewData["Title"] = "Delete Employee";
+    var delDocs = ViewBag.EmployeeDocuments as HRMBT.Web.Models.ViewModels.EmployeeDocumentsViewModel;
+    string Show(string? v) => string.IsNullOrWhiteSpace(v) ? "—" : v!;
 }
 
-<h1>Delete Employee</h1>
+@section Styles {
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="~/css/employee-create.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/employee-dossier.css" asp-append-version="true" />
+}
 
-<h3>Mark this employee as Inactive?</h3>
-<p class="text-muted">The record, payslips, leave and attendance history are kept. Only the status changes.</p>
-<div>
-    <hr />
-    <dl class="row">
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.EmployeeID)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.EmployeeID)
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.EmployeeName)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.EmployeeName)
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.Department)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.Department)
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.Designation)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.Designation)
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.EmployeeStatus)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.EmployeeStatus)
-        </dd>
-    </dl>
-    
-    <form asp-action="Delete" method="post">
-        <input type="hidden" asp-for="uid" />
-        <input type="submit" value="Mark Inactive" class="btn btn-danger" />
-        <a asp-action="Index" class="btn btn-secondary">Back to List</a>
-    </form>
+<div class="employee-create-page dossier-page py-3">
+    <div class="container-fluid px-0">
+        <partial name="_DossierHero" model="Model" view-data="@(new ViewDataDictionary(ViewData) { { "PhotoId", delDocs?.PhotoDocumentId }, { "HeroTag", "Mark inactive" }, { "HeroDanger", true } })" />
+
+        <div class="dos-confirm">
+            <div class="dos-confirm-note">
+                <strong>Mark this employee as Inactive?</strong>
+                The record, payslips, leave and attendance history are kept. Only the status changes.
+            </div>
+            <div class="table-responsive emp-table-wrap" style="border:0;border-radius:0;">
+                <table class="table emp-form-table emp-details-table dos-table mb-0">
+                    <tbody>
+                        <tr class="emp-form-row">
+                            <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.EmployeeID)</span></th>
+                            <td class="emp-field-cell"><span class="info-value">@Show(Model.EmployeeID)</span></td>
+                            <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.EmployeeName)</span></th>
+                            <td class="emp-field-cell"><span class="info-value">@Show(Model.EmployeeName)</span></td>
+                        </tr>
+                        <tr class="emp-form-row">
+                            <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.Department)</span></th>
+                            <td class="emp-field-cell"><span class="info-value">@Show(Model.Department)</span></td>
+                            <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.Designation)</span></th>
+                            <td class="emp-field-cell"><span class="info-value">@Show(Model.Designation)</span></td>
+                        </tr>
+                        <tr class="emp-form-row">
+                            <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.EmployeeStatus)</span></th>
+                            <td class="emp-field-cell" colspan="3"><span class="info-value">@Show(Model.EmployeeStatus)</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <form asp-action="Delete" method="post" class="dos-confirm-actions">
+                <input type="hidden" asp-for="uid" />
+                <a asp-action="Index" class="btn btn-action-outline">Back to list</a>
+                <button type="submit" class="btn btn-grid-delete"><i class="fa-solid fa-user-slash me-1"></i>Mark inactive</button>
+            </form>
+        </div>
+    </div>
 </div>

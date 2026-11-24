@@ -8,6 +8,8 @@ public class EmployeeDocumentsViewModel
     public int EmployeeId { get; set; }
     public string? EmployeeDisplayName { get; set; }
     public bool CanUpload { get; set; }
+    /// <summary>Id of the current profile photo document (DocumentType = ProfilePhoto), if one was uploaded.</summary>
+    public int? PhotoDocumentId { get; set; }
     public long MaxFileSizeBytes { get; set; }
     public int MaxFilesPerUpload { get; set; }
     public string AllowedExtensionsDisplay { get; set; } = string.Empty;
@@ -26,6 +28,9 @@ public class EmployeeDocumentItemViewModel
     public string FileSizeDisplay { get; set; } = string.Empty;
     public DateTime UploadedOn { get; set; }
     public string UploadedOnDisplay { get; set; } = string.Empty;
+    public string FilePath { get; set; } = string.Empty;
+    /// <summary>True when the metadata row exists but the file is not on disk (for example after a deploy that wiped uploads).</summary>
+    public bool FileMissing { get; set; }
 }
 
 public class EmployeeDocumentUploadViewModel

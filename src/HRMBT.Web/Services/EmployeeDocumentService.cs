@@ -41,13 +41,14 @@ public class EmployeeDocumentService : IEmployeeDocumentService
 
         var documents = await _context.EmployeeDocuments
             .AsNoTracking()
-            .Where(d => d.EmployeeId == employeeUid && !d.IsDeleted)
+            .Where(d => d.EmployeeId == employeeUid && !d.IsDeleted && d.DocumentType != ProfilePhotoType)
             .OrderByDescending(d => d.UploadedOn)
             .Select(d => new EmployeeDocumentItemViewModel
             {
                 DocumentId = d.Id,
                 EmployeeId = d.EmployeeId,
                 FileName = d.FileName,
+                FilePath = d.FilePath,
                 OriginalFileName = d.OriginalFileName ?? d.FileName,
                 FileExtension = d.FileExtension ?? string.Empty,
                 FileSize = d.FileSize ?? 0,
@@ -59,29 +60,41 @@ public class EmployeeDocumentService : IEmployeeDocumentService
 
         foreach (var doc in documents)
         {
+            doc.FileMissing = !System.IO.File.Exists(GetPhysicalPath(doc.FilePath));
             doc.FileSizeDisplay = FormatFileSize(doc.FileSize);
             doc.UploadedOnDisplay = doc.UploadedOn == DateTime.MinValue
                 ? "—"
                 : Fmt.DateAndTime(doc.UploadedOn);
         }
 
+        var photoId = await _context.EmployeeDocuments
+            .AsNoTracking()
+            .Where(d => d.EmployeeId == employeeUid && !d.IsDeleted && d.DocumentType == ProfilePhotoType)
+            .OrderByDescending(d => d.UploadedOn)
+            .Select(d => (int?)d.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+
         return new EmployeeDocumentsViewModel
         {
             EmployeeId = employeeUid,
+            PhotoDocumentId = photoId,
             EmployeeDisplayName = employee?.EmployeeName,
             CanUpload = canUpload,
             MaxFileSizeBytes = _options.MaxFileSizeBytes,
             MaxFilesPerUpload = _options.MaxFilesPerUpload,
-            AllowedExtensionsDisplay = string.Join(", ", _options.AllowedExtensions),
+            AllowedExtensionsDisplay = string.Join(", ", _options.AllowedExtensions.Select(NormalizeExtension).Distinct()),
             Documents = documents,
             Upload = new EmployeeDocumentUploadViewModel { EmployeeId = employeeUid }
         };
     }
 
+    public const string ProfilePhotoType = "ProfilePhoto";
+
     public async Task<EmployeeDocumentUploadResult> UploadAsync(
         int employeeUid,
         IEnumerable<IFormFile> files,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? documentType = null)
     {
         var errors = new List<string>();
 
@@ -175,6 +188,7 @@ public class EmployeeDocumentService : IEmployeeDocumentService
                     FileSize = file.Length,
                     FileHash = fileHash,
                     UploadedOn = DateTime.Now,
+                    DocumentType = documentType,
                     IsDeleted = false
                 });
                 uploaded++;
@@ -202,6 +216,41 @@ public class EmployeeDocumentService : IEmployeeDocumentService
             UploadedCount = uploaded,
             Errors = errors
         };
+    }
+
+    public async Task<EmployeeDocumentUploadResult> SetProfilePhotoAsync(
+        int employeeUid,
+        IFormFile photo,
+        CancellationToken cancellationToken = default)
+    {
+        var ext = NormalizeExtension(Path.GetExtension(photo?.FileName));
+        if (photo == null || photo.Length == 0 || (ext != ".png" && ext != ".jpg" && ext != ".jpeg"))
+        {
+            return new EmployeeDocumentUploadResult { Success = false, Errors = new[] { "Choose a PNG or JPG picture." } };
+        }
+
+        var previous = await _context.EmployeeDocuments
+            .Where(d => d.EmployeeId == employeeUid && !d.IsDeleted && d.DocumentType == ProfilePhotoType)
+            .ToListAsync(cancellationToken);
+
+        // the new picture is stored first; the old ones are retired only if that worked
+        var result = await UploadAsync(employeeUid, new[] { photo }, cancellationToken, ProfilePhotoType);
+        if (result.UploadedCount > 0)
+        {
+            foreach (var old in previous) old.IsDeleted = true;
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        return result;
+    }
+
+    public async Task<bool> RemoveProfilePhotoAsync(int employeeUid, CancellationToken cancellationToken = default)
+    {
+        var photos = await _context.EmployeeDocuments
+            .Where(d => d.EmployeeId == employeeUid && !d.IsDeleted && d.DocumentType == ProfilePhotoType)
+            .ToListAsync(cancellationToken);
+        foreach (var photo in photos) photo.IsDeleted = true;
+        await _context.SaveChangesAsync(cancellationToken);
+        return photos.Count > 0;
     }
 
     public async Task<EmployeeDocumentDownloadResult?> GetDownloadAsync(

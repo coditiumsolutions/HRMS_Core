@@ -20,6 +20,12 @@
         };
     }
 
+    var initials = string.Concat((Model.EmployeeName ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(w => char.ToUpperInvariant(w[0])));
+    if (initials.Length == 0) initials = "?";
+    var docsVmForHero = ViewBag.EmployeeDocuments as HRMBT.Web.Models.ViewModels.EmployeeDocumentsViewModel;
+    var photoId = docsVmForHero?.PhotoDocumentId;
+    var heroMeta = string.Join("  ·  ", new[] { Model.Designation, Model.Department, Model.Project }.Where(x => !string.IsNullOrWhiteSpace(x)));
+
     var displayTitle = string.IsNullOrWhiteSpace(Model.EmployeeName)
         ? "Employee Details"
         : $"{Model.EmployeeName}{(string.IsNullOrWhiteSpace(Model.EmployeeID) ? "" : $" ({Model.EmployeeID})")}";
@@ -28,10 +34,11 @@
 @section Styles {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="stylesheet" href="~/css/employee-create.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/employee-dossier.css" asp-append-version="true" />
 }
 
-<div class="employee-create-page py-4" id="employeeDetailsView" data-tab-storage-key="hrms.employeeDetails.activeTab">
-    <div class="container-fluid px-3 px-lg-4">
+<div class="employee-create-page dossier-page py-3" id="employeeDetailsView" data-tab-storage-key="hrms.employeeDetails.activeTab">
+    <div class="container-fluid px-0">
         <nav aria-label="breadcrumb" class="mb-3">
             <ol class="breadcrumb emp-breadcrumb mb-0">
                 <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fa-solid fa-gauge-high me-1"></i>Dashboard</a></li>
@@ -40,23 +47,9 @@
             </ol>
         </nav>
 
-        <div class="page-header-card p-4 mb-4">
-            <div class="row align-items-center g-3">
-                <div class="col">
-                    <h1 class="page-title mb-0">
-                        <span class="page-title-icon"><i class="fa-solid fa-user"></i></span>
-                        @displayTitle
-                    </h1>
-                </div>
-                <div class="col-auto d-none d-lg-flex align-items-center gap-2 flex-wrap">
-                    <span class="status-pill @StatusClass(Model.EmployeeStatus)">
-                        @(string.IsNullOrWhiteSpace(Model.EmployeeStatus) ? "—" : Model.EmployeeStatus)
-                    </span>
-                </div>
-            </div>
-        </div>
+        <partial name="_DossierHero" model="Model" view-data="@(new ViewDataDictionary(ViewData) { { "PhotoId", photoId } })" />
 
-        <div class="row g-4">
+        <div class="row g-0">
             <div class="col-12">
                 <div class="card section-card emp-tabs-card shadow-sm">
                     <div class="emp-tabs-nav border-bottom">
@@ -97,56 +90,50 @@
                                     <h2 class="emp-section-header"><i class="fa-solid fa-id-card"></i> Employee Info</h2>
                                     <p class="emp-section-sub">Identity, contact, department, role, project, and employment status.</p>
                                     <div class="table-responsive emp-table-wrap">
-                                        <table class="table emp-form-table emp-details-table mb-0">
+                                        <table class="table emp-form-table emp-details-table dos-table mb-0">
                                             <tbody>
-                                                <tr class="emp-form-row">
-                                                    <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.EmployeeID)</span></th>
-                                                    <td class="emp-field-cell"><span class="info-value @(string.IsNullOrWhiteSpace(Model.EmployeeID) ? "text-empty" : "")">@Show(Model.EmployeeID)</span></td>
-                                                    <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.EmployeeName)</span></th>
-                                                    <td class="emp-field-cell"><span class="info-value @(string.IsNullOrWhiteSpace(Model.EmployeeName) ? "text-empty" : "")">@Show(Model.EmployeeName)</span></td>
-                                                </tr>
-                                                <tr class="emp-form-row">
-                                                    <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.FatherName)</span></th>
-                                                    <td class="emp-field-cell"><span class="info-value @(string.IsNullOrWhiteSpace(Model.FatherName) ? "text-empty" : "")">@Show(Model.FatherName)</span></td>
-                                                    <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.CNIC)</span></th>
-                                                    <td class="emp-field-cell"><span class="info-value @(string.IsNullOrWhiteSpace(Model.CNIC) ? "text-empty" : "")">@Show(Model.CNIC)</span></td>
-                                                </tr>
-                                                <tr class="emp-form-row">
-                                                    <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.DOB)</span></th>
-                                                    <td class="emp-field-cell"><span class="info-value @(string.IsNullOrWhiteSpace(Model.DOB) ? "text-empty" : "")">@Fmt.ShortDate(Model.DOB)</span></td>
-                                                    <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.MobileNo)</span></th>
-                                                    <td class="emp-field-cell">
-                                                        <span class="info-value @(string.IsNullOrWhiteSpace(Model.MobileNo) ? "text-empty" : "")">
+                                            <tr class="emp-form-row">
+                                                <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.EmployeeID)</span></th>
+                                                <td class="emp-field-cell"><span class="info-value @(string.IsNullOrWhiteSpace(Model.EmployeeID) ? "text-empty" : "")">@Show(Model.EmployeeID)</span></td>
+                                                <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.EmployeeName)</span></th>
+                                                <td class="emp-field-cell"><span class="info-value @(string.IsNullOrWhiteSpace(Model.EmployeeName) ? "text-empty" : "")">@Show(Model.EmployeeName)</span></td>
+                                            </tr>
+                                            <tr class="emp-form-row">
+                                                <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.FatherName)</span></th>
+                                                <td class="emp-field-cell"><span class="info-value @(string.IsNullOrWhiteSpace(Model.FatherName) ? "text-empty" : "")">@Show(Model.FatherName)</span></td>
+                                                <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.CNIC)</span></th>
+                                                <td class="emp-field-cell"><span class="info-value @(string.IsNullOrWhiteSpace(Model.CNIC) ? "text-empty" : "")">@Show(Model.CNIC)</span></td>
+                                            </tr>
+                                            <tr class="emp-form-row">
+                                                <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.DOB)</span></th>
+                                                <td class="emp-field-cell"><span class="info-value @(string.IsNullOrWhiteSpace(Model.DOB) ? "text-empty" : "")">@Fmt.ShortDate(Model.DOB)</span></td>
+                                                <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.MobileNo)</span></th>
+                                                <td class="emp-field-cell"><span class="info-value @(string.IsNullOrWhiteSpace(Model.MobileNo) ? "text-empty" : "")">
                                                             @if (!string.IsNullOrWhiteSpace(Model.MobileNo))
                                                             {
                                                                 <i class="fa-solid fa-phone text-muted me-1"></i>
                                                             }
                                                             @Show(Model.MobileNo)
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                                <tr class="emp-form-row">
-                                                    <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.Department)</span></th>
-                                                    <td class="emp-field-cell"><span class="info-value @(string.IsNullOrWhiteSpace(Model.Department) ? "text-empty" : "")">@Show(Model.Department)@if (!string.IsNullOrWhiteSpace(Model.SubDepartment)) { <span class="text-muted"> · @Model.SubDepartment</span> }</span></td>
-                                                    <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.Designation)</span></th>
-                                                    <td class="emp-field-cell"><span class="info-value @(string.IsNullOrWhiteSpace(Model.Designation) ? "text-empty" : "")">@Show(Model.Designation)</span></td>
-                                                </tr>
-                                                <tr class="emp-form-row">
-                                                    <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.Project)</span></th>
-                                                    <td class="emp-field-cell"><span class="info-value @(string.IsNullOrWhiteSpace(Model.Project) ? "text-empty" : "")">@Show(Model.Project)</span></td>
-                                                    <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.DateOfJoining)</span></th>
-                                                    <td class="emp-field-cell">
-                                                        <span class="info-value @(Model.DateOfJoining.HasValue ? "" : "text-empty")">@Fmt.ShortDate(Model.DateOfJoining)</span>
-                                                    </td>
-                                                </tr>
-                                                <tr class="emp-form-row">
-                                                    <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.EmployeeStatus)</span></th>
-                                                    <td class="emp-field-cell" colspan="3">
-                                                        <span class="status-pill @StatusClass(Model.EmployeeStatus)">
+                                                        </span></td>
+                                            </tr>
+                                            <tr class="emp-form-row">
+                                                <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.Department)</span></th>
+                                                <td class="emp-field-cell"><span class="info-value @(string.IsNullOrWhiteSpace(Model.Department) ? "text-empty" : "")">@Show(Model.Department)@if (!string.IsNullOrWhiteSpace(Model.SubDepartment)) { <span class="text-muted"> · @Model.SubDepartment</span> }</span></td>
+                                                <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.Designation)</span></th>
+                                                <td class="emp-field-cell"><span class="info-value @(string.IsNullOrWhiteSpace(Model.Designation) ? "text-empty" : "")">@Show(Model.Designation)</span></td>
+                                            </tr>
+                                            <tr class="emp-form-row">
+                                                <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.Project)</span></th>
+                                                <td class="emp-field-cell"><span class="info-value @(string.IsNullOrWhiteSpace(Model.Project) ? "text-empty" : "")">@Show(Model.Project)</span></td>
+                                                <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.DateOfJoining)</span></th>
+                                                <td class="emp-field-cell"><span class="info-value @(Model.DateOfJoining.HasValue ? "" : "text-empty")">@Fmt.ShortDate(Model.DateOfJoining)</span></td>
+                                            </tr>
+                                            <tr class="emp-form-row">
+                                                <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.EmployeeStatus)</span></th>
+                                                <td class="emp-field-cell" colspan="3"><span class="status-pill @StatusClass(Model.EmployeeStatus)">
                                                             @(string.IsNullOrWhiteSpace(Model.EmployeeStatus) ? "—" : Model.EmployeeStatus)
-                                                        </span>
-                                                    </td>
-                                                </tr>
+                                                        </span></td>
+                                            </tr>
                                             </tbody>
                                         </table>
                                     </div>
@@ -159,22 +146,22 @@
                                             <span class="emp-collapse-hint">Notes, remarks, and audit fields</span>
                                         </button>
                                         <div class="collapse" id="additionalInfoCollapse">
-                                            <div class="table-responsive emp-table-wrap mt-3">
-                                                <table class="table emp-form-table emp-details-table mb-0">
-                                                    <tbody>
-                                                        <tr class="emp-form-row">
-                                                            <th scope="row" class="emp-label-cell align-top pt-3"><span class="info-label">@Html.DisplayNameFor(m => m.Details)</span></th>
-                                                            <td class="emp-field-cell" colspan="3"><span class="info-value @(string.IsNullOrWhiteSpace(Model.Details) ? "text-empty" : "")">@Show(Model.Details)</span></td>
-                                                        </tr>
-                                                        <tr class="emp-form-row">
-                                                            <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.ModifiedBy)</span></th>
-                                                            <td class="emp-field-cell"><span class="info-value @(string.IsNullOrWhiteSpace(Model.ModifiedBy) ? "text-empty" : "")">@Show(Model.ModifiedBy)</span></td>
-                                                            <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.ModifiedOn)</span></th>
-                                                            <td class="emp-field-cell"><span class="info-value @(string.IsNullOrWhiteSpace(Model.ModifiedOn) ? "text-empty" : "")">@Fmt.DateAndTime(Model.ModifiedOn)</span></td>
-                                                        </tr>
-                                                    </tbody>
-                                                </table>
-                                            </div>
+                                            <div class="mt-3"><div class="table-responsive emp-table-wrap">
+                                        <table class="table emp-form-table emp-details-table dos-table mb-0">
+                                            <tbody>
+                                            <tr class="emp-form-row">
+                                                <th scope="row" class="emp-label-cell align-top pt-3"><span class="info-label">@Html.DisplayNameFor(m => m.Details)</span></th>
+                                                <td class="emp-field-cell" colspan="3"><span class="info-value @(string.IsNullOrWhiteSpace(Model.Details) ? "text-empty" : "")">@Show(Model.Details)</span></td>
+                                            </tr>
+                                            <tr class="emp-form-row">
+                                                <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.ModifiedBy)</span></th>
+                                                <td class="emp-field-cell"><span class="info-value @(string.IsNullOrWhiteSpace(Model.ModifiedBy) ? "text-empty" : "")">@Show(Model.ModifiedBy)</span></td>
+                                                <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.ModifiedOn)</span></th>
+                                                <td class="emp-field-cell"><span class="info-value @(string.IsNullOrWhiteSpace(Model.ModifiedOn) ? "text-empty" : "")">@Fmt.DateAndTime(Model.ModifiedOn)</span></td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </div></div>
                                             <div class="alert alert-light border mt-3 mb-0 d-flex gap-3 align-items-start">
                                                 <i class="fa-solid fa-phone text-primary fs-5 flex-shrink-0 mt-1"></i>
                                                 <div class="small text-muted mb-0">
@@ -199,13 +186,8 @@
 
                                     <h2 class="emp-section-header"><i class="fa-solid fa-sack-dollar"></i> Salary Detail</h2>
                                     <p class="emp-section-sub">Base salary and tax settings from the employee record.</p>
-                                    <div class="table-responsive emp-table-wrap mb-4">
-                                        <table class="table emp-form-table emp-details-table mb-0">
-                                            <tbody>
-                                                <tr class="emp-form-row">
-                                                    <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.BasicSalary)</span></th>
-                                                    <td class="emp-field-cell">
-                                                        <span class="info-value @(Model.BasicSalary.HasValue ? "" : "text-empty")">
+                                    <dl class="dossier-grid">
+                                        <div class="dos-field"><dt class="dos-label">@Html.DisplayNameFor(m => m.BasicSalary)</dt><dd class="dos-value"><span class="info-value @(Model.BasicSalary.HasValue ? "" : "text-empty")">
                                                             @if (Model.BasicSalary.HasValue)
                                                             {
                                                                 <span class="text-muted small me-1">PKR</span>@Fmt.Amount(Model.BasicSalary.Value)
@@ -214,11 +196,8 @@
                                                             {
                                                                 @:—
                                                             }
-                                                        </span>
-                                                    </td>
-                                                    <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.ApplyTax)</span></th>
-                                                    <td class="emp-field-cell">
-                                                        @if (taxYes)
+                                                        </span></dd></div>
+                                        <div class="dos-field"><dt class="dos-label">@Html.DisplayNameFor(m => m.ApplyTax)</dt><dd class="dos-value">@if (taxYes)
                                                         {
                                                             <span class="status-pill status-active">Yes</span>
                                                         }
@@ -229,12 +208,8 @@
                                                         else
                                                         {
                                                             <span class="info-value text-empty">—</span>
-                                                        }
-                                                    </td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                                        }</dd></div>
+                                    </dl>
 
                                     <h2 class="emp-section-header"><i class="fa-solid fa-plus-circle"></i> Allowances</h2>
                                     <p class="emp-section-sub">Allowances linked to this employee.</p>
@@ -358,30 +333,30 @@
                                     <h2 class="emp-section-header"><i class="fa-solid fa-umbrella-beach"></i> Leave Balance</h2>
                                     <p class="emp-section-sub">Carry-forward and historical leave totals.</p>
                                     <div class="table-responsive emp-table-wrap">
-                                        <table class="table emp-form-table emp-details-table mb-0">
+                                        <table class="table emp-form-table emp-details-table dos-table mb-0">
                                             <tbody>
-                                                <tr class="emp-form-row">
-                                                    <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.CarryForwardLeaves)</span></th>
-                                                    <td class="emp-field-cell"><span class="info-value @(Model.CarryForwardLeaves.HasValue ? "" : "text-empty")">@Fmt.Number(Model.CarryForwardLeaves)</span></td>
-                                                    <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.CarryForwardLeaves1)</span></th>
-                                                    <td class="emp-field-cell"><span class="info-value @(Model.CarryForwardLeaves1.HasValue ? "" : "text-empty")">@Fmt.Number(Model.CarryForwardLeaves1)</span></td>
-                                                </tr>
-                                                <tr class="emp-form-row">
-                                                    <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.Year2024)</span></th>
-                                                    <td class="emp-field-cell"><span class="info-value @(Model.Year2024.HasValue ? "" : "text-empty")">@Fmt.Number(Model.Year2024)</span></td>
-                                                    <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.Year2022)</span></th>
-                                                    <td class="emp-field-cell"><span class="info-value @(Model.Year2022.HasValue ? "" : "text-empty")">@Fmt.Number(Model.Year2022)</span></td>
-                                                </tr>
-                                                <tr class="emp-form-row">
-                                                    <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.Year2023)</span></th>
-                                                    <td class="emp-field-cell"><span class="info-value @(Model.Year2023.HasValue ? "" : "text-empty")">@Fmt.Number(Model.Year2023)</span></td>
-                                                    <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.Year2023New)</span></th>
-                                                    <td class="emp-field-cell"><span class="info-value @(Model.Year2023New.HasValue ? "" : "text-empty")">@Fmt.Number(Model.Year2023New)</span></td>
-                                                </tr>
-                                                <tr class="emp-form-row">
-                                                    <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.AdjustedAjusted)</span></th>
-                                                    <td class="emp-field-cell" colspan="3"><span class="info-value @(Model.AdjustedAjusted.HasValue ? "" : "text-empty")">@Fmt.Number(Model.AdjustedAjusted)</span></td>
-                                                </tr>
+                                            <tr class="emp-form-row">
+                                                <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.CarryForwardLeaves)</span></th>
+                                                <td class="emp-field-cell"><span class="info-value @(Model.CarryForwardLeaves.HasValue ? "" : "text-empty")">@Fmt.Number(Model.CarryForwardLeaves)</span></td>
+                                                <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.CarryForwardLeaves1)</span></th>
+                                                <td class="emp-field-cell"><span class="info-value @(Model.CarryForwardLeaves1.HasValue ? "" : "text-empty")">@Fmt.Number(Model.CarryForwardLeaves1)</span></td>
+                                            </tr>
+                                            <tr class="emp-form-row">
+                                                <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.Year2024)</span></th>
+                                                <td class="emp-field-cell"><span class="info-value @(Model.Year2024.HasValue ? "" : "text-empty")">@Fmt.Number(Model.Year2024)</span></td>
+                                                <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.Year2022)</span></th>
+                                                <td class="emp-field-cell"><span class="info-value @(Model.Year2022.HasValue ? "" : "text-empty")">@Fmt.Number(Model.Year2022)</span></td>
+                                            </tr>
+                                            <tr class="emp-form-row">
+                                                <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.Year2023)</span></th>
+                                                <td class="emp-field-cell"><span class="info-value @(Model.Year2023.HasValue ? "" : "text-empty")">@Fmt.Number(Model.Year2023)</span></td>
+                                                <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.Year2023New)</span></th>
+                                                <td class="emp-field-cell"><span class="info-value @(Model.Year2023New.HasValue ? "" : "text-empty")">@Fmt.Number(Model.Year2023New)</span></td>
+                                            </tr>
+                                            <tr class="emp-form-row">
+                                                <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.AdjustedAjusted)</span></th>
+                                                <td class="emp-field-cell" colspan="3"><span class="info-value @(Model.AdjustedAjusted.HasValue ? "" : "text-empty")">@Fmt.Number(Model.AdjustedAjusted)</span></td>
+                                            </tr>
                                             </tbody>
                                         </table>
                                     </div>
@@ -393,13 +368,13 @@
                                     <h2 class="emp-section-header"><i class="fa-solid fa-clock-rotate-left"></i> Employee History</h2>
                                     <p class="emp-section-sub">Transfers, promotions, status changes, and other employment events.</p>
                                     <div class="table-responsive emp-table-wrap">
-                                        <table class="table emp-form-table emp-details-table mb-0">
+                                        <table class="table emp-salary-list mb-0">
                                             <thead>
-                                                <tr class="emp-form-row">
-                                                    <th class="emp-label-cell" style="width:18%;"><span class="info-label">Date</span></th>
-                                                    <th class="emp-field-cell" style="width:22%;"><span class="info-label">Event</span></th>
-                                                    <th class="emp-field-cell" style="width:35%;"><span class="info-label">Details</span></th>
-                                                    <th class="emp-field-cell" style="width:25%;"><span class="info-label">Recorded By</span></th>
+                                                <tr>
+                                                    <th style="width:18%;">Date</th>
+                                                    <th style="width:22%;">Event</th>
+                                                    <th style="width:35%;">Details</th>
+                                                    <th style="width:25%;">Recorded By</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -452,57 +427,13 @@
                             <div class="tab-pane fade" id="tab-attachments" role="tabpanel" aria-labelledby="tab-attachments-btn" tabindex="0">
                                 <div class="emp-tab-pane-inner">
                                     <h2 class="emp-section-header"><i class="fa-solid fa-paperclip"></i> Attachments</h2>
-                                    <p class="emp-section-sub">Employee documents and profile summary.</p>
-                                    @if (ViewBag.EmployeeDocuments is HRMBT.Web.Models.ViewModels.EmployeeDocumentsViewModel docsVm)
+                                    <p class="emp-section-sub">Profile photo and employee documents. Uploading is available here and on the Edit page.</p>
+                                    @if (docsVmForHero != null)
                                     {
-                                        @await Html.PartialAsync("_EmployeeDocuments", docsVm)
+                                        @await Html.PartialAsync("_EmployeePhotoCard", docsVmForHero, new ViewDataDictionary(ViewData) { { "DocReturn", "details" } })
+
+                                        @await Html.PartialAsync("_EmployeeDocuments", docsVmForHero, new ViewDataDictionary(ViewData) { { "DocReturn", "details" } })
                                     }
-                                    <hr class="my-4" />
-                                    <h3 class="h6 fw-bold text-dark mb-3"><i class="fa-solid fa-user text-muted me-2"></i>Profile summary</h3>
-                                    <div class="row g-4 justify-content-center">
-                                        <div class="col-md-8 col-lg-6">
-                                            <div class="card border-0 bg-light emp-attachment-card">
-                                                <div class="card-body text-center py-4">
-                                                    <div class="photo-preview-wrap mx-auto">
-                                                        <img src="@Url.Content("~/images/employee-avatar-placeholder.svg")" alt="Profile" />
-                                                    </div>
-                                                    <div class="profile-summary mt-3">
-                                                        <span class="profile-name">@Show(Model.EmployeeName)</span>
-                                                        @if (!string.IsNullOrWhiteSpace(Model.Designation) || !string.IsNullOrWhiteSpace(Model.Department))
-                                                        {
-                                                            <span class="profile-role">
-                                                                @if (!string.IsNullOrWhiteSpace(Model.Designation))
-                                                                {
-                                                                    @Model.Designation
-                                                                }
-                                                                @if (!string.IsNullOrWhiteSpace(Model.Designation) && !string.IsNullOrWhiteSpace(Model.Department))
-                                                                {
-                                                                    <span class="text-muted mx-1">·</span>
-                                                                }
-                                                                @if (!string.IsNullOrWhiteSpace(Model.Department))
-                                                                {
-                                                                    @Model.Department
-                                                                }
-                                                            </span>
-                                                        }
-                                                        @if (!string.IsNullOrWhiteSpace(Model.EmployeeID))
-                                                        {
-                                                            <span class="profile-id">
-                                                                <i class="fa-solid fa-id-card"></i>@Model.EmployeeID
-                                                            </span>
-                                                        }
-                                                        <span class="status-pill @StatusClass(Model.EmployeeStatus) mt-1">
-                                                            @(string.IsNullOrWhiteSpace(Model.EmployeeStatus) ? "—" : Model.EmployeeStatus)
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="alert alert-info border-0 mt-4 mb-0 small">
-                                        <i class="fa-solid fa-shield-halved me-2"></i>
-                                        <strong>Read-only.</strong> Use <strong>Edit</strong> below to modify this employee.
-                                    </div>
                                 </div>
                             </div>
 

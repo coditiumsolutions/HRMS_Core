@@ -7,10 +7,11 @@
 @section Styles {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="stylesheet" href="~/css/employee-create.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/employee-dossier.css" asp-append-version="true" />
 }
 
-<div class="employee-create-page py-4">
-    <div class="container-fluid px-3 px-lg-4">
+<div class="employee-create-page dossier-page py-3">
+    <div class="container-fluid px-0">
         <nav aria-label="breadcrumb" class="mb-3">
             <ol class="breadcrumb emp-breadcrumb mb-0">
                 <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="fa-solid fa-gauge-high me-1"></i>Dashboard</a></li>
@@ -19,35 +20,8 @@
             </ol>
         </nav>
 
-        <div class="page-header-card p-4 mb-4">
-            <div class="row align-items-center g-3">
-                <div class="col">
-                    <h1 class="page-title mb-1">
-                        <span class="page-title-icon"><i class="fa-solid fa-user-pen"></i></span>
-                        Edit Employee
-                    </h1>
-                    <p class="text-muted mb-0">
-                        @if (!string.IsNullOrWhiteSpace(Model.EmployeeName))
-                        {
-                            <span class="fw-semibold text-dark">@Model.EmployeeName</span>
-                            <span class="mx-2">•</span>
-                        }
-                        Update profile, assignment, and compensation.
-                    </p>
-                </div>
-                <div class="col-auto d-none d-lg-flex align-items-center gap-2 flex-wrap">
-                    @if (!string.IsNullOrWhiteSpace(Model.EmployeeID))
-                    {
-                        <span class="badge rounded-pill text-bg-light border px-3 py-2 text-secondary">
-                            <i class="fa-solid fa-id-card me-1 text-primary"></i>@Model.EmployeeID
-                        </span>
-                    }
-                    <span class="badge rounded-pill text-bg-light border px-3 py-2 text-secondary">
-                        <i class="fa-solid fa-pen me-1 text-warning"></i> Edit mode
-                    </span>
-                </div>
-            </div>
-        </div>
+        @{ var editDocs = ViewBag.EmployeeDocuments as HRMBT.Web.Models.ViewModels.EmployeeDocumentsViewModel; }
+        <partial name="_DossierHero" model="Model" view-data="@(new ViewDataDictionary(ViewData) { { "PhotoId", editDocs?.PhotoDocumentId }, { "HeroTag", "Editing" } })" />
 
         <form asp-action="Edit" method="post" id="employeeCreateForm" data-tab-storage-key="hrms.employeeEdit.activeTab">
             <input type="hidden" asp-for="RowVersion" />
@@ -371,6 +345,7 @@
                                         <p class="emp-section-sub">Upload HR documents (PDF, Word, Excel, images). Files save immediately — you do not need to click Save employee.</p>
                                         @if (ViewBag.EmployeeDocuments is HRMBT.Web.Models.ViewModels.EmployeeDocumentsViewModel docsVm)
                                         {
+                                            @await Html.PartialAsync("_EmployeePhotoCard", docsVm)
                                             @await Html.PartialAsync("_EmployeeDocuments", docsVm)
                                         }
                                         else

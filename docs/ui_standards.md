@@ -82,6 +82,19 @@ Everything below lives in `hrms-theme.css`; page CSS and views should not restat
 All grid pages use the Actions column now: Employees, Allowances, Deductions, Attendance, Leave, Leave quotas, Payroll (View, plus Delete while the payslip is unlocked), Tax, Setup Config and Setup Users. The styles (`col-actions`, `row-action*`) are in `hrms-theme.css`, so a new grid only needs the markup: an Actions `th` (`class="col-actions text-center" data-align="none"`) and a `td.col-actions` with the icon links. Not covered: Payslips and Lookups, which have their own row buttons; convert them when you touch them.
 - **No colour in page CSS:** section headers, their icons and their spacing come from the theme. Do not add `.xxx .card-header { background... }` rules to a view or a page stylesheet (the old teal ones were removed on 2026-11-24).
 
+## Employee dossier standard (2026-11-24): every page that shows or edits one employee
+
+Pages: Employees Details, Edit, Create and the Delete (mark inactive) confirmation. The look lives in `wwwroot/css/employee-dossier.css`, scoped by the wrapper class `dossier-page` (put `class="employee-create-page dossier-page py-3"` on the page wrapper and `container-fluid px-0` inside it; link `employee-create.css` first, then `employee-dossier.css`). Any new page about a single employee (for example a payslip or leave summary for one person) should use it.
+
+- **Hero band** (`Views/Employee/_DossierHero.cshtml`, never hand-written in a view): navy gradient with brass underline, circular avatar with a brass ring, name in Fraunces, a brass `ID 1007` chip, `designation  ·  department  ·  project`, status pill and joining date on the right. The avatar is the uploaded profile photo, else the initials. Options through `ViewData`: `PhotoId` (the profile photo document id, from `EmployeeDocumentsViewModel.PhotoDocumentId`), `HeroTag` (small brass pill: "Editing", "Mark inactive"), `HeroNew` (Create: "New employee" with a user-plus icon), `HeroDanger` (red underline for destructive confirmations).
+- **Profile photo:** a document of type `ProfilePhoto` (`EmployeeDocuments.DocumentType`). One live photo per employee; uploading replaces it. Managed on the Attachments tab through `_EmployeePhotoCard.cshtml` (`/employee-documents/photo`, `/employee-documents/photo/remove`); it is kept out of the documents list. PNG or JPG only.
+- **Tabs:** dark text, brass icons, brass underline on the active tab; a tab that holds one section shows only its one-line intro (no repeated heading); a tab with several sections (Salary) keeps small-caps section headings with a brass left bar.
+- **Label | value table** (Details, Delete; class `dos-table`) and the same table with inputs (Edit, Create; `emp-form-table`): four columns (label, value, label, value), tinted label cells with 0.68rem small-caps labels, values 0.98rem semibold, hairline dividers, brass hover tint, empty values shown as a muted `—`, rows about 52px. Do not use a horizontal grid of cards for these fields.
+- **List tables inside a tab** (allowances, deductions, history, documents): the standard grid look (teal header with brass underline, 0.5rem rows).
+- **Confirmation pages** (Delete): hero with `HeroDanger`, a pale red note with the consequence in plain words, the key fields in the label | value table, then Back (outlined) and the red action on the right.
+- **Placeholders** are muted grey, inputs are 2.2rem high with a brass focus ring.
+- **Uploads** on Details and Edit: documents and photo upload from the Attachments tab; files that are missing on the server show a "File missing" badge instead of a dead download link.
+
 ## Status (2026-11-23)
 
 - Every `ToString("N2" | "N0" | "yyyy-MM-dd" | "dd MMM yyyy" | "dd-MMM-yy" | "g" | "0.##" | "F1" ...)` in `Views/` was moved to `Fmt` (about 110 places across Payroll, Payslips, Allowances, Deductions, Reports, Leave, Attendance, Employee and Setup views). Form date inputs were left ISO on purpose.

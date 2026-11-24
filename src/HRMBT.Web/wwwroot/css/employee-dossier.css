@@ -1,0 +1,289 @@
+/* Employee dossier standard (Details, Edit, Create, Delete): one look for every page that shows or edits an employee.
+   Wrapper class: .dossier-page (+ .employee-create-page for the shared tab and form markup).
+   Navy and brass like the rest of the app; one hero band, hairline-ruled field grids, grid-standard list tables. */
+
+.dossier-page {
+  --dos-navy: #00203f;
+  --dos-navy-2: #0b2d52;
+  --dos-brass: #d4af37;
+  --dos-brass-ink: #8a6d0b;
+  --dos-line: #e4e8ee;
+  --dos-ink: #14213a;
+  --dos-mute: #6a7688;
+}
+
+/* ---------- Hero ---------- */
+.dossier-page .dossier-hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1.1rem;
+  margin-bottom: 0.75rem;
+  color: #fff;
+  background:
+    radial-gradient(120% 220% at 100% 0%, rgba(212, 175, 55, 0.18) 0%, rgba(212, 175, 55, 0) 45%),
+    linear-gradient(90deg, var(--dos-navy) 0%, var(--dos-navy-2) 100%);
+  border-bottom: 3px solid var(--dos-brass);
+  border-radius: 0.6rem;
+  box-shadow: 0 0.35rem 1rem rgba(0, 32, 63, 0.18);
+  overflow: hidden;
+}
+.dossier-page .dossier-hero::after {          /* fine diagonal guilloche, barely there */
+  content: "";
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(115deg, rgba(255,255,255,.035) 0 1px, transparent 1px 9px);
+  pointer-events: none;
+}
+.dossier-page .dossier-avatar {
+  flex: 0 0 auto;
+  width: 3.1rem; height: 3.1rem;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: var(--hr-font-display, "Fraunces", serif);
+  font-size: 1.15rem; font-weight: 600; letter-spacing: 0.04em;
+  color: var(--dos-brass);
+  background: rgba(255, 255, 255, 0.06);
+  border: 2px solid var(--dos-brass);
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.16);
+}
+.dossier-page .dossier-id { min-width: 0; flex: 1 1 auto; position: relative; z-index: 1; }
+.dossier-page .dossier-name {
+  margin: 0;
+  font-family: var(--hr-font-display, "Fraunces", serif);
+  font-size: 1.55rem; font-weight: 600; line-height: 1.15;
+  color: #fff;
+  overflow-wrap: anywhere;
+}
+.dossier-page .dossier-meta {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 0.35rem 0.7rem;
+  margin-top: 0.3rem;
+  font-size: 0.88rem; color: rgba(255, 255, 255, 0.78);
+}
+.dossier-page .dossier-chip {
+  display: inline-block;
+  padding: 0.05rem 0.55rem;
+  font-size: 0.74rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--dos-brass);
+  border: 1px solid rgba(212, 175, 55, 0.6);
+  border-radius: 2rem;
+}
+.dossier-page .dossier-side {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 0.3rem;
+  flex: 0 0 auto;
+}
+.dossier-page .dossier-joined { font-size: 0.78rem; color: rgba(255, 255, 255, 0.7); }
+.dossier-page .dossier-side .status-pill { background: #fff; }
+
+/* ---------- Tabs ---------- */
+.dossier-page .emp-tabs-card { border-radius: 0.6rem; }
+.dossier-page .emp-tabs-nav { background: #fff; padding: 0 0.6rem; overflow-y: hidden; }
+.dossier-page .emp-nav-tabs .nav-link { color: var(--dos-ink); font-size: 0.82rem; padding: 0.6rem 0.95rem; }
+.dossier-page .emp-nav-tabs .nav-link i { color: var(--dos-brass-ink); }
+.dossier-page .emp-nav-tabs .nav-link.active { background: #fff; border-bottom-color: var(--dos-brass); color: var(--dos-navy); }
+.dossier-page .emp-nav-tabs .nav-link.active i { color: var(--dos-brass); }
+.dossier-page .emp-tab-pane-inner { padding: 0.9rem 1.1rem 1.1rem; }
+
+/* ---------- Section headings inside a tab ---------- */
+.dossier-page .emp-section-header {
+  display: flex; align-items: center; gap: 0.5rem;
+  margin: 0 0 0.1rem;
+  padding-left: 0.65rem;
+  font-size: 0.78rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--dos-navy);
+  border-left: 3px solid var(--dos-brass);
+  line-height: 1.2;
+}
+.dossier-page .emp-section-header i { color: var(--dos-brass-ink); font-size: 0.85rem; }
+.dossier-page .emp-section-sub { margin: 0 0 0.7rem 0.65rem; padding-left: 0.65rem; font-size: 0.82rem; color: var(--dos-mute); }
+
+.dossier-page .dos-group {
+  display: flex; align-items: center; gap: 0.7rem;
+  margin: 0.95rem 0 0.45rem;
+  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--dos-brass-ink);
+}
+.dossier-page .dos-group::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, var(--dos-line), transparent); }
+.dossier-page .dos-group:first-of-type { margin-top: 0.2rem; }
+
+/* ---------- Field grid (replaces the label/value tables) ---------- */
+.dossier-page .dossier-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  background: #fff;
+  border: 1px solid var(--dos-line);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+.dossier-page .dos-field {
+  padding: 0.45rem 1rem 0.5rem;
+  min-height: 3.2rem;
+  display: flex; flex-direction: column; justify-content: center; gap: 0.12rem;
+  box-shadow: 1px 0 0 var(--dos-line), 0 1px 0 var(--dos-line);   /* hairlines on right and bottom; the outer border hides the last ones */
+  margin: 0 -1px -1px 0;
+  min-width: 0;
+}
+.dossier-page .dos-field:hover { background: #fffaf0; }
+.dossier-page .dos-field--wide { grid-column: 1 / -1; }
+.dossier-page .dos-label {
+  margin: 0;
+  font-size: 0.66rem; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase;
+  color: var(--dos-mute);
+}
+.dossier-page .dos-value { margin: 0; font-size: 1rem; font-weight: 600; color: var(--dos-ink); line-height: 1.3; overflow-wrap: anywhere; }
+.dossier-page .dos-value .info-value { font-size: inherit; font-weight: inherit; color: inherit; }
+.dossier-page .dos-value .info-value.text-empty { color: #aab3c0; font-style: normal; font-weight: 400; }
+.dossier-page .dos-value .status-pill { margin-top: 0.1rem; }
+.dossier-page .dos-value span.text-muted { font-weight: 500; }
+.dossier-page .dos-value i { margin-right: 0.35rem; }
+
+/* ---------- List tables (allowances, deductions, history): same as the app grids ---------- */
+.dossier-page .emp-table-wrap { border: 1px solid var(--dos-line); border-radius: 0.5rem; overflow: hidden; background: #fff; }
+.dossier-page .emp-salary-list { margin: 0; }
+.dossier-page .emp-salary-list thead th {
+  background: #4a7a94; color: #fff;
+  font-size: 0.74rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+  padding: 0.5rem 0.85rem;
+  border-bottom: 2px solid var(--dos-brass);
+}
+.dossier-page .emp-salary-list tbody td { padding: 0.5rem 0.85rem; font-size: 0.9rem; color: var(--dos-ink); border-bottom: 1px solid #f1f3f5; }
+.dossier-page .emp-salary-list tbody tr:nth-child(even) { background: #fafbfc; }
+.dossier-page .emp-salary-list tbody tr:last-child td { border-bottom: 0; }
+.dossier-page .emp-salary-list tbody td.text-end { color: var(--dos-ink); font-weight: 600; }
+.dossier-page .emp-table-wrap > p { padding: 0.7rem 1rem; color: var(--dos-mute); }
+
+.dossier-page .emp-documents-table thead th { background: #4a7a94; color: #fff; border-bottom: 2px solid var(--dos-brass); }
+.dossier-page .emp-additional .emp-collapse-toggle { border-radius: 0.5rem; }
+
+@media (max-width: 1199.98px) {
+  .dossier-page .dossier-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 767.98px) {
+  .dossier-page .dossier-grid { grid-template-columns: minmax(0, 1fr); }
+  .dossier-page .dossier-hero { flex-wrap: wrap; }
+  .dossier-page .dossier-side { align-items: flex-start; flex-direction: row; align-items: center; gap: 0.6rem; }
+}
+
+/* Tabs with a single section already say what they are on the tab: keep the one-line intro, drop the repeated heading */
+.dossier-page .tab-pane:not(#tab-salary) > .emp-tab-pane-inner > .emp-section-header { display: none; }
+.dossier-page .tab-pane:not(#tab-salary) > .emp-tab-pane-inner > .emp-section-sub { margin: 0 0 0.75rem; padding-left: 0; }
+/* Salary tab: several sections, spaced apart; the two salary fields fill the row */
+.dossier-page #tab-salary .dossier-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 1.1rem; }
+.dossier-page #tab-salary .emp-table-wrap { margin-bottom: 1.1rem !important; }
+.dossier-page #tab-salary .emp-table-wrap > p { font-size: 0.9rem; }
+
+/* Attachments: sub-headings follow the same small-caps section style */
+.dossier-page #tab-attachments h3,
+.dossier-page #tab-attachments h4 {
+  font-family: inherit; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--dos-navy); margin: 0 0 0.6rem; padding-left: 0.65rem; border-left: 3px solid var(--dos-brass);
+}
+.dossier-page #tab-attachments h3 i, .dossier-page #tab-attachments h4 i { color: var(--dos-brass-ink) !important; }
+.dossier-page #tab-attachments hr { border-color: var(--dos-line); opacity: 1; margin: 1rem 0; }
+
+/* ---------- Employee Info: the classic label | value table, in the dossier styling ---------- */
+.dossier-page .dos-table { table-layout: fixed; width: 100%; border-collapse: separate; border-spacing: 0; }
+.dossier-page .dos-table .emp-form-row:nth-child(odd),
+.dossier-page .dos-table .emp-form-row:nth-child(even) { background: #fff; }
+.dossier-page .dos-table th.emp-label-cell {
+  width: 16%;
+  padding: 0.5rem 1rem;
+  background: #f6f8fb;
+  border-right: 1px solid var(--dos-line);
+  border-bottom: 1px solid var(--dos-line);
+  vertical-align: middle;
+}
+.dossier-page .dos-table td.emp-field-cell {
+  width: 34%;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--dos-line);
+  vertical-align: middle;
+  background: #fff;
+}
+.dossier-page .dos-table td.emp-field-cell + th.emp-label-cell { border-left: 1px solid var(--dos-line); }
+.dossier-page .dos-table tr:last-child > th, .dossier-page .dos-table tr:last-child > td { border-bottom: 0; }
+.dossier-page .dos-table .emp-form-row:hover td.emp-field-cell { background: #fffaf0; }
+.dossier-page .dos-table .info-label {
+  display: block;
+  font-size: 0.68rem; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--dos-mute);
+}
+.dossier-page .dos-table .info-value { font-size: 0.98rem; font-weight: 600; color: var(--dos-ink); }
+.dossier-page .dos-table .info-value.text-empty { color: #aab3c0; font-weight: 400; font-style: normal; }
+.dossier-page .dos-table .info-value i { margin-right: 0.35rem; }
+.dossier-page .dos-table td.emp-field-cell { height: 2.7rem; }
+@media (max-width: 767.98px) {
+  .dossier-page .dos-table th.emp-label-cell, .dossier-page .dos-table td.emp-field-cell { width: auto; }
+}
+
+/* ---------- Profile photo ---------- */
+.dossier-page .dossier-avatar--photo { object-fit: cover; padding: 0; background: var(--dos-navy-2); }
+.dossier-page .dos-photo {
+  display: flex; align-items: center; gap: 1.1rem;
+  padding: 0.85rem 1rem; margin-bottom: 1.1rem;
+  background: #fff; border: 1px solid var(--dos-line); border-radius: 0.5rem;
+}
+.dossier-page .dos-photo-img {
+  flex: 0 0 auto; width: 5rem; height: 5rem; border-radius: 50%; object-fit: cover;
+  border: 2px solid var(--dos-brass); box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.16);
+}
+.dossier-page .dos-photo-empty {
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: var(--hr-font-display, "Fraunces", serif); font-size: 1.6rem; font-weight: 600;
+  color: var(--dos-brass); background: var(--dos-navy);
+}
+.dossier-page .dos-photo-body { min-width: 0; flex: 1 1 auto; }
+.dossier-page .dos-photo-title { font-family: inherit; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dos-navy); margin: 0 0 0.15rem; }
+.dossier-page .dos-photo-help { margin: 0 0 0.55rem; font-size: 0.85rem; color: var(--dos-mute); }
+.dossier-page .dos-photo-form { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; max-width: 36rem; }
+.dossier-page .dos-photo-form .form-control { flex: 1 1 14rem; }
+.dossier-page .dos-photo-remove { margin-top: 0.4rem; }
+
+/* ---------- Edit / Create forms: same table, inputs instead of values ---------- */
+.dossier-page .emp-form-table:not(.dos-table) { table-layout: fixed; width: 100%; border-collapse: separate; border-spacing: 0; }
+.dossier-page .emp-form-table:not(.dos-table) .emp-form-row:nth-child(odd),
+.dossier-page .emp-form-table:not(.dos-table) .emp-form-row:nth-child(even) { background: #fff; }
+.dossier-page .emp-form-table:not(.dos-table) th.emp-label-cell {
+  width: 16%; min-width: 6.5rem;
+  padding: 0.4rem 1rem;
+  background: #f6f8fb;
+  border-right: 1px solid var(--dos-line);
+  border-bottom: 1px solid var(--dos-line);
+  vertical-align: middle;
+}
+.dossier-page .emp-form-table:not(.dos-table) th.emp-label-cell .form-label {
+  margin: 0;
+  font-size: 0.68rem; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--dos-mute);
+}
+.dossier-page .emp-form-table:not(.dos-table) td.emp-field-cell { width: 34%; padding: 0.35rem 0.8rem; border-bottom: 1px solid var(--dos-line); vertical-align: middle; background: #fff; }
+.dossier-page .emp-form-table:not(.dos-table) td.emp-field-cell + th.emp-label-cell { border-left: 1px solid var(--dos-line); }
+.dossier-page .emp-form-table:not(.dos-table) tr:last-child > th, .dossier-page .emp-form-table:not(.dos-table) tr:last-child > td { border-bottom: 0; }
+.dossier-page .emp-form-table .emp-field-cell .form-control,
+.dossier-page .emp-form-table .emp-field-cell .form-select {
+  min-height: 2.2rem; padding-top: 0.25rem; padding-bottom: 0.25rem;
+  font-size: 0.95rem; font-weight: 500; color: var(--dos-ink);
+  border-color: #d5dbe4; border-radius: 0.4rem;
+}
+.dossier-page .emp-form-table .emp-field-cell .form-control:focus,
+.dossier-page .emp-form-table .emp-field-cell .form-select:focus { border-color: var(--dos-brass); box-shadow: 0 0 0 0.2rem rgba(212, 175, 55, 0.22); }
+.dossier-page .emp-form-table .field-validation-error { display: block; font-size: 0.78rem; color: #b91c1c; margin-top: 0.15rem; }
+
+/* ---------- Hero variants ---------- */
+.dossier-page .dossier-mode {
+  display: inline-block; padding: 0.1rem 0.6rem;
+  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--dos-navy); background: var(--dos-brass); border-radius: 2rem;
+}
+.dossier-page .dossier-hero--new .dossier-avatar { color: var(--dos-brass); }
+.dossier-page .dossier-hero--danger { border-bottom-color: #b91c1c; }
+
+/* ---------- Delete confirmation ---------- */
+.dossier-page .dos-confirm { background: #fff; border: 1px solid var(--dos-line); border-radius: 0.5rem; overflow: hidden; }
+.dossier-page .dos-confirm-note { padding: 0.75rem 1rem; background: #fff6f6; border-bottom: 1px solid #f3d0d0; color: #7a1d1d; font-size: 0.92rem; }
+.dossier-page .dos-confirm-note strong { display: block; font-size: 1rem; color: #991b1b; }
+.dossier-page .dos-confirm-actions { display: flex; gap: 0.6rem; justify-content: flex-end; padding: 0.75rem 1rem; border-top: 1px solid var(--dos-line); background: #f9fafc; }
+
+/* quieter placeholders, outlined secondary button on the confirmation card */
+.dossier-page .emp-form-table .form-control::placeholder { color: #aab3c0; font-weight: 400; }
+.dossier-page .dos-confirm-actions .btn-action-outline { border: 1.5px solid var(--dos-brass); color: var(--dos-brass-ink); background: #fff; border-radius: 2rem; padding: 0.3rem 1rem; font-weight: 600; }

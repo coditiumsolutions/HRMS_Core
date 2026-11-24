@@ -21,6 +21,7 @@ public class EmployeeDocumentsController : Controller
     public async Task<IActionResult> Upload(
         [FromForm] int employeeId,
         [FromForm] List<IFormFile>? files,
+        [FromForm] string? returnTo,
         CancellationToken cancellationToken)
     {
         if (employeeId <= 0)
@@ -48,7 +49,48 @@ public class EmployeeDocumentsController : Controller
             TempData["DocumentError"] = "No files were uploaded. Choose one or more allowed file types.";
         }
 
-        return RedirectToAction("Edit", "Employee", new { id = employeeId, tab = "attachments" });
+        return BackToEmployee(employeeId, returnTo);
+    }
+
+    private IActionResult BackToEmployee(int employeeId, string? returnTo) =>
+        string.Equals(returnTo, "details", StringComparison.OrdinalIgnoreCase)
+            ? RedirectToAction("Details", "Employee", new { id = employeeId, tab = "attachments" })
+            : RedirectToAction("Edit", "Employee", new { id = employeeId, tab = "attachments" });
+
+    [HttpPost("photo")]
+    [ValidateAntiForgeryToken]
+    [RequestSizeLimit(20971520)]
+    public async Task<IActionResult> UploadPhoto([FromForm] int employeeId, IFormFile? photo, [FromForm] string? returnTo, CancellationToken cancellationToken)
+    {
+        if (employeeId <= 0 || !await _documentService.EmployeeExistsAsync(employeeId, cancellationToken))
+        {
+            TempData["DocumentError"] = "Invalid employee reference.";
+            return RedirectToAction("Index", "Employee");
+        }
+
+        var result = await _documentService.SetProfilePhotoAsync(employeeId, photo!, cancellationToken);
+        if (result.UploadedCount > 0)
+            TempData["DocumentSuccess"] = "Profile photo updated.";
+        else
+            TempData["DocumentError"] = result.Errors.Count > 0 ? string.Join(" ", result.Errors) : "The photo could not be saved.";
+
+        return BackToEmployee(employeeId, returnTo);
+    }
+
+    [HttpPost("photo/remove")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RemovePhoto([FromForm] int employeeId, [FromForm] string? returnTo, CancellationToken cancellationToken)
+    {
+        if (employeeId <= 0)
+        {
+            TempData["DocumentError"] = "Invalid employee reference.";
+            return RedirectToAction("Index", "Employee");
+        }
+
+        TempData["DocumentSuccess"] = await _documentService.RemoveProfilePhotoAsync(employeeId, cancellationToken)
+            ? "Profile photo removed."
+            : "There was no profile photo to remove.";
+        return BackToEmployee(employeeId, returnTo);
     }
 
     [HttpGet("{id}")]

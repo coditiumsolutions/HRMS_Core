@@ -1,0 +1,38 @@
+﻿@model HRMBT.Web.Models.ViewModels.EmployeeDocumentsViewModel
+@* Profile photo card (Details and Edit, Attachments tab). ViewData["DocReturn"] = "details" sends the user back to Details after a change. *@
+@{
+    var photoId = Model.PhotoDocumentId;
+    var returnTo = ViewData["DocReturn"] as string;
+    var initials = string.Concat((Model.EmployeeDisplayName ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(w => char.ToUpperInvariant(w[0])));
+    if (initials.Length == 0) initials = "?";
+}
+<div class="dos-photo">
+    @if (photoId.HasValue)
+    {
+        <img class="dos-photo-img" src="@Url.Action("Download", "EmployeeDocuments", new { id = photoId.Value })" alt="Profile photo" />
+    }
+    else
+    {
+        <span class="dos-photo-img dos-photo-empty" aria-hidden="true">@initials</span>
+    }
+    <div class="dos-photo-body">
+        <h3 class="dos-photo-title">Profile photo</h3>
+        <p class="dos-photo-help">Shown in the header of the employee pages. PNG or JPG, up to @Fmt.Number(Model.MaxFileSizeBytes / (1024.0 * 1024.0)) MB.</p>
+        <form asp-controller="EmployeeDocuments" asp-action="UploadPhoto" method="post" enctype="multipart/form-data" class="dos-photo-form">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="employeeId" value="@Model.EmployeeId" />
+            @if (!string.IsNullOrEmpty(returnTo)) { <input type="hidden" name="returnTo" value="@returnTo" /> }
+            <input type="file" name="photo" class="form-control form-control-sm" accept=".png,.jpg,.jpeg,image/png,image/jpeg" required aria-label="Choose a profile photo" />
+            <button type="submit" class="btn btn-action-primary btn-sm"><i class="fa-solid fa-camera me-1"></i>@(photoId.HasValue ? "Replace photo" : "Upload photo")</button>
+        </form>
+        @if (photoId.HasValue)
+        {
+            <form asp-controller="EmployeeDocuments" asp-action="RemovePhoto" method="post" class="dos-photo-remove" onsubmit="return confirm('Remove the profile photo?');">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="employeeId" value="@Model.EmployeeId" />
+                @if (!string.IsNullOrEmpty(returnTo)) { <input type="hidden" name="returnTo" value="@returnTo" /> }
+                <button type="submit" class="btn btn-link btn-sm text-danger p-0">Remove photo</button>
+            </form>
+        }
+    </div>
+</div>
