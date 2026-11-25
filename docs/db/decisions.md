@@ -117,7 +117,7 @@ Status: Closed
 ---
 
 ## T7. Notes and remarks on HR records
-Status: Open
+Status: Closed
 
 **Context.** HR keeps track of edge cases in notes, for example a forgotten check-out noted on that day's attendance. Today only some tables have a free-text note and the names differ (`Comments` on Attendance, `Remarks` on Allowances, `Notes` on Payslips, `Details` on Employee). A single column per row is overwritten by the next note and records no author or time. The rule is db_standards.md S24; the drafted tables are in db_changes.md (`Notes` columns and `RecordNotes`).
 
@@ -132,9 +132,9 @@ Status: Open
 3. Should notes be categorised (e.g. `ForgotCheckout`, `LateArrival`, `Other`) so HR can filter them? Suggested: not now; a `Category` column can be added once HR lists the categories.
 4. Who can read notes? Suggested: Admin and HR only, same as the rest of the app until roles are enforced (B13).
 
-**Answer:** ______
-**Decided by / date:** ______
-**Notes:** ______
+**Answer:** A
+**Decided by / date:** Rayder / 25-11-2026
+**Notes:** 1. go with suggested. 2. Yes they should be editable, they are notes, not permenant data. 3. no need for categorisation. 4. everyone, i.e HR and admin
 
 ---
 
