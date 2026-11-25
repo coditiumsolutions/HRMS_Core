@@ -250,8 +250,9 @@ namespace HRMBT.Web.Controllers
 
             if (s[0].MinSalary != 0m)
                 w.Add($"The first slab starts at {s[0].MinSalary.ToString("N0", inv)}, not 0, so income below it is not taxed.");
-            if (s[^1].MaxSalary.HasValue && s[^1].MaxSalary.Value > 0m)
-                w.Add($"The last slab stops at {s[^1].MaxSalary!.Value.ToString("N0", inv)}; leave its \"up to\" empty so higher incomes are covered.");
+            var lastMax = s[^1].MaxSalary;
+            if (lastMax.HasValue && lastMax.Value > 0m)
+                w.Add($"The last slab stops at {lastMax.Value.ToString("N0", inv)}; leave its \"up to\" empty so higher incomes are covered.");
 
             for (var i = 1; i < s.Count; i++)
             {
