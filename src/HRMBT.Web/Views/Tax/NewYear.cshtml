@@ -1,0 +1,215 @@
+@using System.Globalization
+@model HRMBT.Web.Models.ViewModels.TaxYearNewVM
+
+@{
+    ViewData["Title"] = "New tax year";
+    ViewData["Module"] = "Tax";
+    var free = ViewBag.FreeYears as List<string> ?? new List<string>();
+    var copyYears = ViewBag.CopyYears as List<int> ?? new List<int>();
+    var copiedFrom = ViewBag.CopiedFrom as string;
+    string V(decimal? d) => d.HasValue ? d.Value.ToString("0.##", CultureInfo.InvariantCulture) : "";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" crossorigin="anonymous" />
+    <link rel="stylesheet" href="~/css/employee-list.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tax-rules.css" asp-append-version="true" />
+}
+
+<div class="employee-list-page tax-page py-3">
+    <div class="container-fluid px-0">
+
+        <div class="tax-intro">
+            <div>
+                <h1>New tax year</h1>
+                <p>Set up a tax year (July to June) and all of its slabs on one page. Enter annual income; tax = the slab's fixed amount + its rate on the part of the income above the slab start.</p>
+            </div>
+            <a asp-action="Index" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>All tax years</a>
+        </div>
+
+        <partial name="_TaxSourceNote" />
+
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div class="alert alert-danger" role="alert">
+                <strong>The tax year was not saved.</strong>
+                <ul class="mb-0 mt-1">
+                    @foreach (var err in ViewData.ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).Where(m => !string.IsNullOrWhiteSpace(m)).Distinct())
+                    {
+                        <li>@err</li>
+                    }
+                </ul>
+            </div>
+        }
+
+        <div class="grid-card mb-3">
+            <div class="card-header"><span><i class="bi bi-copy"></i>Start from an existing year (optional)</span></div>
+            <div class="card-body grid-form">
+                <div class="row g-2 align-items-end">
+                    <div class="col-12 col-md-4">
+                        <label class="form-label" for="copyFrom">Copy the slabs of</label>
+                        <select id="copyFrom" class="form-select">
+                            <option value="">Start empty</option>
+                            @foreach (var y in copyYears)
+                            {
+                                <option value="@y" selected="@(copiedFrom == $"{y}-{y + 1}")">@($"{y}-{y + 1}")</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-auto">
+                        <button type="button" id="loadCopy" class="btn btn-sm btn-grid-edit">Load slabs</button>
+                    </div>
+                    <div class="col-12 col-md text-muted small">
+                        @if (copiedFrom != null)
+                        {
+                            <span>Slabs copied from <strong>@copiedFrom</strong>. Change what differs, then save. Loading again replaces what is on this page.</span>
+                        }
+                        else
+                        {
+                            <span>Useful when most slabs stay the same. Loading replaces what is on this page.</span>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <form asp-action="NewYear" method="post" id="taxYearForm">
+            <div class="grid-card mb-3">
+                <div class="card-header"><span><i class="bi bi-calendar3"></i>Tax year</span></div>
+                <div class="card-body grid-form">
+                    <div class="row g-2">
+                        <div class="col-12 col-md-4">
+                            <label class="form-label" for="TaxYear">Tax year (1 July to 30 June)</label>
+                            <select asp-for="TaxYear" class="form-select" asp-items="@(new Microsoft.AspNetCore.Mvc.Rendering.SelectList(free))"></select>
+                            @if (free.Count == 0)
+                            {
+                                <div class="form-text text-danger">Every year in the list already has slabs.</div>
+                            }
+                            else
+                            {
+                                <div class="form-text">Only years without slabs are listed. To change a year that exists, open its card.</div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid-card mb-3">
+                <div class="card-header"><span><i class="bi bi-table"></i>Slabs (annual income)</span></div>
+                <div class="card-body grid-form">
+                    <div class="table-wrap table-responsive">
+                        <table class="employee-grid tax-slab-table" id="slabTable">
+                            <thead>
+                                <tr>
+                                    <th data-align="none" style="width:3rem">#</th>
+                                    <th data-align="none">Annual income from</th>
+                                    <th data-align="none">Annual income up to</th>
+                                    <th data-align="none">Fixed amount</th>
+                                    <th data-align="none">Rate on the excess (%)</th>
+                                    <th data-align="none" class="text-center" style="width:3rem"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="slabRows">
+                                @for (var i = 0; i < Model.Slabs.Count; i++)
+                                {
+                                    var r = Model.Slabs[i];
+                                    <tr>
+                                        <td class="slab-no">@(i + 1)</td>
+                                        <td><input type="number" step="0.01" min="0" class="form-control" data-f="MinSalary" name="Slabs[@i].MinSalary" value="@V(r.MinSalary)" /></td>
+                                        <td><input type="number" step="0.01" min="0" class="form-control" data-f="MaxSalary" name="Slabs[@i].MaxSalary" value="@V(r.MaxSalary)" placeholder="No limit" /></td>
+                                        <td><input type="number" step="0.01" min="0" class="form-control" data-f="FixedAmount" name="Slabs[@i].FixedAmount" value="@V(r.FixedAmount)" placeholder="0" /></td>
+                                        <td><input type="number" step="0.01" min="0" max="100" class="form-control" data-f="TaxPercentage" name="Slabs[@i].TaxPercentage" value="@V(r.TaxPercentage)" /></td>
+                                        <td class="text-center"><button type="button" class="btn btn-sm remove-row" title="Remove this slab" aria-label="Remove this slab"><i class="bi bi-x-lg"></i></button></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-2 mt-3">
+                        <button type="button" id="addRow" class="btn btn-sm btn-grid-edit"><i class="bi bi-plus-lg me-1"></i>Add slab row</button>
+                        <button type="button" id="fillUpTo" class="btn btn-sm btn-outline-secondary" title="Sets each empty 'up to' to the start of the next slab">Fill "up to" from the next slab</button>
+                        <button type="button" id="fillFixed" class="btn btn-sm btn-outline-secondary" title="Fixed amount = fixed amount of the slab below + its rate on the width of that slab">Calculate fixed amounts from the rates</button>
+                    </div>
+                    <p class="text-muted small mt-2 mb-0">
+                        Blank rows are ignored. Slabs are saved in order of "from". An empty "up to" ends where the next slab starts; the last slab has no limit.
+                        "Calculate fixed amounts" is a helper: it works out each fixed amount from the slab below, so compare the result with the source before saving.
+                    </p>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-end gap-2 mb-4">
+                <a asp-action="Index" class="btn btn-sm btn-outline-secondary">Cancel</a>
+                <button type="submit" class="btn btn-sm btn-grid-edit" @(free.Count == 0 ? "disabled" : null)><i class="bi bi-check2 me-1"></i>Save tax year</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            var body = document.getElementById('slabRows');
+            function rowEls() { return Array.prototype.slice.call(body.querySelectorAll('tr')); }
+            function field(tr, f) { return tr.querySelector('input[data-f="' + f + '"]'); }
+            function num(input) { var v = parseFloat(input.value); return isNaN(v) ? null : v; }
+            function renumber() {
+                rowEls().forEach(function (tr, i) {
+                    tr.querySelectorAll('input[data-f]').forEach(function (inp) { inp.name = 'Slabs[' + i + '].' + inp.getAttribute('data-f'); });
+                    tr.querySelector('.slab-no').textContent = i + 1;
+                });
+            }
+            function sortedRows() {
+                return rowEls().map(function (tr) { return { tr: tr, min: num(field(tr, 'MinSalary')) }; })
+                    .filter(function (r) { return r.min !== null; })
+                    .sort(function (a, b) { return a.min - b.min; });
+            }
+
+            document.getElementById('addRow').addEventListener('click', function () {
+                var tr = body.querySelector('tr').cloneNode(true);
+                tr.querySelectorAll('input').forEach(function (i) { i.value = ''; });
+                body.appendChild(tr);
+                renumber();
+                field(tr, 'MinSalary').focus();
+            });
+
+            body.addEventListener('click', function (e) {
+                var b = e.target.closest('.remove-row');
+                if (!b) return;
+                var tr = b.closest('tr');
+                if (rowEls().length > 1) { tr.remove(); renumber(); }
+                else tr.querySelectorAll('input').forEach(function (i) { i.value = ''; });
+            });
+
+            document.getElementById('fillUpTo').addEventListener('click', function () {
+                var rows = sortedRows();
+                for (var i = 0; i < rows.length - 1; i++) {
+                    var up = field(rows[i].tr, 'MaxSalary');
+                    if (up.value === '') up.value = rows[i + 1].min;
+                }
+            });
+
+            document.getElementById('fillFixed').addEventListener('click', function () {
+                var rows = sortedRows();
+                var prevFixed = null;
+                for (var i = 0; i < rows.length; i++) {
+                    var fx = field(rows[i].tr, 'FixedAmount');
+                    if (i === 0) { if (fx.value === '') fx.value = 0; prevFixed = num(fx) || 0; continue; }
+                    var rate = num(field(rows[i - 1].tr, 'TaxPercentage'));
+                    if (rate === null) { prevFixed = num(fx) || 0; continue; }
+                    var v = Math.round((prevFixed + (rows[i].min - rows[i - 1].min) * rate / 100) * 100) / 100;
+                    fx.value = v;
+                    prevFixed = v;
+                }
+            });
+
+            document.getElementById('loadCopy').addEventListener('click', function () {
+                var y = document.getElementById('copyFrom').value;
+                window.location.href = window.location.pathname + (y ? '?copyFrom=' + encodeURIComponent(y) : '');
+            });
+
+            document.getElementById('taxYearForm').addEventListener('submit', renumber);
+            renumber();
+        })();
+    </script>
+}

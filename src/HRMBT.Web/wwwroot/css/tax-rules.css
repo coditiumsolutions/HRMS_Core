@@ -1,0 +1,55 @@
+/* Tax rules pages: year cards (same look as the Home/Setup overview cards) and the source note. Colours of section headers come from hrms-theme.css. */
+.tax-page .tax-intro { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: .75rem; margin-bottom: .75rem; }
+.tax-page .tax-intro h1 { font-size: 1.35rem; font-weight: 700; color: #00203f; margin: 0 0 .25rem; }
+.tax-page .tax-intro p { color: #6c757d; font-size: .9rem; margin: 0; }
+
+.tax-page .tax-source-note { display: flex; gap: .6rem; align-items: flex-start; background: #fffaf0; border: 1px solid #ecd9a3; border-left: 3px solid #d4af37; border-radius: .4rem; padding: .55rem .85rem; margin-bottom: 1rem; font-size: .85rem; color: #4a4a4a; }
+.tax-page .tax-source-note i { color: #9a7b10; margin-top: .15rem; }
+.tax-page .tax-source-note a { font-weight: 600; }
+
+.tax-page .tax-year-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.25rem; }
+
+.tax-page .setup-tile { background: #fff; border: 1px solid rgba(0, 32, 63, .08); border-radius: .75rem; box-shadow: 0 .25rem 1rem rgba(0, 32, 63, .06); overflow: hidden; height: 100%; display: flex; flex-direction: column; transition: transform .15s ease, box-shadow .15s ease; }
+.tax-page .setup-tile:hover { transform: translateY(-3px); box-shadow: 0 .5rem 1.35rem rgba(0, 32, 63, .12); }
+.tax-page a.setup-tile { text-decoration: none; color: inherit; }
+.tax-page a.setup-tile:focus-visible { outline: 2px solid #d4af37; outline-offset: 2px; }
+.tax-page .setup-tile-header { padding: .45rem .8rem; display: flex; align-items: center; gap: .55rem; }
+.tax-page .setup-tile-icon { width: 1.9rem; height: 1.9rem; border-radius: .4rem; background: rgba(212, 175, 55, .2); border: 1px solid rgba(240, 215, 140, .45); color: #f0d78c; display: inline-flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; }
+.tax-page .setup-tile-body { border-left: 3px solid #d4af37; padding: .6rem .85rem .7rem; display: flex; flex-direction: column; flex: 1; }
+.tax-page .setup-tile-body p { color: #6c757d; font-size: .875rem; line-height: 1.35; margin: 0 0 .5rem; }
+.tax-page .setup-tile-stat { font-size: 1.6rem; font-weight: 700; color: #9a7b10; line-height: 1.1; margin: 0 0 .25rem; font-variant-numeric: tabular-nums; }
+.tax-page .setup-tile-meta { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: auto; }
+.tax-page .setup-tile-meta span { font-size: .72rem; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; color: #495057; background: #f8fafc; border: 1px solid #e9ecef; border-radius: .25rem; padding: .2rem .5rem; }
+.tax-page .setup-tile-meta span i { color: #d4af37; margin-right: .25rem; }
+.tax-page .tax-badge { margin-left: auto; font-size: .68rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #00203f; background: #f0d78c; border-radius: .25rem; padding: .1rem .45rem; }
+.tax-page .tax-chip-warn { color: #8a4b00 !important; background: #fff4e0 !important; border-color: #f2d19b !important; }
+
+.tax-page .tax-warnings { background: #fff4e0; border: 1px solid #f2d19b; border-radius: .4rem; padding: .55rem .85rem .55rem 2rem; margin-bottom: 1rem; font-size: .85rem; color: #6b3d00; }
+.tax-page .tax-warnings strong { display: block; margin: 0 0 .2rem -1.25rem; }
+.tax-page .tax-warnings ul { margin: 0; padding-left: .25rem; }
+.tax-page .tax-ok { background: #eaf6ee; border: 1px solid #b7dfc3; border-radius: .4rem; padding: .45rem .85rem; margin-bottom: 1rem; font-size: .85rem; color: #1e5e34; }
+
+/* New tax year: slab entry rows */
+.tax-page .tax-slab-table td { vertical-align: middle; padding: .3rem .4rem; }
+.tax-page .tax-slab-table .form-control { min-width: 7.5rem; }
+.tax-page .tax-slab-table .slab-no { color: #6c757d; font-weight: 600; text-align: center; }
+.tax-page .tax-slab-table .remove-row { color: #b42318; border: 0; background: transparent; }
+.tax-page .tax-slab-table .remove-row:hover { background: #fdecea; }
+.tax-page .setup-tile-header > span:not(.setup-tile-icon):not(.tax-badge) { white-space: nowrap; }
+
+/* Label | value table (Details, Delete): tinted small-caps labels, semibold values, hairline dividers */
+.tax-page .tax-detail-table { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; }
+.tax-page .tax-detail-table th, .tax-page .tax-detail-table td { padding: .85rem 1rem; border-bottom: 1px solid #eef0f2; vertical-align: middle; }
+.tax-page .tax-detail-table tr:last-child th, .tax-page .tax-detail-table tr:last-child td { border-bottom: 0; }
+.tax-page .tax-detail-table th { width: 16%; min-width: 7.5rem; background: #f8fafc; font-size: .68rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: #6c757d; text-align: left; }
+.tax-page .tax-detail-table td { width: 34%; font-size: .98rem; font-weight: 600; color: #00203f; font-variant-numeric: tabular-nums; }
+.tax-page .tax-detail-table tr:hover td { background: #fffaf0; }
+.tax-page .tax-detail-sub { font-size: .78rem; font-weight: 400; color: #6c757d; margin-left: .35rem; }
+@media (max-width: 767.98px) {
+  .tax-page .tax-detail-table, .tax-page .tax-detail-table tbody, .tax-page .tax-detail-table tr, .tax-page .tax-detail-table th, .tax-page .tax-detail-table td { display: block; width: 100%; }
+  .tax-page .tax-detail-table th { border-bottom: 0; padding-bottom: .2rem; }
+}
+
+/* Delete confirmation: pale red consequence note */
+.tax-page .tax-danger-note { display: flex; gap: .6rem; align-items: flex-start; background: #fdecea; border: 1px solid #f3b9b3; border-left: 3px solid #b42318; border-radius: .4rem; padding: .6rem .9rem; margin-bottom: 1rem; font-size: .88rem; color: #6e1a12; }
+.tax-page .tax-danger-note i { color: #b42318; margin-top: .15rem; }

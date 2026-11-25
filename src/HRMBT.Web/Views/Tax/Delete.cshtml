@@ -1,51 +1,69 @@
 @model HRMBT.Web.Models.TaxRule
 
 @{
-    ViewData["Title"] = "Delete Tax Rule";
+    ViewData["Title"] = "Delete tax slab";
+    ViewData["Module"] = "Tax";
+    var hasLimit = Model.MaxSalary.HasValue && Model.MaxSalary.Value > 0m;
 }
 
-<h1>Delete Tax Rule</h1>
+@section Styles {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" crossorigin="anonymous" />
+    <link rel="stylesheet" href="~/css/employee-list.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tax-rules.css" asp-append-version="true" />
+}
 
-<h3>Are you sure you want to delete this?</h3>
-<div>
-    <hr />
-    <dl class="row">
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.Id)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.Id)
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.TaxYear)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.TaxYear)
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.MinSalary)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.MinSalary)
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.MaxSalary)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.MaxSalary)
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.TaxPercentage)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.TaxPercentage)%
-        </dd>
-    </dl>
-    
-    <form asp-action="Delete">
-        <input type="hidden" asp-for="Id" />
-        <input type="submit" value="Delete" class="btn btn-danger" />
-        <a asp-action="Index" class="btn btn-secondary">Back to List</a>
-    </form>
+<div class="employee-list-page tax-page py-3">
+    <div class="container-fluid px-0">
+
+        <div class="tax-intro">
+            <div>
+                <h1>Delete tax slab</h1>
+                <p>Please confirm. This cannot be undone.</p>
+            </div>
+            <a asp-action="Year" asp-route-start="@Model.StartYear" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Tax year @Model.TaxYear</a>
+        </div>
+
+        <div class="tax-danger-note" role="alert">
+            <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+            <div>
+                Deleting this slab removes it from tax year <strong>@Model.TaxYear</strong>. Payslips already generated keep the tax they were calculated with,
+                but payslips generated afterwards for this year will use the slabs that remain, so incomes in this range may be taxed at the wrong rate until a replacement slab is added.
+                If it is the last slab of the year, the whole year disappears from the Tax rules page.
+            </div>
+        </div>
+
+        <div class="grid-card mb-3">
+            <div class="card-header"><span><i class="bi bi-table"></i>Slab to delete</span></div>
+            <div class="card-body">
+                <table class="tax-detail-table">
+                    <tbody>
+                        <tr>
+                            <th scope="row">Tax year</th>
+                            <td>@Model.TaxYear <span class="tax-detail-sub">01/07/@Model.StartYear to 30/06/@(Model.StartYear + 1)</span></td>
+                            <th scope="row">Rate on the excess</th>
+                            <td>@Fmt.Percent(Model.TaxPercentage)</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Annual income from</th>
+                            <td>@Fmt.Amount(Model.MinSalary)</td>
+                            <th scope="row">Annual income up to</th>
+                            <td>@(hasLimit ? Fmt.Amount(Model.MaxSalary!.Value) : "No limit")</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Fixed amount</th>
+                            <td>@Fmt.Amount(Model.FixedAmount) <span class="tax-detail-sub">a year</span></td>
+                            <th scope="row"></th>
+                            <td></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <form asp-action="Delete" asp-route-id="@Model.Id" method="post" class="d-flex justify-content-end gap-2 mb-4">
+            <input type="hidden" asp-for="Id" />
+            <a asp-action="Year" asp-route-start="@Model.StartYear" class="btn btn-sm btn-outline-secondary">Back</a>
+            <button type="submit" class="btn btn-sm btn-grid-delete"><i class="bi bi-trash3 me-1"></i>Delete slab</button>
+        </form>
+    </div>
 </div>
-

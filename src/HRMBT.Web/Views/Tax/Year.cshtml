@@ -1,0 +1,98 @@
+@model HRMBT.Web.Models.ViewModels.TaxYearVM
+
+@{
+    ViewData["Title"] = $"Tax year {Model.Label}";
+    var editBaseUrl = Url.Action("Edit", "Tax", new { id = "__id__" });
+    var detailsBaseUrl = Url.Action("Details", "Tax", new { id = "__id__" });
+}
+
+@section Styles {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" crossorigin="anonymous" />
+    <link rel="stylesheet" href="~/css/employee-list.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tax-rules.css" asp-append-version="true" />
+}
+
+<div class="employee-list-page tax-page py-3">
+    <div class="container-fluid px-0">
+
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show d-flex align-items-center gap-2 mb-3" role="alert">
+                <i class="bi bi-check-circle-fill"></i>
+                <div>@TempData["SuccessMessage"]</div>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+            </div>
+        }
+
+        <div class="tax-intro">
+            <div>
+                <h1>Tax year @Model.Label@(Model.IsCurrent ? " (current)" : "")</h1>
+                <p>01/07/@Model.StartYear to 30/06/@(Model.StartYear + 1). Tax on an annual income = the slab's fixed amount + its rate on the part of the income above the slab start; monthly tax = annual tax / 12.</p>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <a asp-action="Index" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>All tax years</a>
+                <a asp-action="Create" asp-route-year="@Model.StartYear" class="btn btn-sm btn-grid-edit"><i class="bi bi-plus-lg me-1"></i>New slab for @Model.Label</a>
+            </div>
+        </div>
+
+        <partial name="_TaxSourceNote" />
+
+        @if (Model.Warnings.Count > 0)
+        {
+            <div class="tax-warnings" role="alert">
+                <strong><i class="bi bi-exclamation-triangle-fill me-1"></i>Please check these slabs against the source</strong>
+                <ul>
+                    @foreach (var w in Model.Warnings)
+                    {
+                        <li>@w</li>
+                    }
+                </ul>
+            </div>
+        }
+        else
+        {
+            <div class="tax-ok"><i class="bi bi-check-circle-fill me-1"></i>The slabs start at 0, meet without gaps and each fixed amount follows from the slab below.</div>
+        }
+
+        <div class="grid-card mb-4">
+            <div class="card-header"><span><i class="bi bi-table"></i>Slabs of @Model.Label (annual income)</span></div>
+            <div class="card-body">
+                <div class="table-wrap table-responsive">
+                    <table class="employee-grid hrms-selectable-grid" id="taxGrid"
+                           data-edit-base="@editBaseUrl"
+                           data-details-base="@detailsBaseUrl">
+                        <thead>
+                            <tr>
+                                <th>@Html.DisplayNameFor(m => m.Rules[0].MinSalary)</th>
+                                <th>@Html.DisplayNameFor(m => m.Rules[0].MaxSalary)</th>
+                                <th>@Html.DisplayNameFor(m => m.Rules[0].FixedAmount)</th>
+                                <th>@Html.DisplayNameFor(m => m.Rules[0].TaxPercentage)</th>
+                                <th class="col-actions text-center" data-align="none" scope="col">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.Rules)
+                            {
+                                <tr data-record-id="@item.Id" title="Double-click to open">
+                                    <td class="salary col-salary">@Fmt.Amount(item.MinSalary)</td>
+                                    <td class="salary col-salary">@(item.MaxSalary.HasValue && item.MaxSalary.Value > 0m ? Fmt.Amount(item.MaxSalary.Value) : "No limit")</td>
+                                    <td class="salary col-salary">@Fmt.Amount(item.FixedAmount)</td>
+                                    <td>@Fmt.Percent(item.TaxPercentage)</td>
+                                    <td class="col-actions">
+                                        <a class="row-action row-action-view" asp-action="Details" asp-route-id="@item.Id" title="View slab" aria-label="View slab"><i class="bi bi-eye"></i></a>
+                                        <a class="row-action row-action-edit" asp-action="Edit" asp-route-id="@item.Id" title="Edit slab" aria-label="Edit slab"><i class="bi bi-pencil-square"></i></a>
+                                        <a class="row-action row-action-delete" asp-action="Delete" asp-route-id="@item.Id" title="Delete slab" aria-label="Delete slab"><i class="bi bi-trash3"></i></a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @await Html.PartialAsync("_HrmsGridSelectionScript")
+}

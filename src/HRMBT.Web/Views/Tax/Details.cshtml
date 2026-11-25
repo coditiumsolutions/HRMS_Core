@@ -1,49 +1,60 @@
 @model HRMBT.Web.Models.TaxRule
 
 @{
-    ViewData["Title"] = "Tax Rule Details";
+    ViewData["Title"] = "Tax slab";
+    ViewData["Module"] = "Tax";
+    var hasLimit = Model.MaxSalary.HasValue && Model.MaxSalary.Value > 0m;
 }
 
-<h1>Tax Rule Details</h1>
+@section Styles {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" crossorigin="anonymous" />
+    <link rel="stylesheet" href="~/css/employee-list.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tax-rules.css" asp-append-version="true" />
+}
 
-<div>
-    <hr />
-    <dl class="row">
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.Id)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.Id)
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.TaxYear)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.TaxYear)
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.MinSalary)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.MinSalary)
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.MaxSalary)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.MaxSalary)
-        </dd>
-        <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.TaxPercentage)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.TaxPercentage)%
-        </dd>
-    </dl>
-</div>
-<div>
-    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-sm btn-grid-edit">Edit</a>
-    <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-sm btn-grid-delete">Delete</a>
-    <a asp-action="Index" class="btn btn-secondary">Back to List</a>
-</div>
+<div class="employee-list-page tax-page py-3">
+    <div class="container-fluid px-0">
 
+        <div class="tax-intro">
+            <div>
+                <h1>Tax slab</h1>
+                <p>One slab of tax year @Model.TaxYear. Annual tax = fixed amount + rate on the part of the annual income above "Annual income from"; monthly tax = annual tax / 12.</p>
+            </div>
+            <a asp-action="Year" asp-route-start="@Model.StartYear" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Tax year @Model.TaxYear</a>
+        </div>
+
+        <div class="grid-card mb-3">
+            <div class="card-header"><span><i class="bi bi-table"></i>Slab (annual income)</span></div>
+            <div class="card-body">
+                <table class="tax-detail-table">
+                    <tbody>
+                        <tr>
+                            <th scope="row">Tax year</th>
+                            <td>@Model.TaxYear <span class="tax-detail-sub">01/07/@Model.StartYear to 30/06/@(Model.StartYear + 1)</span></td>
+                            <th scope="row">Rate on the excess</th>
+                            <td>@Fmt.Percent(Model.TaxPercentage)</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Annual income from</th>
+                            <td>@Fmt.Amount(Model.MinSalary)</td>
+                            <th scope="row">Annual income up to</th>
+                            <td>@(hasLimit ? Fmt.Amount(Model.MaxSalary!.Value) : "No limit")</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Fixed amount</th>
+                            <td>@Fmt.Amount(Model.FixedAmount) <span class="tax-detail-sub">a year</span></td>
+                            <th scope="row">Monthly tax at the slab start</th>
+                            <td>@Fmt.Amount(Math.Round(Model.FixedAmount / 12m, 0, MidpointRounding.AwayFromZero))</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2 mb-4">
+            <a asp-action="Year" asp-route-start="@Model.StartYear" class="btn btn-sm btn-outline-secondary">Back</a>
+            <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-sm btn-grid-delete"><i class="bi bi-trash3 me-1"></i>Delete</a>
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-sm btn-grid-edit"><i class="bi bi-pencil-square me-1"></i>Edit</a>
+        </div>
+    </div>
+</div>

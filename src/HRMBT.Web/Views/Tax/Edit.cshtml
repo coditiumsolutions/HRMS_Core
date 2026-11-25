@@ -1,48 +1,95 @@
 @model HRMBT.Web.Models.TaxRule
 
 @{
-    ViewData["Title"] = "Edit Tax Rule";
+    ViewData["Title"] = "Edit slab";
+    ViewData["Module"] = "Tax";
 }
 
-<h1>Edit Tax Rule</h1>
+@section Styles {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" crossorigin="anonymous" />
+    <link rel="stylesheet" href="~/css/employee-list.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tax-rules.css" asp-append-version="true" />
+}
 
-<hr />
-<div class="row">
-    <div class="col-md-6">
-        <form asp-action="Edit">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+<div class="employee-list-page tax-page py-3">
+    <div class="container-fluid px-0">
+
+        <div class="tax-intro">
+            <div>
+                <h1>Edit slab</h1>
+                <p>Change one slab of tax year @Model.TaxYear. Existing payslips keep the tax they were generated with.</p>
+            </div>
+            <a asp-action="@(Model.StartYear > 0 ? "Year" : "Index")" asp-route-start="@(Model.StartYear > 0 ? Model.StartYear : (int?)null)" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>@(Model.StartYear > 0 ? "Tax year " + Model.TaxYear : "All tax years")</a>
+        </div>
+
+        <partial name="_TaxSourceNote" />
+
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div class="alert alert-danger" role="alert">
+                <strong>The slab was not saved.</strong>
+                <ul class="mb-0 mt-1">
+                    @foreach (var err in ViewData.ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).Where(m => !string.IsNullOrWhiteSpace(m)).Distinct())
+                    {
+                        <li>@err</li>
+                    }
+                </ul>
+            </div>
+        }
+
+        <form asp-action="Edit" method="post">
             <input type="hidden" asp-for="Id" />
-            <div class="form-group mb-3">
-                <label asp-for="TaxYear" class="control-label"></label>
-                <select asp-for="TaxYear" class="form-select" asp-items="ViewBag.TaxYears"></select>
-                <small class="form-text text-muted">From <code>dbo.Configuration</code> (<code>ConfigKey = TaxSlabs</code>, comma-separated <code>ConfigValue</code>). When editing an older slab whose year has been removed from Configuration, its current value remains in the list.</small>
-                <span asp-validation-for="TaxYear" class="text-danger"></span>
+
+            <div class="grid-card mb-3">
+                <div class="card-header"><span><i class="bi bi-calendar3"></i>Tax year</span></div>
+                <div class="card-body grid-form">
+                    <div class="row g-2">
+                        <div class="col-12 col-md-4">
+                            <label asp-for="TaxYear" class="form-label">Tax year (1 July to 30 June)</label>
+                            <select asp-for="TaxYear" class="form-select" asp-items="ViewBag.TaxYears"></select>
+                            <div class="form-text">Moving the slab to another year takes it out of this year's card.</div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="form-group mb-3">
-                <label asp-for="MinSalary" class="control-label"></label>
-                <input asp-for="MinSalary" class="form-control" type="number" step="0.01" min="0" />
-                <span asp-validation-for="MinSalary" class="text-danger"></span>
+
+            <div class="grid-card mb-3">
+                <div class="card-header"><span><i class="bi bi-table"></i>Slab (annual income)</span></div>
+                <div class="card-body grid-form">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6 col-xl-3">
+                            <label asp-for="MinSalary" class="form-label"></label>
+                            <input asp-for="MinSalary" class="form-control" type="number" step="0.01" min="0" />
+                            <div class="form-text">Where the slab starts. The rate applies to the part of the income above this.</div>
+                        </div>
+                        <div class="col-12 col-md-6 col-xl-3">
+                            <label asp-for="MaxSalary" class="form-label"></label>
+                            <input asp-for="MaxSalary" class="form-control" type="number" step="0.01" min="0" placeholder="No limit" />
+                            <div class="form-text">Leave empty for no upper limit (the top slab).</div>
+                        </div>
+                        <div class="col-12 col-md-6 col-xl-3">
+                            <label asp-for="FixedAmount" class="form-label"></label>
+                            <input asp-for="FixedAmount" class="form-control" type="number" step="0.01" min="0" />
+                            <div class="form-text">Tax already due at the start of the slab (0 for the first taxed slab).</div>
+                        </div>
+                        <div class="col-12 col-md-6 col-xl-3">
+                            <label asp-for="TaxPercentage" class="form-label"></label>
+                            <input asp-for="TaxPercentage" class="form-control" type="number" step="0.01" min="0" max="100" />
+                            <div class="form-text">Percent charged on the part above the slab start.</div>
+                        </div>
+                    </div>
+                    <div class="form-text mt-3">Annual tax = fixed amount + rate on the part of the annual income above "Annual income from". Monthly tax = annual tax / 12.</div>
+                </div>
             </div>
-            <div class="form-group mb-3">
-                <label asp-for="MaxSalary" class="control-label"></label>
-                <input asp-for="MaxSalary" class="form-control" type="number" step="0.01" min="0" />
-                <small class="form-text text-muted">Leave empty for unlimited maximum salary</small>
-                <span asp-validation-for="MaxSalary" class="text-danger"></span>
-            </div>
-            <div class="form-group mb-3">
-                <label asp-for="TaxPercentage" class="control-label"></label>
-                <input asp-for="TaxPercentage" class="form-control" type="number" step="0.01" min="0" max="100" />
-                <span asp-validation-for="TaxPercentage" class="text-danger"></span>
-            </div>
-            <div class="form-group mb-3">
-                <input type="submit" value="Save" class="btn btn-primary" />
-                <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+
+            <div class="d-flex justify-content-end gap-2 mb-4">
+                <a asp-action="@(Model.StartYear > 0 ? "Year" : "Index")" asp-route-start="@(Model.StartYear > 0 ? Model.StartYear : (int?)null)" class="btn btn-sm btn-outline-secondary">Cancel</a>
+                <button type="submit" class="btn btn-sm btn-grid-edit"><i class="bi bi-check2 me-1"></i>Save slab</button>
             </div>
         </form>
     </div>
 </div>
 
 @section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <partial name="_ValidationScriptsPartial" />
 }
-
