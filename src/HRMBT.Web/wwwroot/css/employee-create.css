@@ -3,12 +3,12 @@
 .employee-create-page {
   background: linear-gradient(180deg, #f1f3f5 0%, #e9ecef 100%);
   min-height: calc(100vh - 120px);
-  padding-bottom: 5.5rem;
+  padding-bottom: 1rem;
 }
 
 .employee-create-page.py-4 {
   padding-top: 1rem !important;
-  padding-bottom: 5.5rem !important;
+  padding-bottom: 1rem !important;
 }
 
 .employee-create-page .row.g-4 {
@@ -160,92 +160,6 @@
   background: rgba(51, 107, 135, 0.08);
   border-color: #00203f;
   color: #00203f;
-}
-
-/* Sticky action bar */
-.employee-create-actions {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 1020;
-  background: rgba(255, 255, 255, 0.96);
-  backdrop-filter: blur(8px);
-  border-top: 1px solid rgba(0, 32, 63, 0.1);
-  box-shadow: 0 -0.25rem 1rem rgba(0, 32, 63, 0.08);
-  padding: 0.5rem 0;
-}
-
-.employee-create-actions .btn-action-primary {
-  border-radius: 2rem;
-  padding: 0.4rem 1.25rem;
-  font-weight: 600;
-  font-size: 0.875rem;
-  background: linear-gradient(135deg, #00203f 0%, #1a4a7a 100%);
-  border: none;
-  color: #fff;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
-}
-
-.employee-create-actions .btn-action-primary:hover:not(:disabled) {
-  color: #fff;
-  transform: translateY(-1px);
-  box-shadow: 0 0.35rem 1rem rgba(0, 32, 63, 0.35);
-}
-
-.employee-create-actions .btn-action-primary:disabled {
-  opacity: 0.75;
-  cursor: not-allowed;
-}
-
-.employee-create-actions .btn-action-secondary {
-  border-radius: 2rem;
-  padding: 0.4rem 1.15rem;
-  font-weight: 600;
-  font-size: 0.875rem;
-  border: 1px solid #ced4da;
-  color: #495057;
-  background: #fff;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-}
-
-.employee-create-actions .btn-action-secondary:hover {
-  background: #f8f9fa;
-  border-color: #adb5bd;
-  color: #212529;
-}
-
-.employee-create-actions .btn-action-outline {
-  border-radius: 2rem;
-  padding: 0.4rem 1.15rem;
-  font-weight: 600;
-  font-size: 0.875rem;
-  border: 2px solid #d4af37;
-  color: #856404;
-  background: #fff;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-
-.employee-create-actions .btn-action-outline:hover {
-  background: #fff9e6;
-  color: #664d03;
-}
-
-@media (max-width: 991.98px) {
-  .employee-create-page {
-    padding-bottom: 7.5rem;
-  }
-
-  .employee-create-actions .d-flex {
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    justify-content: center !important;
-  }
-
-  .employee-create-actions .btn {
-    flex: 1 1 auto;
-    min-width: 8rem;
-  }
 }
 
 /* Read-only details view (shares Create page chrome) */

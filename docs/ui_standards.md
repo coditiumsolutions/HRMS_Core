@@ -1,6 +1,6 @@
 ---
 status: current
-last_verified: 2026-11-23
+last_verified: 2026-11-25
 applies_to: src/HRMBT.Web/Views (Razor), wwwroot/css/hrms-theme.css, wwwroot/js/hrms-grid.js
 implementation: src/HRMBT.Web/Infrastructure/Fmt.cs, wwwroot/css/hrms-theme.css, wwwroot/js/hrms-grid.js
 ---
@@ -85,6 +85,28 @@ Everything below lives in `hrms-theme.css`; page CSS and views should not restat
 - **No salary on a grid (rule, 2026-11-24):** never show salary information (basic, gross, net, allowance or deduction amounts, tax amounts, percentages that reveal pay) as a grid column. To see money the user opens the employee's or record's details page, and the view that shows it is the place to check roles. Removed from the Allowances, Deductions, Payroll, Payroll status, Payroll search, Payroll employee-selection, Payslips and Attendance pick grids. Not covered, needs a decision: the Reports pages (Salaries, Allowances and Deductions summaries) whose purpose is the amounts, the "Net (filtered period)" chip on the Payslips page, and the tax slab limits on the Tax grid (those are rules, not one person's pay).
 All grid pages use the Actions column now: Employees, Allowances, Deductions, Attendance, Leave, Leave quotas, Payroll (View, plus Delete while the payslip is unlocked), Tax, Setup Config and Setup Users. The styles (`col-actions`, `row-action*`) are in `hrms-theme.css`, so a new grid only needs the markup: an Actions `th` (`class="col-actions text-center" data-align="none"`) and a `td.col-actions` with the icon links. Not covered: Payslips and Lookups, which have their own row buttons; convert them when you touch them.
 - **No colour in page CSS:** section headers, their icons and their spacing come from the theme. Do not add `.xxx .card-header { background... }` rules to a view or a page stylesheet (the old teal ones were removed on 2026-11-24).
+
+## Action bar standard (2026-11-25): the Save / Cancel / Run buttons of every form
+
+One component, `.action-bar`, defined at the end of `wwwroot/css/hrms-theme.css`. Do not write page-level CSS for a button row, and do not use `position: fixed`, `btn-lg`, `rounded-pill`/`btn-primary` or square custom buttons for it.
+
+- **Floating bar** (a page-level form: Run payroll, single payroll, manual payslip, payslip details, Employee Create/Edit, leave request, tax slab and tax year, config edit): `<div class="action-bar">` as the last child of the `<form>`, or the form itself carries the class. It sits in the content column under the last card (never over the sidebar), uses the same white card look as the sections above it (0.75rem radius, thin border, light shadow), is only as tall as its buttons (0.5rem vertical padding) and sticks 0.75rem above the bottom of the window while the form is taller than the screen. It is hidden when printing.
+- **Inline bar** (a form inside a card: allowance and deduction create/edit, setup user, lookup edit, leave edit): `<div class="action-bar action-bar--inline">` as the last child of the card body. Same buttons, no card chrome, a thin rule above, right aligned.
+- **Buttons:** `btn-action-primary` (navy, the one main action), `btn-action-secondary` (white with grey border: Cancel, Back, Reset, other links), `btn-action-outline` (white with brass border: a related page such as Details), `btn-action-danger` (red outline, fills red on hover: Delete confirmations). Always right aligned, secondary actions on the left of the primary one, the primary action last. Small pill buttons: 0.3rem 0.9rem padding, 0.875rem text, set by the bar, so do not add `btn-sm`/`btn-lg` sizing rules.
+- **Hint text** on the left is optional (`<div class="action-bar-hint">`, one short line, hidden below 768px with `d-none d-md-block`); keep it short or leave it out.
+- **Small screens:** buttons wrap and share the width; nothing else to write.
+- **Page padding:** the page wrapper needs only the normal 1rem bottom padding (the old 6.5rem and 7.5rem reserved for the fixed bar are gone).
+- **Not part of this standard:** filter "Apply" buttons inside Search & Filters, row actions in grids (`Actions` column), selection toolbars above a grid, and the confirm buttons of the older plain pages (Attendance Edit/Delete/Upload, leave quota forms, Setup Create config, Setup Delete user/config, LMS Delete). Those older pages move to the bar when they are redesigned.
+- **Markup example:**
+```html
+<form asp-action="Create" method="post">
+    ... cards ...
+    <div class="action-bar d-flex flex-wrap align-items-center justify-content-end gap-2">
+        <a asp-action="Index" class="btn btn-action-secondary">Cancel</a>
+        <button type="submit" class="btn btn-action-primary"><i class="bi bi-check2 me-1"></i>Save</button>
+    </div>
+</form>
+```
 
 ## Employee dossier standard (2026-11-24): every page that shows or edits one employee
 

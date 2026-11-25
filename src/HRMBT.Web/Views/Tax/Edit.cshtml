@@ -19,7 +19,7 @@
                 <h1>Edit slab</h1>
                 <p>Change one slab of tax year @Model.TaxYear. Existing payslips keep the tax they were generated with.</p>
             </div>
-            <a asp-action="@(Model.StartYear > 0 ? "Year" : "Index")" asp-route-start="@(Model.StartYear > 0 ? Model.StartYear : (int?)null)" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>@(Model.StartYear > 0 ? "Tax year " + Model.TaxYear : "All tax years")</a>
+            <a asp-action="@(Model.StartYear > 0 ? "Year" : "Index")" asp-route-start="@(Model.StartYear > 0 ? Model.StartYear : (int?)null)" class="btn btn-sm btn-action-secondary"><i class="bi bi-arrow-left me-1"></i>@(Model.StartYear > 0 ? "Tax year " + Model.TaxYear : "All tax years")</a>
         </div>
 
         <partial name="_TaxSourceNote" />
@@ -82,9 +82,9 @@
                 </div>
             </div>
 
-            <div class="d-flex justify-content-end gap-2 mb-4">
-                <a asp-action="@(Model.StartYear > 0 ? "Year" : "Index")" asp-route-start="@(Model.StartYear > 0 ? Model.StartYear : (int?)null)" class="btn btn-sm btn-outline-secondary">Cancel</a>
-                <button type="submit" class="btn btn-sm btn-grid-edit"><i class="bi bi-check2 me-1"></i>Save slab</button>
+            <div class="action-bar d-flex flex-wrap align-items-center justify-content-end gap-2">
+                <a asp-action="@(Model.StartYear > 0 ? "Year" : "Index")" asp-route-start="@(Model.StartYear > 0 ? Model.StartYear : (int?)null)" class="btn btn-sm btn-action-secondary">Cancel</a>
+                <button type="submit" class="btn btn-sm btn-action-primary"><i class="bi bi-check2 me-1"></i>Save slab</button>
             </div>
         </form>
     </div>

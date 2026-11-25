@@ -3,7 +3,7 @@
 .payslip-page {
   background: linear-gradient(180deg, #f1f3f5 0%, #e9ecef 100%);
   min-height: calc(100vh - 120px);
-  padding-bottom: 6.5rem;
+  padding-bottom: 1rem;
 }
 
 .payslip-page .page-header-card,
@@ -159,18 +159,6 @@
 }
 
 .payslip-page .btn-action-outline:hover { background: #fff9e6; color: #664d03; }
-
-/* Sticky bar */
-.payslip-actions {
-  position: fixed;
-  left: 0; right: 0; bottom: 0;
-  z-index: 1020;
-  background: rgba(255, 255, 255, 0.96);
-  backdrop-filter: blur(8px);
-  border-top: 1px solid rgba(0, 32, 63, 0.1);
-  box-shadow: 0 -0.25rem 1rem rgba(0, 32, 63, 0.08);
-  padding: 0.75rem 0;
-}
 
 /* Net salary highlight */
 .payslip-page .calc-summary {
@@ -489,9 +477,6 @@
 }
 
 @media (max-width: 991.98px) {
-  .payslip-page { padding-bottom: 7.5rem; }
-  .payslip-actions .d-flex { flex-wrap: wrap; gap: 0.5rem; justify-content: center !important; }
-  .payslip-actions .btn { flex: 1 1 auto; min-width: 8rem; }
 }
 
 /* ========== PRINT layout ========== */

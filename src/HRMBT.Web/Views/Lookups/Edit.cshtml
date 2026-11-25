@@ -110,9 +110,9 @@
                         <div class="form-text">Inactive entries are hidden from new entries; existing records keep them.</div>
                     </div>
 
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-sm btn-grid-edit"><i class="bi bi-check2 me-1"></i>Save</button>
-                        <a class="btn btn-sm btn-grid-delete" asp-action="Index" asp-route-kind="@Model.Kind" asp-route-departmentId="@(Model.Kind == "subdepartments" && Model.DepartmentId > 0 ? Model.DepartmentId : (int?)null)">Cancel</a>
+                    <div class="action-bar action-bar--inline">
+                        <a class="btn btn-sm btn-action-secondary" asp-action="Index" asp-route-kind="@Model.Kind" asp-route-departmentId="@(Model.Kind == "subdepartments" && Model.DepartmentId > 0 ? Model.DepartmentId : (int?)null)">Cancel</a>
+                        <button type="submit" class="btn btn-sm btn-action-primary"><i class="bi bi-check2 me-1"></i>Save</button>
                     </div>
                 </div>
             </div>

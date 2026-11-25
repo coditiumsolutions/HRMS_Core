@@ -50,14 +50,6 @@
             margin-bottom: 0;
         }
         .setup-user-form-table tr { border-bottom: 1px solid #eef0f2; }
-        .setup-user-form-actions {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.35rem;
-            justify-content: flex-end;
-            align-items: center;
-            padding: 0.65rem 0.85rem;
-        }
     </style>
 }
 
@@ -119,9 +111,9 @@
                         </table>
                     </div>
 
-                    <div class="setup-user-form-actions">
-                        <button type="submit" class="btn btn-sm btn-grid-edit"><i class="bi bi-check2 me-1"></i>Save</button>
-                        <a class="btn btn-sm btn-grid-delete" asp-action="Users">Cancel</a>
+                    <div class="action-bar action-bar--inline">
+                        <a class="btn btn-sm btn-action-secondary" asp-action="Users">Cancel</a>
+                        <button type="submit" class="btn btn-sm btn-action-primary"><i class="bi bi-check2 me-1"></i>Save</button>
                     </div>
                 </div>
             </div>

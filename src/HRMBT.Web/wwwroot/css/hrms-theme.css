@@ -786,3 +786,29 @@ body .ts-dropdown .no-results { color: #6c757d; }
 body .filter-card .ts-wrapper { min-width: 8.5rem; }
 body .filter-card .ts-wrapper .ts-control { min-height: 2rem; font-size: .85rem; padding-top: .2rem; padding-bottom: .2rem; border-radius: .4rem; }
 body .ts-wrapper.is-invalid .ts-control, body .ts-wrapper.input-validation-error .ts-control { border-color: var(--hr-danger, #dc3545); }
+
+/* ===== Action bar (standard) =====
+   Save / Cancel / Run buttons of a form. Floating variant: put <div class="action-bar"> as the last child of the form;
+   it sits in the content column (never over the sidebar), looks like the cards above it and sticks to the bottom of the
+   window while the form is taller than the screen. Inline variant: <div class="action-bar action-bar--inline"> as the last
+   child of a card, right aligned, with a top rule. Buttons use btn-action-primary / -secondary / -outline, never btn-lg.
+   Optional left-hand hint: <div class="action-bar-hint">. Standard: docs/ui_standards.md. */
+.action-bar { position: sticky; bottom: .75rem; z-index: 1020; margin-top: 1rem; background: #fff; border: 1px solid rgba(0,32,63,.08); border-radius: .75rem; box-shadow: 0 .25rem 1rem rgba(0,32,63,.06); padding: .5rem .75rem; }
+.action-bar > .container-fluid { padding-left: 0 !important; padding-right: 0 !important; }
+.action-bar--inline { position: static; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: .5rem; margin: 0; background: transparent; border: 0; border-top: 1px solid #eef0f2; border-radius: 0; box-shadow: none; padding: .6rem .85rem; }
+.action-bar .action-bar-hint { color: #6c757d; font-size: .8125rem; }
+.action-bar .btn { padding: .3rem .9rem; font-size: .875rem; font-weight: 600; line-height: 1.4; border-radius: 2rem; }
+.action-bar .btn.btn-action-primary { background: linear-gradient(135deg, #00203f 0%, #1a4a7a 100%); border: 1px solid transparent; color: #fff; }
+.action-bar .btn.btn-action-primary:hover:not(:disabled) { color: #fff; box-shadow: 0 .25rem .75rem rgba(0,32,63,.3); }
+.action-bar .btn.btn-action-primary:disabled { opacity: .65; cursor: not-allowed; }
+.action-bar .btn.btn-action-secondary { background: #fff; border: 1px solid #ced4da; color: #495057; }
+.action-bar .btn.btn-action-secondary:hover { background: #f8f9fa; border-color: #adb5bd; color: #212529; }
+.action-bar .btn.btn-action-outline { background: #fff; border: 1px solid #d4af37; color: #856404; }
+.action-bar .btn.btn-action-outline:hover { background: #fff9e6; color: #664d03; }
+@media (max-width: 991.98px) {
+  .action-bar .d-flex { flex-wrap: wrap; gap: .5rem; justify-content: center !important; }
+  .action-bar .btn { flex: 1 1 auto; }
+}
+@media print { .action-bar { display: none !important; } }
+.action-bar .btn.btn-action-danger { background: #fff; border: 1px solid #dc3545; color: #b02a37; }
+.action-bar .btn.btn-action-danger:hover { background: #dc3545; color: #fff; }

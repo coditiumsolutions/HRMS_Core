@@ -24,7 +24,7 @@
                 <h1>New tax year</h1>
                 <p>Set up a tax year (July to June) and all of its slabs on one page. Enter annual income; tax = the slab's fixed amount + its rate on the part of the income above the slab start.</p>
             </div>
-            <a asp-action="Index" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>All tax years</a>
+            <a asp-action="Index" class="btn btn-sm btn-action-secondary"><i class="bi bi-arrow-left me-1"></i>All tax years</a>
         </div>
 
         <partial name="_TaxSourceNote" />
@@ -57,7 +57,7 @@
                         </select>
                     </div>
                     <div class="col-auto">
-                        <button type="button" id="loadCopy" class="btn btn-sm btn-grid-edit">Load slabs</button>
+                        <button type="button" id="loadCopy" class="btn btn-sm btn-action-primary">Load slabs</button>
                     </div>
                     <div class="col-12 col-md text-muted small">
                         @if (copiedFrom != null)
@@ -127,9 +127,9 @@
                     </div>
 
                     <div class="d-flex flex-wrap gap-2 mt-3">
-                        <button type="button" id="addRow" class="btn btn-sm btn-grid-edit"><i class="bi bi-plus-lg me-1"></i>Add slab row</button>
-                        <button type="button" id="fillUpTo" class="btn btn-sm btn-outline-secondary" title="Sets each empty 'up to' to the start of the next slab">Fill "up to" from the next slab</button>
-                        <button type="button" id="fillFixed" class="btn btn-sm btn-outline-secondary" title="Fixed amount = fixed amount of the slab below + its rate on the width of that slab">Calculate fixed amounts from the rates</button>
+                        <button type="button" id="addRow" class="btn btn-sm btn-action-primary"><i class="bi bi-plus-lg me-1"></i>Add slab row</button>
+                        <button type="button" id="fillUpTo" class="btn btn-sm btn-action-secondary" title="Sets each empty 'up to' to the start of the next slab">Fill "up to" from the next slab</button>
+                        <button type="button" id="fillFixed" class="btn btn-sm btn-action-secondary" title="Fixed amount = fixed amount of the slab below + its rate on the width of that slab">Calculate fixed amounts from the rates</button>
                     </div>
                     <p class="text-muted small mt-2 mb-0">
                         Blank rows are ignored. Slabs are saved in order of "from". An empty "up to" ends where the next slab starts; the last slab has no limit.
@@ -138,9 +138,9 @@
                 </div>
             </div>
 
-            <div class="d-flex justify-content-end gap-2 mb-4">
-                <a asp-action="Index" class="btn btn-sm btn-outline-secondary">Cancel</a>
-                <button type="submit" class="btn btn-sm btn-grid-edit" @(free.Count == 0 ? "disabled" : null)><i class="bi bi-check2 me-1"></i>Save tax year</button>
+            <div class="action-bar d-flex flex-wrap align-items-center justify-content-end gap-2">
+                <a asp-action="Index" class="btn btn-sm btn-action-secondary">Cancel</a>
+                <button type="submit" class="btn btn-sm btn-action-primary" @(free.Count == 0 ? "disabled" : null)><i class="bi bi-check2 me-1"></i>Save tax year</button>
             </div>
         </form>
     </div>

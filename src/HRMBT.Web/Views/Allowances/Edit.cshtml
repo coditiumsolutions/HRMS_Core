@@ -59,27 +59,6 @@
             color: var(--hr-teal-600, #2d6a87);
         }
         .allowance-edit-table tr { border-bottom: 1px solid #eef0f2; }
-        .allowance-edit-actions {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.35rem;
-            justify-content: flex-end;
-            align-items: center;
-            padding: 0.65rem 0.85rem;
-        }
-        .allowance-edit-actions .btn,
-        .allowance-edit-actions .btn-action-primary,
-        .allowance-edit-actions .btn-action-secondary,
-        .allowance-edit-actions .btn-action-outline {
-            border-radius: 0.25rem !important;
-            padding: 0.2rem 0.6rem !important;
-            font-size: 0.8125rem !important;
-            font-weight: 600;
-            min-height: 1.6rem !important;
-            height: 1.6rem;
-            line-height: 1.2 !important;
-            white-space: nowrap;
-        }
     </style>
 }
 
@@ -197,10 +176,10 @@
                         </table>
                     </div>
 
-                    <div class="allowance-edit-actions">
-                        <button type="submit" class="btn btn-sm btn-action-primary"><i class="bi bi-check2 me-1"></i>Save</button>
-                        <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-sm btn-action-outline">Details</a>
+                    <div class="action-bar action-bar--inline">
                         <a asp-action="Index" class="btn btn-sm btn-action-secondary">Cancel</a>
+                        <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-sm btn-action-outline">Details</a>
+                        <button type="submit" class="btn btn-sm btn-action-primary"><i class="bi bi-check2 me-1"></i>Save</button>
                     </div>
                 </div>
             </div>
