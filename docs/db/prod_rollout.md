@@ -1,7 +1,7 @@
 # Production rollout: applying the database redesign to HRBTK
-Version: 1.4 | Date: 2026-11-25
+Version: 1.5 | Date: 2026-11-25
 Applies to: production database `HRBTK` (SQL Server 2022, server "Teezhost 16GB", https://hr.coditium.com)
-Status: **Run on production on 2026-11-24** (all ten scripts, in one session, after a verified full backup). Below sections 1-7 stay as the plan that was followed; section 8 records what happened. Before that, everything had been run only against a local copy (`TAZ\SQLEXPRESS`, test data).
+Status: **Run on production on 2026-11-24** (all ten scripts, in one session, after a verified full backup). Below sections 1-7 stay as the plan that was followed; section 8 records what happened. Before that, everything had been run only against a local copy (`TAZ\SQLEXPRESS`, test data). **Update 2026-11-25:** the database was dropped and restored the same evening; scripts 06 to 12 were re-run (sections 9 and 10).
 
 Source of truth for *what* changes: `db_changes.md`. This file is *how* to apply it. Scripts live in `scripts/database/redesign/`.
 
@@ -109,10 +109,34 @@ Also compare row counts of the tables that existed before with the backup. Keep 
 - **Still to do by hand:** deploy the new build with `scripts\deploy\DeployToIIS.bat` and restore `wwwroot/uploads`; run `scripts/database/tools/backfill-document-hashes.ps1` for the 8 documents; enter `LeaveQuota` rows for new years; HR to review `mig.EmployeeOrgMap` and the department/sub-department split, then drop the `mig` schema; copy the backup files off the server.
 - **Done after the run (2026-11-24):** `farhan` now holds Admin and HR (row added to `UserRoles`).
 
-## 9. Script 12 (tax slabs on the annual method): still to run on production
-Written 2026-11-25, after the main run. Run on the dev copy twice (first run replaced the 2025 and 2026 slabs, second run changed nothing).
-- **What it does:** adds `TaxRules.FixedAmount` (+ `CK_TaxRules_Fixed`), and replaces the slabs of tax years 2025 and 2026 with the annual salaried slabs (`docs/reference/pk-income-tax.md`). Any other tax year is left untouched with a warning, because its old monthly bands are wrong under the new method.
-- **Order:** run it **before** deploying the new build (the app reads `FixedAmount`). Back up first (S19): `sqlcmd -b -I -i scripts\database\redesign\12_tax_slabs_annual.sql`.
-- **Existing payslips are not changed** (they are snapshots; 99 on production, some with tax calculated the old way).
-- **Check afterwards:** `SELECT * FROM dbo.TaxRules ORDER BY TaxYearStart, MinSalary` shows 8 rows for 2026 and 6 for 2025; re-run the script and confirm it says "already on the annual method".
-- **Not run from this session:** the production `sa` login was refused on 2026-11-25 (password probably rotated), so the owner runs it.
+## 9. Script 12 (tax slabs on the annual method): run on production 2026-11-25
+Written 2026-11-25, after the main run. Run on the dev copy twice (first run replaced the 2025 and 2026 slabs, second run changed nothing). **Run on production on 2026-11-25** as part of the recovery in section 10 (after a verified backup): it replaced the 2025 and 2026 slabs ("Tax year starting 2025/2026: slabs replaced by the annual method"), `TaxRules` has 14 rows and `__EFMigrationsHistory` ends at `20261125000012_Redesign_Phase12_TaxSlabsAnnual`.
+- **What it does:** adds `TaxRules.FixedAmount` (+ `CK_TaxRules_Fixed`), and replaces the slabs of tax years 2025 and 2026 with the annual salaried slabs (`docs/reference/pk-income-tax.md`). Any other tax year is left untouched with a warning, because its old monthly bands are wrong under the new method and HR must re-enter them.
+- **Order:** run it **before** deploying the new build (the app reads `FixedAmount`). This is now satisfied on production; the build itself is still to be deployed.
+- **Existing payslips are not changed** (they are snapshots; some were calculated the old way).
+
+## 10. Incident 2026-11-24/25: databases dropped, HRBTK restored and brought current
+Read from the server's default trace, `msdb` restore/backup history and the SQL error log. All times are PKT (the server clock is Pakistan Standard Time, UTC+5).
+
+| When | What |
+|---|---|
+| 2026-11-24 15:29-15:30 | `HRBTK_pre_redesign_20261124.bak` and `HRBTK_after04_20261124.bak` taken (section 8). |
+| 2026-11-24 22:21:16 to 22:26:03 | Login `Musab` (SSMS, DESKTOP-HE6LSGD) drops BMSBT, DBZaura, Ecommerce, **HRBTK** (22:21:43), NACTA, Pavilion, PMSAbbas, ResidentPortal, RND_PMS_Sync, DBPMSCoditium. |
+| 2026-11-24 22:26:13 | Same login creates an empty database `BillingRecovery`. |
+| 2026-11-25 13:00:42 to 13:00:50 | Login `sa` restores DBZaura (backup of 21 Oct), BMSBT (4 Nov), **HRBTK** (`HRBTK_after04_20261124.bak`), PMSAbbas (10 Nov), NACTA (1 Oct), Pavilion (6 Oct). |
+| 2026-11-25 13:11 | Backup run of the databases by `sa`. |
+| 2026-11-25 (afternoon) | HRBTK recovery (below). |
+
+**Not recovered:** Ecommerce, ResidentPortal, RND_PMS_Sync and DBPMSCoditium have no backup on the server (a hosting-provider snapshot or other machines are the only hope). **Data entered into HRBTK after 2026-11-24 15:30 and before the drop is lost** (the restored copy is the after-04 backup); at the time all data was test data.
+
+**HRBTK recovery (done from this repo with `sqlcmd -b -I`, credentials never written to a file):**
+1. State found: after-04 schema (33 tables, no `UserRoles`, `EmployeeEvents` or `TaxRules.FixedAmount`).
+2. Safety backup `HRBTK_restored_before06_20261125.bak` (`COPY_ONLY, CHECKSUM`, verified).
+3. Scripts 06, 07, 08, 09, 10, 11 and 12 run in order, each without error.
+4. `farhan` (uid 1002) given the HR role again (`UserRoles`); roles now: shahid Admin, sindhu Admin, farhan Admin+HR, ryyan Admin, Zulfiqar HR, shahzad none (check whether that is intended).
+5. Checks: 35 tables (33 `dbo` + 2 `mig`), `FixedAmount` present, `TaxRules` 14 rows, `EmployeeEvents` present, 0 untrusted foreign keys, 848 employees, migration history ends at Phase 12.
+6. Final backup `HRBTK_current_schema_20261125.bak` (`COPY_ONLY, CHECKSUM`, verified). Both backups are on the server only; copy them off.
+7. Schema compared with `db.md` v2.2: tables, 414 columns (type and nullability), 54 foreign keys, 72 indexes, 45 check constraints and both views match.
+8. App smoke test: the current build (Development environment, production connection string passed through the environment) connected, the test user logged in and the main list, detail, edit, payroll, payslip, leave, setup and tax pages returned 200 with no errors in the log; nothing was created or changed.
+
+**Still open:** deploy the new build with `scripts\deploy\DeployToIIS.bat` and fix the IIS site/binding for hr.coditium.com (the HTTP.sys 404 and the pos.coditium.com certificate show that no site answers for that host); change the `sa` password and close port 1433; decide on the four unrecoverable databases.
