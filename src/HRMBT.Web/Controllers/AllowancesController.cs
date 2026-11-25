@@ -532,12 +532,13 @@ public class AllowancesController : Controller
             trimmedRemarks = trimmedRemarks[..500];
 
         int added = 0;
+        var addedRows = new List<Allowance>();
         foreach (var uid in distinctIds)
         {
             if (!await _context.Employees.AnyAsync(e => e.uid == uid))
                 continue;
 
-            _context.Allowances.Add(new Allowance
+            var newRow = new Allowance
             {
                 EmployeeId = uid,
                 AllowanceType = type,
@@ -555,7 +556,9 @@ public class AllowancesController : Controller
                 CreatedBy = user,
                 ModifiedDate = null,
                 ModifiedBy = null
-            });
+            };
+            _context.Allowances.Add(newRow);
+            addedRows.Add(newRow);
             added++;
         }
 
@@ -566,6 +569,9 @@ public class AllowancesController : Controller
         }
 
         await _context.SaveChangesAsync();
+        foreach (var row in addedRows)
+            await _auditLog.WriteAsync("Allowances", "INSERT", row.Id.ToString(), row.EmployeeId,
+                null, SnapshotAllowance(row), "Allowances");
         string valueText;
         if (isPercentage)
             valueText = $"{percentageValue:N2}%";
@@ -729,6 +735,8 @@ public class AllowancesController : Controller
             allowance.ModifiedBy = null;
             _context.Add(allowance);
             await _context.SaveChangesAsync();
+            await _auditLog.WriteAsync("Allowances", "INSERT", allowance.Id.ToString(), allowance.EmployeeId,
+                null, SnapshotAllowance(allowance), "Allowances");
             TempData["SuccessMessage"] = "Allowance created successfully.";
             return RedirectToAction(nameof(Index));
         }
@@ -875,8 +883,12 @@ public class AllowancesController : Controller
         var allowance = await _context.Allowances.FindAsync(id);
         if (allowance != null)
         {
+            var oldSnapshot = SnapshotAllowance(allowance);
+            var employeeId = allowance.EmployeeId;
             _context.Allowances.Remove(allowance);
             await _context.SaveChangesAsync();
+            await _auditLog.WriteAsync("Allowances", "DELETE", id.ToString(), employeeId,
+                oldSnapshot, null, "Allowances");
             TempData["SuccessMessage"] = "Allowance deleted.";
         }
 

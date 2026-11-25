@@ -39,9 +39,9 @@ pre{background:var(--code);padding:12px;border-radius:8px;overflow:auto;font:13p
 <h1>Payroll module review</h1>
 <p class="sub">Written 2026-11-25 and updated the same day after the income-tax fix, from the code (<code>PayrollController</code>, <code>PayrollCalculationService</code>, <code>PayslipsController</code>, <code>AllowancesController</code>, <code>DeductionsController</code>, <code>TaxController</code>, <code>PayslipLockService</code>) and <code>db.md</code> v2.0. Each item has an ID (S = section, F = finding, P = proposal, B/T = decision in <code>docs/db/decisions.md</code>) so you can say "do F2 and P1".</p>
 
-<div class="card"><b>What I could not check:</b> the production login (<code>sa</code>) was refused today, so I could not read live payroll data. Figures below are the production counts recorded right after the migration on 2026-11-24 (<code>db.md</code>). The app logic is read from code and was not re-run for this review.</div>
+<div class="card"><b>What I could not check:</b> the figures below are the production counts recorded right after the migration on 2026-11-24 (<code>db.md</code>); production was dropped and restored that evening (<code>docs/db/prod_rollout.md</code> section 10), so data entered after 15:30 is gone. All of it was test data.</div>
 
-<div class="card"><b>Update 2026-11-25: income tax corrected.</b> The flat "basic × slab %" method (old F7) was wrong. Tax is now the annual progressive slab method (fixed amount + rate on the part above the slab start; monthly = annual / 12 rounded to the rupee), slabs hold annual income, and the Tax rules pages show one card per tax year with a "New tax year" page for entering all slabs at once. Source, slab tables and method: <code>docs/reference/pk-income-tax.md</code>. Script <code>12_tax_slabs_annual.sql</code> is run on the dev copy only; <b>production still needs it before the new build is deployed</b> (<code>docs/db/prod_rollout.md</code> section 9). Parts of this review that changed are marked <i>updated</i>.</div>
+<div class="card"><b>Update 2026-11-25: income tax corrected.</b> The flat "basic × slab %" method (old F7) was wrong. Tax is now the annual progressive slab method (fixed amount + rate on the part above the slab start; monthly = annual / 12 rounded to the rupee), slabs hold annual income, and the Tax rules pages show one card per tax year with a "New tax year" page for entering all slabs at once. Source, slab tables and method: <code>docs/reference/pk-income-tax.md</code>. Script <code>12_tax_slabs_annual.sql</code> was run on the dev copy and on production (2026-11-25); the new build can now be deployed (<code>docs/db/prod_rollout.md</code> sections 9 and 10). Parts of this review that changed are marked <i>updated</i>.</div>
 
 <nav>
 <a href="#s1">S1 Overview</a><a href="#s2">S2 Data</a><a href="#s3">S3 Calculation</a><a href="#s4">S4 Lifecycle &amp; lock</a><a href="#s5">S5 Findings</a><a href="#s6">S6 Proposal</a><a href="#s7">S7 Decisions</a><a href="#s8">S8 Build order</a>
@@ -71,7 +71,7 @@ pre{background:var(--code);padding:12px;border-radius:8px;overflow:auto;font:13p
 <tr><td>New tax year <i>(new)</i></td><td><code>/tax-rules/years/new</code></td><td>Set up a whole tax year and all its slabs on one page; can start from a copy of another year.</td></tr>
 <tr><td>New slab <i>(updated)</i></td><td><code>/tax-rules/new</code></td><td>One slab for any tax year. Both forms link to mytaxcalculator.pk and say to contact the software department if a slab needs something the form cannot hold.</td></tr>
 </table>
-<p class="note">Production snapshot (2026-11-24): 99 payslips with 132 lines in about 11 month/year combinations, 23 allowances, 11 deductions (all fixed amounts), 14 tax slabs (old monthly bands with one flat rate; replaced by annual slabs by script 12, dev copy only so far), 848 employees. This is test data, so it says little about real use.</p>
+<p class="note">Production snapshot (2026-11-24): 99 payslips with 132 lines in about 11 month/year combinations, 23 allowances, 11 deductions (all fixed amounts), 14 tax slabs (old monthly bands with one flat rate; replaced by annual slabs by script 12, now also run on production), 848 employees. This is test data, so it says little about real use.</p>
 
 <!-- ============================================================ -->
 <h2 id="s2">S2. Data it uses</h2>
@@ -149,11 +149,11 @@ Deduction percentages still use gross while tax uses basic × 12, so the 39,000 
 <p>Editing one allowance locks all of the employee's unlocked slips in every month, including old ones. Locked slips can never be deleted or fixed, so an edit made to correct next month's pay freezes last month's slip with the old figures. The status screen then reports those slips as "Payroll Generated".</p>
 <p class="where"><code>PayslipLockService</code>, <code>AllowancesController.Edit</code>, <code>DeductionsController.Edit</code>, <code>PayrollController.PayrollStatus</code></p></div>
 
-<div class="item bug" id="F2"><p><span class="id">F2</span><b>One locked slip blocks "Run Payroll" for everyone</b><span class="tag bug">bug</span></p>
-<p><code>/payroll/run</code> stops with "Payroll for this month is locked" if any slip in that month is locked, even though the other employees have none yet. A single allowance edit (F1) can therefore block the bulk run. <code>/run/single</code> and <code>/generate/selected</code> do not make this check, so the three routes behave differently. <code>/payslips/new</code> checks it again in a fourth way.</p></div>
+<div class="item bug" id="F2"><p><span class="id">F2</span><b>One locked slip blocks "Run Payroll" for everyone</b><span class="tag ok">fixed 2026-11-25</span></p>
+<p><i>Fixed: the month-wide lock check is gone from <code>/payroll/run</code> and <code>/payslips/new</code>; all routes now use one set of rules (<code>PayrollCalculationService.CheckEmployee</code>).</i> It was: <code>/payroll/run</code> stopped with "Payroll for this month is locked" if any slip in that month is locked, even though the other employees have none yet. A single allowance edit (F1) can therefore block the bulk run. <code>/run/single</code> and <code>/generate/selected</code> do not make this check, so the three routes behave differently. <code>/payslips/new</code> checks it again in a fourth way.</p></div>
 
-<div class="item gap" id="F3"><p><span class="id">F3</span><b>Adding or deleting an allowance/deduction does not touch existing slips and leaves no trail</b><span class="tag gap">gap</span></p>
-<p>Only Edit locks slips and writes an audit row. Create, bulk create and Delete do neither, and Delete is a hard delete. Add an allowance after a slip is generated and the slip silently misses it; delete one and the slip keeps paying it.</p></div>
+<div class="item gap" id="F3"><p><span class="id">F3</span><b>Adding or deleting an allowance/deduction does not touch existing slips</b><span class="tag ok">audit part fixed 2026-11-25</span></p>
+<p><i>Audit is now written for create, bulk create and delete of allowances and deductions, and for payslip delete and manual payslip create.</i> Still open: only Edit locks slips, and Delete is a hard delete. Add an allowance after a slip is generated and the slip silently misses it; delete one and the slip keeps paying it.</p></div>
 
 <div class="item bug" id="F4"><p><span class="id">F4</span><b>Pay ignores attendance, leave, joining and leaving</b><span class="tag bug">bug</span></p>
 <p>Everyone gets the full basic regardless of join date, leaving date, absent days or unpaid leave. <code>Employee.PayBasis</code> and <code>HourlyRate</code> are not read, and the slip's working days, leave days, leave balance and hourly fields stay empty. Needs HR rules B6, B10, B11, B12 before it can be built.</p></div>
@@ -161,17 +161,18 @@ Deduction percentages still use gross while tax uses basic × 12, so the 39,000 
 <div class="item bug" id="F5"><p><span class="id">F5</span><b>Someone who resigned mid-month cannot get a final payslip</b><span class="tag bug">bug</span></p>
 <p>Every generation route and the status screen require <code>EmployeeStatus = 'Active'</code>. Employee History now sets Resigned or Terminated on a resignation, so once that is recorded the person can no longer be paid for the days worked that month. Joining month has the opposite problem (F4): full month paid.</p></div>
 
-<div class="item gap" id="F6"><p><span class="id">F6</span><b>No sanity checks before generating</b><span class="tag gap">gap</span></p>
+<div class="item gap" id="F6"><p><span class="id">F6</span><b>No sanity checks before generating</b><span class="tag ok">preview added 2026-11-25</span></p>
+<p><i>New: <b>Preview</b> on the Run Payroll page (<code>POST /payroll/run/preview</code>) lists who would get a payslip and warns about no basic salary, future month, joined after or left before the month, tax switched on with no slabs, and negative net. Nothing is saved. The single and selected routes show the same warnings in their result message. Warnings do not stop generation (only "not Active" and "already exists" do); the date window for the month and proration wait for B21 and B10.</i></p>
 <p>Any month from 2000 to 2100 is accepted, including future months and months before the employee joined. An employee with no basic salary gets a slip of 0.00. There is no preview and no list of warnings before the run.</p></div>
 
 <div class="item gap" id="F7"><p><span class="id">F7</span><b>Tax was a flat percentage of basic, not a progressive slab calculation</b><span class="tag ok">fixed 2026-11-25</span></p>
-<p>Was: the whole monthly basic multiplied by one slab percentage. Now: annual progressive method with a fixed amount per slab (see S3.1 step 6 and <code>docs/reference/pk-income-tax.md</code>). Still open under B17: whether allowances are taxable (the base), the 2025-26 fixed amounts (derived, to be verified against the Finance Act), and the 9% surcharge for 2025-26 incomes above 10 million (not applied). Production gets the fix when script 12 is run there.</p></div>
+<p>Was: the whole monthly basic multiplied by one slab percentage. Now: annual progressive method with a fixed amount per slab (see S3.1 step 6 and <code>docs/reference/pk-income-tax.md</code>). Still open under B17: whether allowances are taxable (the base), the 2025-26 fixed amounts (derived, to be verified against the Finance Act), and the 9% surcharge for 2025-26 incomes above 10 million (not applied). Script 12 has been run on production, so the fix goes live with the next deploy.</p></div>
 
 <div class="item inc" id="F8"><p><span class="id">F8</span><b>Percentage deductions use gross, tax uses basic</b><span class="tag inc">inconsistent</span></p>
 <p>Two bases in one slip (deductions on gross, tax on basic × 12). Might be intended (a provident fund on gross, tax on basic) but nobody has said so; part of B23 and B17.</p></div>
 
-<div class="item bug" id="F9"><p><span class="id">F9</span><b>Net pay can be negative</b><span class="tag bug">bug</span></p>
-<p>A fixed deduction larger than gross, or stacked loans, produce a negative net with no warning and no cap.</p></div>
+<div class="item bug" id="F9"><p><span class="id">F9</span><b>Net pay can be negative</b><span class="tag bug">warns only</span></p>
+<p><i>The preview and the run messages now warn about negative net pay; there is still no cap (B23).</i> A fixed deduction larger than gross, or stacked loans, produce a negative net with no warning and no cap.</p></div>
 
 <div class="item gap" id="F10"><p><span class="id">F10</span><b>Frequencies and loan-style deductions are not really supported</b><span class="tag gap">gap</span></p>
 <p>Weekly and Bi-Weekly are offered but behave as Monthly. A Monthly deduction runs until someone sets an end date; there is no total owed, no instalments and no remaining balance, so "Loan" and "Advance" types cannot stop themselves. The bulk deduction form only offers Once and Monthly, the single form offers all five.</p></div>
@@ -183,9 +184,10 @@ Deduction percentages still use gross while tax uses basic × 12, so the 39,000 
 <p>Allowance lines and gross are unrounded; each deduction line and the deductions total are rounded separately, so the lines can differ from the total by a paisa. No rule for rounding net to whole rupees (decision B27).</p></div>
 
 <div class="item inc" id="F13"><p><span class="id">F13</span><b>Five ways to create a payslip, two payslip lists, two detail pages</b><span class="tag inc">inconsistent</span></p>
-<p><code>/payroll/generate</code>, <code>/payroll/run</code>, <code>/payroll/run/single</code>, <code>/payroll/new</code> and <code>/payslips/new</code>. The last one lets a user type gross and deductions by hand: no tax, no line items, no audit row, bypasses the engine. <code>/payroll/new</code> duplicates <code>/run/single</code>. <code>/payroll</code> and <code>/payslips</code> are two lists, <code>/payroll/{id}</code> and <code>/payslips/{id}</code> two detail pages. Views <code>Payroll/Edit</code>, <code>Delete</code> and <code>Generate</code> have no action behind them. Already noted in <code>docs/routes.md</code> as a behaviour decision.</p></div>
+<p><code>/payroll/generate</code>, <code>/payroll/run</code>, <code>/payroll/run/single</code>, <code>/payroll/new</code> and <code>/payslips/new</code>. The last one lets a user type gross and deductions by hand: no tax, no line items, no audit row, bypasses the engine. <code>/payroll/new</code> duplicates <code>/run/single</code>. <code>/payroll</code> and <code>/payslips</code> are two lists, <code>/payroll/{id}</code> and <code>/payslips/{id}</code> two detail pages. Views <code>Payroll/Edit</code>, <code>Delete</code> and <code>Generate</code> had no action behind them and were removed on 2026-11-25. Already noted in <code>docs/routes.md</code> as a behaviour decision.</p></div>
 
-<div class="item inc" id="F14"><p><span class="id">F14</span><b><code>Employee.GenStatus</code> is stored text that goes stale</b><span class="tag inc">inconsistent</span></p>
+<div class="item inc" id="F14"><p><span class="id">F14</span><b><code>Employee.GenStatus</code> is stored text that goes stale</b><span class="tag ok">fixed 2026-11-25</span></p>
+<p><i>No route writes it any more and the two screens that showed it no longer do (the payroll search grid shows Locked / Unlocked from the payslip). The column stays in the database for a later clean-up.</i></p>
 <p>Only the "select employees" screen writes text such as "Payroll Created for November 2026" (cut to 50 characters). Other routes do not, and the status screen already derives the real state from the payslips. The column adds nothing and can disagree.</p></div>
 
 <div class="item gap" id="F15"><p><span class="id">F15</span><b>No payroll reports, bank sheet or payment tracking</b><span class="tag gap">gap</span></p>
@@ -201,7 +203,7 @@ Deduction percentages still use gross while tax uses basic × 12, so the 39,000 
 <p>The "Known payroll gotchas" note was out of date (tax year handling was fixed by T6) and has been rewritten for the annual slab method.</p></div>
 
 <div class="item gap" id="F19"><p><span class="id">F19</span><b>UI of the module has not had the redesign</b><span class="tag gap">ui</span></p>
-<p>Open from earlier: the fixed bottom action bar on the Generate screen overlaps the sidebar, the status grid is not on the Emp ID + name standard, emoji sidebar. To be done after the behaviour is settled so screens are not built twice.</p></div>
+<p><i>Done 2026-11-25: the fixed bottom action bar is replaced by the standard action bar (<code>docs/ui_standards.md</code>), and the sidebar emoji are Bootstrap Icons.</i> Still open: the status grid is not on the Emp ID + name standard. To be done after the behaviour is settled so screens are not built twice.</p></div>
 
 <!-- ============================================================ -->
 <h2 id="s6">S6. Proposed way it should work</h2>
@@ -267,7 +269,7 @@ Deduction percentages still use gross while tax uses basic × 12, so the 39,000 
 <!-- ============================================================ -->
 <h2 id="s8">S8. Suggested build order</h2>
 <ol>
-<li><b>Now, no HR input needed:</b> P10 (consistent checks, audit on create/delete, drop <code>GenStatus</code>) plus F9 warning and F6 sanity checks in a preview step.</li>
+<li><b>Done 2026-11-25 (not yet deployed):</b> P10 (consistent checks, audit on create/delete, drop <code>GenStatus</code>) plus F9 warning and F6 sanity checks in a preview step.</li>
 <li><b>After B20, B15, T11:</b> P1 and P4: payslip states, one run page, recalculation instead of silent locks. Biggest improvement to daily use.</li>
 <li><b>After B21, B10:</b> P2 and the proration line of P3.</li>
 <li><b>After B17, B22, B23, B24:</b> tax base, catalogue tables, instalment deductions (P5, P7, P8). The tax method itself is done; run script 12 on production first.</li>

@@ -107,13 +107,13 @@
                             <p class="mb-2"><strong class="text-dark">Scope:</strong> Active employees in the selected department (or all departments).</p>
                             <p class="mb-2"><strong class="text-dark">Period:</strong> Month and year selected.</p>
                             <p class="mb-2"><strong class="text-dark">Skips:</strong> Employees that already have a payslip for the period.</p>
-                            <p class="mb-0"><strong class="text-dark">Lock:</strong> Will not generate if the period is already locked.</p>
+                            <p class="mb-0"><strong class="text-dark">Preview:</strong> Lists who would get a payslip, the net pay, and warnings (no basic salary, future month, joined later or already left, negative net). Saves nothing.</p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="payslip-actions">
+            <div class="action-bar">
                 <div class="container-fluid px-3 px-lg-4">
                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
                         <div class="small text-muted d-none d-md-block">
@@ -126,6 +126,9 @@
                             <a asp-action="GenerateIndividual" class="btn btn-action-secondary">
                                 <i class="bi bi-person me-1"></i>Run single employee
                             </a>
+                            <button type="submit" class="btn btn-action-secondary" asp-action="PreviewRun" id="bulkPayrollPreview">
+                                <i class="bi bi-search me-1"></i>Preview (saves nothing)
+                            </button>
                             <button type="submit" class="btn btn-action-primary" id="bulkPayrollSubmit">
                                 <span class="spinner-border spinner-border-sm me-2 d-none" id="bulkPayrollSpinner" role="status"></span>
                                 <i class="bi bi-play-fill me-1" id="bulkPayrollIcon"></i>Generate payslips
@@ -147,7 +150,8 @@
             var spin = document.getElementById('bulkPayrollSpinner');
             var icon = document.getElementById('bulkPayrollIcon');
             if (!form) return;
-            form.addEventListener('submit', function () {
+            form.addEventListener('submit', function (e) {
+                if (e.submitter && e.submitter.id !== 'bulkPayrollSubmit') return;
                 spin.classList.remove('d-none');
                 icon.classList.add('d-none');
                 btn.disabled = true;

@@ -24,16 +24,27 @@ namespace HRMBT.Web.Controllers
             _payrollService = payrollService;
         }
 
-        private static string FormatMonthYearForGenStatus(string month, int year) =>
-            PayrollMonthHelper.FormatPeriod(month, year);
+        /// <summary>The first reason that stops a payslip being created, or null when it may be created.</summary>
+        private static string? BlockingReason(List<PayrollCalculationService.PayrollIssue> issues) =>
+            issues.FirstOrDefault(i => i.Blocks)?.Text;
 
-        /// <summary>GenStatus is nvarchar(50) on dbo.Employee — keep messages within limit.</summary>
-        private static string ClampGenStatus(string? value, int maxLen = 50)
+        /// <summary>Warnings that do not stop the payslip, as a sentence to append to a message.</summary>
+        private static string WarningSuffix(List<PayrollCalculationService.PayrollIssue> issues)
         {
-            if (string.IsNullOrEmpty(value)) return string.Empty;
-            if (value.Length <= maxLen) return value;
-            return value.Substring(0, maxLen - 3) + "...";
+            var warnings = issues.Where(i => !i.Blocks).Select(i => i.Text).ToList();
+            return warnings.Count == 0 ? "" : " Check: " + string.Join(" ", warnings);
         }
+
+        private async Task<List<string>> DepartmentNamesAsync() =>
+            await _context.Employees
+                .Where(e => e.DepartmentInfo!.DepartmentName != null && e.DepartmentInfo!.DepartmentName != "")
+                .Select(e => e.DepartmentInfo!.DepartmentName!)
+                .Distinct()
+                .OrderBy(d => d)
+                .ToListAsync();
+
+        private async Task<bool> SlipExistsAsync(int uid, string month, int year) =>
+            await _context.Payslips.AnyAsync(p => p.EmployeeId == uid && p.Month == month && p.Year == year);
 
         // GET: Payroll
         [HttpGet("")]
@@ -139,64 +150,74 @@ namespace HRMBT.Web.Controllers
             if (model.Year < 2000 || model.Year > 2100)
                 ModelState.AddModelError("Year", "Invalid year.");
 
+            ViewBag.Departments = await DepartmentNamesAsync();
+
             if (!ModelState.IsValid)
                 return View(model);
 
-            bool locked = await _context.Payslips
-                .AnyAsync(p => p.Month == model.Month && p.Year == model.Year && p.IsLocked);
+            // Same rules as every other route: employees who are not Active or already have a slip are skipped.
+            // (A locked slip elsewhere in the month no longer blocks the run for everyone.)
+            var rows = _payrollService.Preview(await RunEmployeesAsync(model.Department), model.Month, model.Year);
 
-            if (locked)
+            int generated = 0, skipped = 0, failed = 0, withWarnings = 0, negative = 0;
+            foreach (var row in rows.Where(r => r.Employee.EmployeeStatus == "Active"))
             {
-                ModelState.AddModelError("", "Payroll for this month is locked.");
-                return View(model);
-            }
-
-            // Get distinct departments for dropdown (in case of validation error)
-            var departments = await _context.Employees
-                .Where(e => e.DepartmentInfo!.DepartmentName != null && e.DepartmentInfo!.DepartmentName != "")
-                .Select(e => e.DepartmentInfo!.DepartmentName)
-                .Distinct()
-                .OrderBy(d => d)
-                .ToListAsync();
-            ViewBag.Departments = departments;
-
-            // Filter employees by department if specified
-            var query = _context.Employees.Where(e => e.EmployeeStatus == "Active");
-            
-            if (!string.IsNullOrWhiteSpace(model.Department))
-            {
-                query = query.Where(e => e.DepartmentInfo!.DepartmentName != null && e.DepartmentInfo!.DepartmentName == model.Department);
-            }
-
-            var employees = await query.ToListAsync();
-
-            int generated = 0;
-            int skipped = 0;
-
-            foreach (var emp in employees)
-            {
-                if (await _context.Payslips.AnyAsync(p =>
-                    p.EmployeeId == emp.uid &&
-                    p.Month == model.Month &&
-                    p.Year == model.Year))
+                if (!row.WillCreate) { skipped++; continue; }
+                try
                 {
-                    skipped++;
-                    continue;
+                    _payrollService.GeneratePayslip(row.Employee.uid, model.Month, model.Year, User.Identity?.Name ?? "System");
+                    generated++;
+                    if (row.Issues.Count > 0) withWarnings++;
+                    if (row.Net < 0m) negative++;
                 }
-
-                _payrollService.GeneratePayslip(
-                    emp.uid,
-                    model.Month,
-                    model.Year,
-                    User.Identity?.Name ?? "System");
-
-                generated++;
+                catch (Exception)
+                {
+                    failed++;
+                }
             }
 
-            TempData["SuccessMessage"] =
-                $"Payroll completed. Generated: {generated}, Skipped: {skipped}";
+            var msg = $"Payroll completed. Generated: {generated}, Skipped: {skipped} (already have a payslip)";
+            if (failed > 0) msg += $", Failed: {failed}";
+            if (withWarnings > 0) msg += $". {withWarnings} generated with warnings (use Preview to see them)";
+            if (negative > 0) msg += $"; {negative} have a negative net pay";
+            TempData["SuccessMessage"] = msg + ".";
 
             return RedirectToAction(nameof(Index));
+        }
+
+        private async Task<List<Employee>> RunEmployeesAsync(string? department)
+        {
+            var query = _context.Employees.Where(e => e.EmployeeStatus == "Active");
+            if (!string.IsNullOrWhiteSpace(department))
+                query = query.Where(e => e.DepartmentInfo!.DepartmentName == department);
+            return await query.ToListAsync();
+        }
+
+        // POST: Payroll/run/preview — shows what a run would do and the warnings; saves nothing
+        [HttpPost("run/preview")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> PreviewRun(GeneratePayslipsVM model)
+        {
+            ViewData["Module"] = "Payroll";
+            model.Month = PayrollMonthHelper.Normalize(model.Month);
+
+            if (!PayrollMonthHelper.IsValid(model.Month))
+                ModelState.AddModelError("Month", "Invalid month.");
+            if (model.Year < 2000 || model.Year > 2100)
+                ModelState.AddModelError("Year", "Invalid year.");
+
+            if (!ModelState.IsValid)
+            {
+                ViewBag.Departments = await DepartmentNamesAsync();
+                return View("GeneratePayslips", model);
+            }
+
+            var rows = _payrollService.Preview(await RunEmployeesAsync(model.Department), model.Month, model.Year)
+                .OrderByDescending(r => r.Issues.Count(i => i.Blocks) == 0 && r.Issues.Count > 0)
+                .ThenBy(r => r.Employee.EmployeeID)
+                .ToList();
+            ViewBag.Rows = rows;
+            return View("RunPreview", model);
         }
 
         // GET: Payroll/Details/5
@@ -317,33 +338,25 @@ namespace HRMBT.Web.Controllers
                 return View(model);
             }
 
-            if (employee.EmployeeStatus != "Active")
+            var issues = PayrollCalculationService.CheckEmployee(employee, model.Month, model.Year,
+                await SlipExistsAsync(employee.uid, model.Month, model.Year));
+            var block = BlockingReason(issues);
+            if (block != null)
             {
-                ModelState.AddModelError("EmployeeID", $"Employee '{model.EmployeeID}' is not active.");
-                return View(model);
-            }
-
-            // Check if payslip already exists
-            bool exists = await _context.Payslips
-                .AnyAsync(p => p.EmployeeId == employee.uid && 
-                              p.Month == model.Month && 
-                              p.Year == model.Year);
-
-            if (exists)
-            {
-                ModelState.AddModelError("", $"Payslip already exists for Employee {model.EmployeeID} for {PayrollMonthHelper.FormatPeriod(model.Month, model.Year)}.");
+                ModelState.AddModelError("", $"Employee {model.EmployeeID} ({employee.EmployeeName}), {PayrollMonthHelper.FormatPeriod(model.Month, model.Year)}: {block}");
                 return View(model);
             }
 
             try
             {
-                _payrollService.GeneratePayslip(
+                var slip = _payrollService.GeneratePayslip(
                     employee.uid,
                     model.Month,
                     model.Year,
                     User.Identity?.Name ?? "System");
 
-                TempData["SuccessMessage"] = $"Payslip generated successfully for Employee {model.EmployeeID} ({employee.EmployeeName}) for {PayrollMonthHelper.FormatPeriod(model.Month, model.Year)}.";
+                var negative = slip.NetSalary < 0m ? $" Net pay is negative ({slip.NetSalary:N2})." : "";
+                TempData["SuccessMessage"] = $"Payslip generated successfully for Employee {model.EmployeeID} ({employee.EmployeeName}) for {PayrollMonthHelper.FormatPeriod(model.Month, model.Year)}." + WarningSuffix(issues) + negative;
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
@@ -402,48 +415,34 @@ namespace HRMBT.Web.Controllers
             // Find employee by EmployeeID
             var trimmedEmployeeId = employeeId.Trim();
             var employee = await _context.Employees
-                .FirstOrDefaultAsync(e => e.EmployeeID != null && 
-                    e.EmployeeID.Trim().ToLower() == trimmedEmployeeId.ToLower() && 
-                    e.EmployeeStatus == "Active");
+                .FirstOrDefaultAsync(e => e.EmployeeID != null &&
+                    e.EmployeeID.Trim().ToLower() == trimmedEmployeeId.ToLower());
 
             if (employee == null)
             {
-                var inactiveEmployee = await _context.Employees
-                    .FirstOrDefaultAsync(e => e.EmployeeID != null && 
-                        e.EmployeeID.Trim().ToLower() == trimmedEmployeeId.ToLower());
-                
-                if (inactiveEmployee != null)
-                {
-                    ModelState.AddModelError("EmployeeId", $"Employee with ID '{employeeId}' exists but is not active.");
-                }
-                else
-                {
-                    ModelState.AddModelError("EmployeeId", $"Employee with ID '{employeeId}' not found.");
-                }
+                ModelState.AddModelError("EmployeeId", $"Employee with ID '{employeeId}' not found.");
                 return View();
             }
 
-            // Check if payslip already exists
-            var existing = await _context.Payslips
-                .FirstOrDefaultAsync(p => p.EmployeeId == employee.uid && 
-                                         p.Month == monthName && 
-                                         p.Year == year.Value);
-
-            if (existing != null)
+            var issues = PayrollCalculationService.CheckEmployee(employee, monthName, year.Value,
+                await SlipExistsAsync(employee.uid, monthName, year.Value));
+            var block = BlockingReason(issues);
+            if (block != null)
             {
-                ModelState.AddModelError("", "A payslip already exists for this employee for the selected month and year.");
+                ModelState.AddModelError("", $"Employee {employee.EmployeeID} ({employee.EmployeeName}), {PayrollMonthHelper.FormatPeriod(monthName, year.Value)}: {block}");
                 return View();
             }
 
             try
             {
-                _payrollService.GeneratePayslip(
+                var slip = _payrollService.GeneratePayslip(
                     employee.uid,
                     monthName,
                     year.Value,
                     User.Identity?.Name ?? "System");
 
-                TempData["SuccessMessage"] = $"Payslip generated successfully for Employee ID: {employeeId}!";
+                var negative = slip.NetSalary < 0m ? $" Net pay is negative ({slip.NetSalary:N2})." : "";
+                TempData["SuccessMessage"] = $"Payslip generated successfully for Employee ID: {employeeId}!" + WarningSuffix(issues) + negative;
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
@@ -541,27 +540,12 @@ namespace HRMBT.Web.Controllers
             int skipCount = 0;
             int errorCount = 0;
             var errors = new List<string>();
-            var monthYearLabel = FormatMonthYearForGenStatus(monthName, year);
+            int warned = 0;
 
             foreach (var employeeId in selectedEmployeeIds)
             {
                 try
                 {
-                    // Check if payslip already exists
-                    bool exists = await _context.Payslips
-                        .AnyAsync(p => p.EmployeeId == employeeId &&
-                                      p.Month == monthName &&
-                                      p.Year == year);
-
-                    if (exists)
-                    {
-                        var empSkip = await _context.Employees.FindAsync(employeeId);
-                        if (empSkip != null)
-                            empSkip.GenStatus = ClampGenStatus($"Already Created for {monthYearLabel}");
-                        skipCount++;
-                        continue;
-                    }
-
                     var employee = await _context.Employees.FindAsync(employeeId);
                     if (employee == null)
                     {
@@ -570,38 +554,43 @@ namespace HRMBT.Web.Controllers
                         continue;
                     }
 
-                    if (!string.Equals(employee.EmployeeStatus, "Active", StringComparison.OrdinalIgnoreCase))
+                    var slipExists = await SlipExistsAsync(employeeId, monthName, year);
+                    var issues = PayrollCalculationService.CheckEmployee(employee, monthName, year, slipExists);
+                    if (slipExists)
                     {
-                        employee.GenStatus = ClampGenStatus($"Not created: not active for {monthYearLabel}");
-                        errorCount++;
-                        errors.Add($"Employee ID {employee.EmployeeID} is not active.");
+                        skipCount++;
                         continue;
                     }
 
-                    _payrollService.GeneratePayslip(
+                    var block = BlockingReason(issues);
+                    if (block != null)
+                    {
+                        errorCount++;
+                        errors.Add($"Employee ID {employee.EmployeeID}: {block}");
+                        continue;
+                    }
+
+                    var slip = _payrollService.GeneratePayslip(
                         employeeId,
                         monthName,
                         year,
                         User.Identity?.Name ?? "System");
 
-                    employee.GenStatus = ClampGenStatus($"Payroll Created for {monthYearLabel}");
                     successCount++;
+                    if (issues.Count > 0 || slip.NetSalary < 0m)
+                    {
+                        warned++;
+                        errors.Add($"Employee ID {employee.EmployeeID} generated, check: "
+                            + string.Join(" ", issues.Select(i => i.Text))
+                            + (slip.NetSalary < 0m ? " Net pay is negative." : ""));
+                    }
                 }
                 catch (Exception ex)
                 {
                     errorCount++;
-                    var empErr = await _context.Employees.FindAsync(employeeId);
-                    if (empErr != null)
-                    {
-                        var coreReason = ex.InnerException != null ? ex.InnerException.Message : ex.Message;
-                        empErr.GenStatus = ClampGenStatus($"Not created: {coreReason}");
-                    }
-
-                    errors.Add($"Error for Employee ID {empErr?.EmployeeID ?? employeeId.ToString()}: {ex.Message}");
+                    errors.Add($"Error for Employee ID {employeeId}: {ex.Message}");
                 }
             }
-
-            await _context.SaveChangesAsync();
 
             // Build result message
             var message = $"Payroll generation completed: {successCount} successful";

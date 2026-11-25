@@ -493,12 +493,13 @@ public class DeductionsController : Controller
         var typeForRow = trimmedType.Length <= 50 ? trimmedType : trimmedType[..50];
 
         int added = 0;
+        var addedRows = new List<Deduction>();
         foreach (var uid in distinctIds)
         {
             if (!await _context.Employees.AnyAsync(e => e.uid == uid && e.EmployeeStatus == "Active"))
                 continue;
 
-            _context.Deductions.Add(new Deduction
+            var newRow = new Deduction
             {
                 EmployeeId = uid,
                 DeductionType = typeForRow,
@@ -514,7 +515,9 @@ public class DeductionsController : Controller
                 CreatedBy = user,
                 ModifiedDate = null,
                 ModifiedBy = null
-            });
+            };
+            _context.Deductions.Add(newRow);
+            addedRows.Add(newRow);
             added++;
         }
 
@@ -525,6 +528,9 @@ public class DeductionsController : Controller
         }
 
         await _context.SaveChangesAsync();
+        foreach (var row in addedRows)
+            await _auditLog.WriteAsync("Deductions", "INSERT", row.Id.ToString(), row.EmployeeId,
+                null, SnapshotDeduction(row), "Deductions");
         TempData["SuccessMessage"] =
             $"Deduction “{name}” ({trimmedType}, {freqNorm}, PKR {deductionAmount:N2} fixed) added for {added} employee(s).";
         return RedirectToAction(nameof(Add), routeValues);
@@ -668,6 +674,8 @@ public class DeductionsController : Controller
                 deduction.CreatedBy = User.Identity?.Name ?? "System";
                 _context.Add(deduction);
                 await _context.SaveChangesAsync();
+                await _auditLog.WriteAsync("Deductions", "INSERT", deduction.Id.ToString(), deduction.EmployeeId,
+                    null, SnapshotDeduction(deduction), "Deductions");
                 TempData["SuccessMessage"] = "Deduction saved successfully.";
                 return RedirectToAction(nameof(Index));
             }
@@ -821,8 +829,12 @@ public class DeductionsController : Controller
         var deduction = await _context.Deductions.FindAsync(id);
         if (deduction != null)
         {
+            var oldSnapshot = SnapshotDeduction(deduction);
+            var employeeId = deduction.EmployeeId;
             _context.Deductions.Remove(deduction);
             await _context.SaveChangesAsync();
+            await _auditLog.WriteAsync("Deductions", "DELETE", id.ToString(), employeeId,
+                oldSnapshot, null, "Deductions");
             TempData["SuccessMessage"] = "Deduction deleted.";
         }
 

@@ -11,11 +11,19 @@ namespace HRMBT.Web.Controllers
     public class PayslipsController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly HRMBT.Web.Services.IAuditLogService _auditLog;
 
-        public PayslipsController(ApplicationDbContext context)
+        public PayslipsController(ApplicationDbContext context, HRMBT.Web.Services.IAuditLogService auditLog)
         {
             _context = context;
+            _auditLog = auditLog;
         }
+
+        private static object PayslipSnapshot(Payslip p) => new
+        {
+            p.Id, p.EmployeeId, p.Month, p.Year, p.BasicSalary, p.TotalAllowances, p.GrossSalary,
+            p.TaxAmount, p.TotalDeductions, p.NetSalary, p.IsLocked, p.GeneratedBy
+        };
 
         // GET: /Payslips
         [HttpGet("")]
@@ -197,18 +205,6 @@ namespace HRMBT.Web.Controllers
                 }
             }
 
-            bool isMonthLocked = false;
-            if (ModelState.IsValid)
-            {
-                isMonthLocked = await _context.Payslips.AnyAsync(p =>
-                    p.Month == model.Month && p.Year == model.Year && p.IsLocked);
-                if (isMonthLocked)
-                {
-                    ModelState.AddModelError(string.Empty,
-                        $"Payroll for {PayrollMonthHelper.FormatPeriod(model.Month, model.Year)} is locked. New payslips cannot be added.");
-                }
-            }
-
             if (!ModelState.IsValid || employee == null)
             {
                 await PopulateLookups();
@@ -238,6 +234,8 @@ namespace HRMBT.Web.Controllers
 
             _context.Payslips.Add(payslip);
             await _context.SaveChangesAsync();
+            await _auditLog.WriteAsync("Payslips", "INSERT", payslip.Id.ToString(), employee.uid,
+                null, PayslipSnapshot(payslip), "Payroll (manual payslip)");
 
             TempData["SuccessMessage"] =
                 $"Payslip generated for {employee.EmployeeName} ({employee.EmployeeID}) — {PayrollMonthHelper.FormatPeriod(model.Month, model.Year)}.";
@@ -314,10 +312,14 @@ namespace HRMBT.Web.Controllers
                     return RedirectToAction("Index", "Payroll");
                 }
 
+                var oldSnapshot = PayslipSnapshot(payslip);
+                var employeeId = payslip.EmployeeId;
                 var details = _context.PayslipDetails.Where(d => d.PayslipId == id);
                 _context.PayslipDetails.RemoveRange(details);
                 _context.Payslips.Remove(payslip);
                 await _context.SaveChangesAsync();
+                await _auditLog.WriteAsync("Payslips", "DELETE", id.ToString(), employeeId,
+                    oldSnapshot, null, "Payroll");
                 TempData["SuccessMessage"] = "Payslip deleted.";
             }
 

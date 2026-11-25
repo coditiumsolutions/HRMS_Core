@@ -170,42 +170,27 @@ namespace HRMBT.Web.Services.Payroll
                 if (employee == null)
                     throw new InvalidOperationException("Employee not found.");
 
-                decimal basic = employee.BasicSalary ?? 0m;
-                decimal fuelPrice = GetFuelPriceFromConfiguration();
-
                 var monthNum = PayrollMonthHelper.OrderIndex(monthName);
                 if (monthNum < 1 || monthNum > 12)
                     monthNum = DateTime.Now.Month;
-                var periodStart = new DateTime(year, monthNum, 1);
-                var periodEndExclusive = periodStart.AddMonths(1);
 
-                // Active allowances and deductions that apply in this payroll month (effective/end dates and frequency)
-                var allowances = _context.Allowances
-                    .Where(a => a.EmployeeId == employeeId && a.IsActive)
-                    .ToList()
-                    .Where(a => AppliesInPeriod(a.Frequency, a.EffectiveDate, a.EndDate, periodStart, periodEndExclusive))
-                    .ToList();
+                var calc = Compute(
+                    employee,
+                    GetFuelPriceFromConfiguration(),
+                    _context.Allowances.Where(a => a.EmployeeId == employeeId && a.IsActive).ToList(),
+                    _context.Deductions.Where(d => d.EmployeeId == employeeId && d.IsActive).ToList(),
+                    monthNum, year, TaxSlabsFromDatabase);
 
-                var deductions = _context.Deductions
-                    .Where(d => d.EmployeeId == employeeId && d.IsActive)
-                    .OrderBy(d => d.DeductionType)
-                    .ThenBy(d => d.DeductionName)
-                    .ToList()
-                    .Where(d => AppliesInPeriod(d.Frequency, d.EffectiveDate, d.EndDate, periodStart, periodEndExclusive))
-                    .ToList();
-
-                decimal totalAllowances = SumAllowancesForBasic(basic, allowances, fuelPrice);
-
-                decimal gross = basic + totalAllowances;
-
-                decimal totalPayrollDeductions = deductions.Sum(d => DeductionComputedAmount(d, gross));
-                totalPayrollDeductions = Math.Round(totalPayrollDeductions, 2, MidpointRounding.AwayFromZero);
-
-                // Income tax: annual slab method on BasicSalary x 12 (B17 decides the base).
-                var taxResult = CalculateTax(employee, basic, year, monthNum);
-
-                decimal totalWithheld = totalPayrollDeductions + taxResult.TaxAmount;
-                decimal netSalary = gross - totalWithheld;
+                var basic = calc.Basic;
+                var fuelPrice = calc.FuelPrice;
+                var allowances = calc.Allowances;
+                var deductions = calc.Deductions;
+                var totalAllowances = calc.TotalAllowances;
+                var gross = calc.Gross;
+                var totalPayrollDeductions = calc.TotalDeductions;
+                var taxResult = calc.Tax;
+                var totalWithheld = calc.TotalWithheld;
+                var netSalary = calc.Net;
 
                 var payslip = new Payslip
                 {
@@ -296,7 +281,133 @@ namespace HRMBT.Web.Services.Payroll
         /// ApplyTax must be affirmative (yes / y / true / 1). With no slabs for that tax year no tax is charged and the payslip working says so.
         /// TaxPercentage on the payslip is the slab rate (marginal), TaxAmount the monthly tax.
         /// </summary>
-        private (decimal TaxPercentage, decimal TaxAmount, string Category, string Text) CalculateTax(Employee employee, decimal basicSalary, int payslipYear, int payslipMonth)
+        private List<TaxSlab> TaxSlabsFromDatabase(string label) =>
+            _context.TaxRules.AsNoTracking()
+                .Where(r => r.TaxYear == label)
+                .ToList()
+                .Select(r => new TaxSlab(r.MinSalary, r.MaxSalary.HasValue && r.MaxSalary.Value > 0m ? r.MaxSalary : null, r.FixedAmount, r.TaxPercentage))
+                .ToList();
+
+        private sealed record Calc(
+            decimal Basic, decimal FuelPrice, List<Allowance> Allowances, List<Deduction> Deductions,
+            decimal TotalAllowances, decimal Gross, decimal TotalDeductions,
+            (decimal TaxPercentage, decimal TaxAmount, string Category, string Text) Tax,
+            decimal TotalWithheld, decimal Net);
+
+        /// <summary>
+        /// The one calculation used by both <see cref="GeneratePayslip"/> and <see cref="Preview"/>.
+        /// Takes the employee's active allowance and deduction rows and keeps those that apply in the month.
+        /// </summary>
+        private Calc Compute(Employee employee, decimal fuelPrice, List<Allowance> activeAllowances, List<Deduction> activeDeductions,
+            int monthNum, int year, Func<string, List<TaxSlab>> slabsFor)
+        {
+            var basic = employee.BasicSalary ?? 0m;
+            var periodStart = new DateTime(year, monthNum, 1);
+            var periodEndExclusive = periodStart.AddMonths(1);
+
+            var allowances = activeAllowances
+                .Where(a => AppliesInPeriod(a.Frequency, a.EffectiveDate, a.EndDate, periodStart, periodEndExclusive))
+                .ToList();
+            var deductions = activeDeductions
+                .OrderBy(d => d.DeductionType)
+                .ThenBy(d => d.DeductionName)
+                .Where(d => AppliesInPeriod(d.Frequency, d.EffectiveDate, d.EndDate, periodStart, periodEndExclusive))
+                .ToList();
+
+            var totalAllowances = SumAllowancesForBasic(basic, allowances, fuelPrice);
+            var gross = basic + totalAllowances;
+            var totalDeductions = Math.Round(deductions.Sum(d => DeductionComputedAmount(d, gross)), 2, MidpointRounding.AwayFromZero);
+
+            // Income tax: annual slab method on BasicSalary x 12 (B17 decides the base).
+            var tax = CalculateTax(employee, basic, year, monthNum, slabsFor);
+            var withheld = totalDeductions + tax.TaxAmount;
+            return new Calc(basic, fuelPrice, allowances, deductions, totalAllowances, gross, totalDeductions, tax, withheld, gross - withheld);
+        }
+
+        /// <summary>A reason shown before payroll is generated. <see cref="Blocks"/> means no payslip is created.</summary>
+        public sealed record PayrollIssue(bool Blocks, string Text);
+
+        /// <summary>One employee in a payroll preview: what would happen and the figures it would produce.</summary>
+        public sealed record PayrollPreviewRow(Employee Employee, bool WillCreate, decimal Gross, decimal Deductions, decimal Tax, decimal Net, List<PayrollIssue> Issues);
+
+        /// <summary>
+        /// The rules every payroll route applies before creating a payslip, so the routes cannot disagree.
+        /// Blocks: employee not Active, payslip already exists. Warnings: no basic salary, month in the future,
+        /// employee joined after the month or left before it, tax flag set but no slabs for that tax year, negative net.
+        /// </summary>
+        public static List<PayrollIssue> CheckEmployee(Employee employee, string monthName, int year, bool slipExists)
+        {
+            var issues = new List<PayrollIssue>();
+            if (!string.Equals(employee.EmployeeStatus, "Active", StringComparison.OrdinalIgnoreCase))
+                issues.Add(new PayrollIssue(true, $"Not active (status: {employee.EmployeeStatus})."));
+            if (slipExists)
+                issues.Add(new PayrollIssue(true, "A payslip already exists for this month."));
+
+            if ((employee.BasicSalary ?? 0m) <= 0m)
+                issues.Add(new PayrollIssue(false, "No basic salary set; the payslip would be 0.00."));
+
+            var monthNum = PayrollMonthHelper.OrderIndex(monthName);
+            if (monthNum >= 1 && monthNum <= 12)
+            {
+                var start = new DateTime(year, monthNum, 1);
+                var end = start.AddMonths(1);
+                var today = DateTime.Today;
+                if (start > new DateTime(today.Year, today.Month, 1))
+                    issues.Add(new PayrollIssue(false, "This month is in the future."));
+                if (employee.DateOfJoining.HasValue && employee.DateOfJoining.Value.Date >= end)
+                    issues.Add(new PayrollIssue(false, $"Joined {employee.DateOfJoining.Value:dd/MM/yyyy}, after this month; a full month would still be paid."));
+                if (employee.DateOfLeaving.HasValue && employee.DateOfLeaving.Value.Date < start)
+                    issues.Add(new PayrollIssue(false, $"Left {employee.DateOfLeaving.Value:dd/MM/yyyy}, before this month."));
+            }
+            return issues;
+        }
+
+        /// <summary>
+        /// Dry run for a whole group of employees: nothing is saved. Uses the same calculation as generation,
+        /// with the allowance, deduction, slip and tax-slab lookups done once for the group.
+        /// </summary>
+        public List<PayrollPreviewRow> Preview(IEnumerable<Employee> employees, string month, int year)
+        {
+            var list = employees.ToList();
+            var rows = new List<PayrollPreviewRow>();
+            if (list.Count == 0) return rows;
+
+            var monthName = PayrollMonthHelper.Normalize(month);
+            var monthNum = PayrollMonthHelper.OrderIndex(monthName);
+            var ids = list.Select(e => e.uid).ToList();
+            var fuelPrice = GetFuelPriceFromConfiguration();
+            var allowances = _context.Allowances.AsNoTracking().Where(a => ids.Contains(a.EmployeeId) && a.IsActive).ToList()
+                .GroupBy(a => a.EmployeeId).ToDictionary(g => g.Key, g => g.ToList());
+            var deductions = _context.Deductions.AsNoTracking().Where(d => ids.Contains(d.EmployeeId) && d.IsActive).ToList()
+                .GroupBy(d => d.EmployeeId).ToDictionary(g => g.Key, g => g.ToList());
+            var existing = _context.Payslips.AsNoTracking()
+                .Where(p => p.Month == monthName && p.Year == year && ids.Contains(p.EmployeeId))
+                .Select(p => p.EmployeeId).ToHashSet();
+            var slabCache = new Dictionary<string, List<TaxSlab>>();
+            List<TaxSlab> SlabsFor(string label)
+            {
+                if (!slabCache.TryGetValue(label, out var s))
+                    slabCache[label] = s = TaxSlabsFromDatabase(label);
+                return s;
+            }
+
+            foreach (var e in list)
+            {
+                var issues = CheckEmployee(e, monthName, year, existing.Contains(e.uid));
+                var calc = Compute(e, fuelPrice,
+                    allowances.GetValueOrDefault(e.uid) ?? new List<Allowance>(),
+                    deductions.GetValueOrDefault(e.uid) ?? new List<Deduction>(),
+                    monthNum, year, SlabsFor);
+                if (calc.Net < 0m)
+                    issues.Add(new PayrollIssue(false, "Net pay would be negative (deductions and tax are more than gross)."));
+                if (ShouldApplyIncomeTax(e.ApplyTax) && calc.Tax.Text.Contains("no slabs are set up"))
+                    issues.Add(new PayrollIssue(false, "Tax is switched on for this employee but the tax year has no slabs."));
+                rows.Add(new PayrollPreviewRow(e, !issues.Any(i => i.Blocks), calc.Gross, calc.TotalDeductions, calc.Tax.TaxAmount, calc.Net, issues));
+            }
+            return rows;
+        }
+
+        private (decimal TaxPercentage, decimal TaxAmount, string Category, string Text) CalculateTax(Employee employee, decimal basicSalary, int payslipYear, int payslipMonth, Func<string, List<TaxSlab>> slabsFor)
         {
             var taxYearStart = payslipMonth >= 7 ? payslipYear : payslipYear - 1;
             var label = $"{taxYearStart}-{taxYearStart + 1}";
@@ -304,11 +415,7 @@ namespace HRMBT.Web.Services.Payroll
             if (!ShouldApplyIncomeTax(employee.ApplyTax))
                 return (0m, 0m, "Income tax", "Income tax: not applied (employee is not marked for tax).");
 
-            var slabs = _context.TaxRules.AsNoTracking()
-                .Where(r => r.TaxYear == label)
-                .ToList()
-                .Select(r => new TaxSlab(r.MinSalary, r.MaxSalary.HasValue && r.MaxSalary.Value > 0m ? r.MaxSalary : null, r.FixedAmount, r.TaxPercentage))
-                .ToList();
+            var slabs = slabsFor(label);
 
             if (slabs.Count == 0)
                 return (0m, 0m, "Income tax", $"Income tax: no slabs are set up for tax year {label}, so no tax was charged.");

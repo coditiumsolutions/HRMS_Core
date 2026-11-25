@@ -122,7 +122,7 @@
                                     <th>Employee ID</th>
                                     <th>Employee</th>
                                     <th>Period</th>
-                                    <th>Gen Status</th>
+                                    <th>Status</th>
                                     <th class="text-end" style="width:120px;">Actions</th>
                                 </tr>
                             </thead>
@@ -141,7 +141,7 @@
                                             <div class="fw-semibold">@(item.Employee?.EmployeeName ?? "—")</div>
                                         </td>
                                         <td class="text-nowrap">@item.Month @item.Year</td>
-                                        <td>@(string.IsNullOrWhiteSpace(item.Employee?.GenStatus) ? "—" : item.Employee!.GenStatus)</td>
+                                        <td>@(item.IsLocked ? "Locked" : "Unlocked")</td>
                                         <td class="text-end">
                                             <div class="row-actions">
                                                 <a class="btn btn-view" asp-action="Details" asp-route-id="@item.Id" title="Details"><i class="bi bi-eye"></i></a>
