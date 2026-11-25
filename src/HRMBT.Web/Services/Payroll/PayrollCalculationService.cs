@@ -201,7 +201,7 @@ namespace HRMBT.Web.Services.Payroll
                 decimal totalPayrollDeductions = deductions.Sum(d => DeductionComputedAmount(d, gross));
                 totalPayrollDeductions = Math.Round(totalPayrollDeductions, 2, MidpointRounding.AwayFromZero);
 
-                // Tax is calculated on BasicSalary as requested.
+                // Income tax: annual slab method on BasicSalary x 12 (B17 decides the base).
                 var taxResult = CalculateTax(employee, basic, year, monthNum);
 
                 decimal totalWithheld = totalPayrollDeductions + taxResult.TaxAmount;
@@ -233,6 +233,7 @@ namespace HRMBT.Web.Services.Payroll
                         totalPayrollDeductions,
                         taxResult.TaxPercentage,
                         taxResult.TaxAmount,
+                        taxResult.Text,
                         totalWithheld,
                         netSalary,
                         fuelPrice)
@@ -271,7 +272,7 @@ namespace HRMBT.Web.Services.Payroll
                     {
                         ItemType = "Tax",
                         ItemName = "Income Tax",
-                        ItemCategory = $"{taxResult.TaxPercentage:N2}% of Basic",
+                        ItemCategory = taxResult.Category,
                         Amount = taxResult.TaxAmount,
                         SortOrder = sort++
                     });
@@ -289,25 +290,31 @@ namespace HRMBT.Web.Services.Payroll
         }
 
         /// <summary>
-        /// Matches <see cref="TaxRule"/> to basic salary only: TaxAmount = BasicSalary × TaxPercentage / 100.
-        /// Rules are filtered by <see cref="TaxRule.TaxYear"/> when it matches the payroll year (canonical: <c>year.ToString(CultureInfo.InvariantCulture)</c>).
-        /// If no rows match that year (legacy databases), falls back to all rules.
-        /// ApplyTax must be affirmative (yes / y / true / 1); blank/null does not deduct tax — set the flag on the employee row.
-        /// Chooses the slab with the greatest MinSalary whose band still contains the salary (proper bracket resolution).
-        /// MaxSalary unset or zero is treated as no upper ceiling.
+        /// Income tax by the annual slab method (see <see cref="IncomeTaxCalculator"/> and docs/reference/pk-income-tax.md):
+        /// annual taxable income = BasicSalary x 12 (the tax base is still open, decision B17), tax = slab fixed amount + slab rate % of the part above the slab start,
+        /// monthly tax = annual / 12 rounded to the rupee. The tax year is July-June (T6): July-December 2026 uses 2026-2027, January-June 2026 uses 2025-2026.
+        /// ApplyTax must be affirmative (yes / y / true / 1). With no slabs for that tax year no tax is charged and the payslip working says so.
+        /// TaxPercentage on the payslip is the slab rate (marginal), TaxAmount the monthly tax.
         /// </summary>
-        private (decimal TaxPercentage, decimal TaxAmount) CalculateTax(Employee employee, decimal basicSalary, int payslipYear, int payslipMonth)
+        private (decimal TaxPercentage, decimal TaxAmount, string Category, string Text) CalculateTax(Employee employee, decimal basicSalary, int payslipYear, int payslipMonth)
         {
+            var taxYearStart = payslipMonth >= 7 ? payslipYear : payslipYear - 1;
+            var label = $"{taxYearStart}-{taxYearStart + 1}";
+
             if (!ShouldApplyIncomeTax(employee.ApplyTax))
-                return (0m, 0m);
+                return (0m, 0m, "Income tax", "Income tax: not applied (employee is not marked for tax).");
 
-            var applicableRule = FindApplicableTaxRule(basicSalary, payslipYear, payslipMonth);
-            if (applicableRule == null)
-                return (0m, 0m);
+            var slabs = _context.TaxRules.AsNoTracking()
+                .Where(r => r.TaxYear == label)
+                .ToList()
+                .Select(r => new TaxSlab(r.MinSalary, r.MaxSalary.HasValue && r.MaxSalary.Value > 0m ? r.MaxSalary : null, r.FixedAmount, r.TaxPercentage))
+                .ToList();
 
-            decimal percentage = applicableRule.TaxPercentage;
-            decimal taxAmount = Math.Round((basicSalary * percentage) / 100m, 2, MidpointRounding.AwayFromZero);
-            return (percentage, taxAmount);
+            if (slabs.Count == 0)
+                return (0m, 0m, "Income tax", $"Income tax: no slabs are set up for tax year {label}, so no tax was charged.");
+
+            var result = IncomeTaxCalculator.Calculate(basicSalary * IncomeTaxCalculator.MonthsPerYear, slabs);
+            return (result.Slab?.Rate ?? 0m, result.MonthlyTax, IncomeTaxCalculator.Category(result), IncomeTaxCalculator.Describe(label, result));
         }
 
         private static bool ShouldApplyIncomeTax(string? applyTax)
@@ -323,35 +330,6 @@ namespace HRMBT.Web.Services.Payroll
                    || t == "1";
         }
 
-        /// <summary>
-        /// MaxSalary NULL or non-positive values are treated as no upper bound (common data-entry pattern).
-        /// </summary>
-        private static decimal EffectiveMaxInclusive(decimal? maxSalary)
-        {
-            if (!maxSalary.HasValue || maxSalary.Value <= 0m)
-                return decimal.MaxValue;
-
-            return maxSalary.Value;
-        }
-
-        /// <summary>
-        /// Tax year starts on 1 July (T6): a payslip for July-December 2026 uses the 2026-2027 slabs, January-June 2026 uses 2025-2026.
-        /// Rules for any other year are ignored; with no slab for that year no tax is charged.
-        /// Picks the slab with the largest MinSalary bracket containing basicSalary.
-        /// </summary>
-        private TaxRule? FindApplicableTaxRule(decimal basicSalary, int payslipYear, int payslipMonth)
-        {
-            var taxYearStart = payslipMonth >= 7 ? payslipYear : payslipYear - 1;
-            var label = $"{taxYearStart}-{taxYearStart + 1}";
-
-            return _context.TaxRules.AsNoTracking()
-                .Where(r => r.TaxYear == label)
-                .ToList()
-                .Where(r => basicSalary >= r.MinSalary && basicSalary <= EffectiveMaxInclusive(r.MaxSalary))
-                .OrderByDescending(r => r.MinSalary)
-                .FirstOrDefault();
-        }
-
         private string BuildDetails(
             decimal basicSalary,
             decimal totalAllowancesSum,
@@ -361,6 +339,7 @@ namespace HRMBT.Web.Services.Payroll
             decimal totalPayrollDeductions,
             decimal taxPercentage,
             decimal taxAmount,
+            string taxText,
             decimal totalWithheld,
             decimal netSalary,
             decimal fuelPrice = 0m)
@@ -401,7 +380,8 @@ namespace HRMBT.Web.Services.Payroll
             }
 
             sb.AppendLine($"Total payroll deductions (Payslips.TotalDeductions): {totalPayrollDeductions:N2}");
-            sb.AppendLine($"Tax ({taxPercentage:N2}% of BasicSalary): {taxAmount:N2}");
+            sb.AppendLine(taxText);
+            sb.AppendLine($"Tax withheld (slab rate {taxPercentage:N2}%): {taxAmount:N2}");
             sb.AppendLine($"Total withheld (payroll + tax): {totalWithheld:N2}");
             sb.AppendLine($"Net Salary: {netSalary:N2}");
 

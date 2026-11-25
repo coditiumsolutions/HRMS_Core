@@ -96,7 +96,7 @@
                                 <span class="info-value @(Model.TaxAmount > 0 ? "" : "text-empty")">@(Model.TaxAmount > 0 ? Fmt.Money(Model.TaxAmount) : "—")</span>
                             </div>
                             <div class="info-cell">
-                                <span class="info-label">Tax % (of basic)</span>
+                                <span class="info-label">Tax slab rate</span>
                                 <span class="info-value">@Fmt.Percent(Model.TaxPercentage)</span>
                             </div>
                             <div class="info-cell" style="grid-column: span 2;"></div>
