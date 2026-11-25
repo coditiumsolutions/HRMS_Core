@@ -1,38 +1,32 @@
 @{
+    // Order: overview, then the monthly run (all, picked, one), then look-ups.
     var currentAction = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
+    string C(params string[] actions) =>
+        actions.Contains(currentAction) ? "nav-link active fw-bold text-primary" : "nav-link text-dark";
 }
 
-<strong class="sidebar-title">Payroll Menu</strong>
+<strong class="sidebar-title">Payroll</strong>
 <hr />
 <ul class="nav flex-column">
     <li class="nav-item">
-        <a class="nav-link @(currentAction == "GeneratePayroll" ? "active fw-bold text-primary" : "text-dark")"
-           asp-controller="Payroll" asp-action="GeneratePayroll">
-            ⚙️ Generate Payroll
-        </a>
+        <a class="@C("Dashboard")" asp-controller="Payroll" asp-action="Dashboard"><i class="bi bi-speedometer2 me-2" aria-hidden="true"></i>Overview</a>
     </li>
     <li class="nav-item">
-        <a class="nav-link @(currentAction == "Index" || currentAction == "Details" ? "active fw-bold text-primary" : "text-dark")"
-           asp-controller="Payroll" asp-action="Index">
-            📋 All Payrolls
-        </a>
+        <a class="@C("GeneratePayslips")" asp-controller="Payroll" asp-action="GeneratePayslips"><i class="bi bi-play-circle me-2" aria-hidden="true"></i>Run Payroll</a>
     </li>
     <li class="nav-item">
-        <a class="nav-link @(currentAction == "GeneratePayslips" ? "active fw-bold text-primary" : "text-dark")"
-           asp-controller="Payroll" asp-action="GeneratePayslips">
-            💰 Run Payroll
-        </a>
+        <a class="@C("GeneratePayroll")" asp-controller="Payroll" asp-action="GeneratePayroll"><i class="bi bi-check2-square me-2" aria-hidden="true"></i>Pick Employees</a>
     </li>
     <li class="nav-item">
-        <a class="nav-link @(currentAction == "Search" ? "active fw-bold text-primary" : "text-dark")"
-           asp-controller="Payroll" asp-action="Search">
-            🔍 Search Payroll
-        </a>
+        <a class="@C("GenerateIndividual", "Create")" asp-controller="Payroll" asp-action="GenerateIndividual"><i class="bi bi-person me-2" aria-hidden="true"></i>Single Employee</a>
     </li>
     <li class="nav-item">
-        <a class="nav-link @(currentAction == "GenerateIndividual" || currentAction == "Create" ? "active fw-bold text-primary" : "text-dark")"
-           asp-controller="Payroll" asp-action="GenerateIndividual">
-            👤 Run Single Pay
-        </a>
+        <a class="@C("Index", "Details")" asp-controller="Payroll" asp-action="Index"><i class="bi bi-receipt me-2" aria-hidden="true"></i>Payslips</a>
+    </li>
+    <li class="nav-item">
+        <a class="@C("Search")" asp-controller="Payroll" asp-action="Search"><i class="bi bi-search me-2" aria-hidden="true"></i>Search Payslips</a>
+    </li>
+    <li class="nav-item">
+        <a class="@C("PayrollStatus")" asp-controller="Payroll" asp-action="PayrollStatus"><i class="bi bi-clipboard-check me-2" aria-hidden="true"></i>Payroll Status</a>
     </li>
 </ul>

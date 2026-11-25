@@ -1,88 +1,77 @@
 @{
+    // Side menu for the modules that use this shared partial. Payroll, Attendance and Deductions have their own
+    // partials (_PayrollSidebar, _AttendanceSidebar, _DeductionsSidebar). Icons are Bootstrap Icons class names.
+    // Order: look things up first, then do the task, then manage. Labels are plain words, two at most.
     var activeModule = ViewData["Module"]?.ToString() ?? "Home";
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+    var currentAction = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
+
+    // The Module key stays as the code uses it; this is only the heading people see.
+    var titles = new Dictionary<string, string> { ["LMS"] = "Leave", ["Tax"] = "Tax Rules" };
+
     var sidebarLinks = new Dictionary<string, List<(string Icon, string Text, string Action, string Controller)>>
     {
         ["Home"] = new List<(string, string, string, string)>
         {
-            ("👥", "Employees", "Index", "Employee"),
-            ("💰", "Payroll", "Index", "Payroll"),
-            ("➕", "Allowances", "Index", "Allowances"),
-            ("➖", "Deductions", "Index", "Deductions"),
-            ("📅", "Attendance", "Index", "Attendance"),
-            ("📝", "LMS", "Index", "LMS"),
-            ("📋", "Tax", "Index", "Tax"),
-            ("📊", "Reports", "SalariesSummary", "Reports"),
-            ("⚙️", "Setup", "Index", "Setup")
+            ("bi-people", "Employees", "Index", "Employee"),
+            ("bi-calendar-check", "Attendance", "Index", "Attendance"),
+            ("bi-calendar2-heart", "Leave", "Index", "LMS"),
+            ("bi-cash-coin", "Payroll", "Index", "Payroll"),
+            ("bi-plus-circle", "Allowances", "Index", "Allowances"),
+            ("bi-dash-circle", "Deductions", "Index", "Deductions"),
+            ("bi-percent", "Tax Rules", "Index", "Tax"),
+            ("bi-bar-chart-line", "Reports", "SalariesSummary", "Reports"),
+            ("bi-gear", "Setup", "Index", "Setup")
         },
         ["Employees"] = new List<(string, string, string, string)>
         {
-            ("📊", "Dashboard", "Dashboard", "Employee"),
-            ("👥", "All Employees", "Index", "Employee"),
-            ("➕", "Add Employee", "Create", "Employee")
-        },
-        ["Payroll"] = new List<(string, string, string, string)>
-        {
-            ("📈", "Dashboard", "Dashboard", "Payroll"),
-            ("👥", "Employee Detail", "EmployeeDetail", "Payroll"),
-            ("⚙️", "Generate Payroll", "GeneratePayroll", "Payroll"),
-            ("💰", "Run Payroll", "GeneratePayslips", "Payroll"),
-            ("🧾", "Payroll Slips", "Index", "Payroll"),
-            ("📊", "Payroll Status", "PayrollStatus", "Payroll")
-        },
-        ["Attendance"] = new List<(string, string, string, string)>
-        {
-            ("📅", "Attendance Today", "Index", "Attendance"),
-            ("🏢", "Attendance By Department", "Index", "Attendance"),
-            ("📋", "Attendance Summary", "Index", "Attendance"),
-            ("🏝️", "Off-Day", "OffDay", "Attendance")
+            ("bi-people", "All Employees", "Index", "Employee"),
+            ("bi-person-plus", "Add Employee", "Create", "Employee"),
+            ("bi-speedometer2", "Overview", "Dashboard", "Employee")
         },
         ["LMS"] = new List<(string, string, string, string)>
         {
-            ("➕", "Add Leave", "Create", "LMS"),
-            ("📝", "View Leaves", "Index", "LMS"),
-            ("📑", "Leaves Quota", "LeaveQuota", "LMS"),
-            ("⚖️", "Leave Balance", "LeaveBalance", "LMS"),
-            ("📊", "Leave Reports", "Index", "LMS")
+            ("bi-list-check", "Leave Requests", "Index", "LMS"),
+            ("bi-plus-circle", "New Request", "Create", "LMS"),
+            ("bi-scale", "Leave Balances", "LeaveBalance", "LMS"),
+            ("bi-journal-text", "Leave Quotas", "LeaveQuota", "LMS")
         },
         ["Tax"] = new List<(string, string, string, string)>
         {
-            ("📑", "Tax slabs", "Index", "Tax"),
-            ("➕", "New slab", "Create", "Tax"),
-            ("🗓️", "New tax year", "NewYear", "Tax")
+            ("bi-calendar-range", "Tax Years", "Index", "Tax"),
+            ("bi-calendar-plus", "New Tax Year", "NewYear", "Tax"),
+            ("bi-plus-circle", "New Slab", "Create", "Tax")
         },
         ["Reports"] = new List<(string, string, string, string)>
         {
-            ("💰", "Payroll Summary", "SalariesSummary", "Reports"),
-            ("👥", "Employee Summary", "EmployeeSummary", "Reports"),
-            ("➕", "Allowances Summary", "AllowancesSummary", "Reports"),
-            ("➖", "Deductions Summary", "DeductionsSummary", "Reports"),
-            ("📋", "Taxes Summary", "TaxesSummary", "Reports")
+            ("bi-cash-coin", "Payroll Summary", "SalariesSummary", "Reports"),
+            ("bi-people", "Employee Summary", "EmployeeSummary", "Reports"),
+            ("bi-plus-circle", "Allowances Summary", "AllowancesSummary", "Reports"),
+            ("bi-dash-circle", "Deductions Summary", "DeductionsSummary", "Reports"),
+            ("bi-percent", "Tax Summary", "TaxesSummary", "Reports")
         },
         ["Allowances"] = new List<(string, string, string, string)>
         {
-            ("📋", "Allowances", "Index", "Allowances"),
-            ("➕", "Add Single", "Create", "Allowances"),
-            ("➕", "Add Multi", "Add", "Allowances")
-        },
-        ["Deductions"] = new List<(string, string, string, string)>
-        {
-            ("📋", "All deductions", "Index", "Deductions"),
-            ("📋", "Bulk add", "Add", "Deductions"),
-            ("➕", "Single deduction", "Create", "Deductions")
+            ("bi-list-ul", "All Allowances", "Index", "Allowances"),
+            ("bi-plus-circle", "Add One", "Create", "Allowances"),
+            ("bi-plus-square-dotted", "Add Many", "Add", "Allowances")
         }
     };
 
     var links = sidebarLinks.ContainsKey(activeModule) ? sidebarLinks[activeModule] : new List<(string, string, string, string)>();
+    var title = titles.TryGetValue(activeModule, out var t) ? t : activeModule;
 }
 
 @if (links.Any())
 {
-    <strong class="sidebar-title">@activeModule</strong>
+    <strong class="sidebar-title">@title</strong>
     <nav class="nav flex-column">
         @foreach (var link in links)
         {
-            <a class="nav-link" asp-controller="@link.Item4" asp-action="@link.Item3">
-                <span style="margin-right: 6px;">@link.Item1</span>@link.Item2
+            var isCurrent = string.Equals(link.Item4, currentController, StringComparison.OrdinalIgnoreCase)
+                            && string.Equals(link.Item3, currentAction, StringComparison.OrdinalIgnoreCase);
+            <a class="nav-link@(isCurrent ? " active fw-bold" : "")" asp-controller="@link.Item4" asp-action="@link.Item3">
+                <i class="bi @link.Item1 me-2" aria-hidden="true"></i>@link.Item2
             </a>
         }
     </nav>
@@ -91,4 +80,3 @@ else
 {
     <p class="text-muted">Select a module to see navigation options...</p>
 }
-

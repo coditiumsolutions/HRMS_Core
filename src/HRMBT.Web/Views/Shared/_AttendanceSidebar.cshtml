@@ -1,44 +1,29 @@
 @{
+    // Order: look things up, then enter data, then off days.
     var currentAction = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
+    string C(string action) =>
+        currentAction == action ? "nav-link active fw-bold text-primary" : "nav-link text-dark";
 }
 
-<strong class="sidebar-title">Attendance Menu</strong>
+<strong class="sidebar-title">Attendance</strong>
 <hr style="border-color: #D4AF37;" />
 <ul class="nav flex-column">
     <li class="nav-item">
-        <a class="nav-link @(currentAction == "Create" ? "active fw-bold text-primary" : "text-dark")" 
-           asp-controller="Attendance" asp-action="Create">
-            ➕ Add Attendance
-        </a>
+        <a class="@C("Index")" asp-controller="Attendance" asp-action="Index"><i class="bi bi-calendar-day me-2" aria-hidden="true"></i>Today</a>
     </li>
     <li class="nav-item">
-        <a class="nav-link @(currentAction == "OffDay" ? "active fw-bold text-primary" : "text-dark")" 
-           asp-controller="Attendance" asp-action="OffDay">
-            🏝️ Off-Day
-        </a>
+        <a class="@C("AttendanceByDepartment")" asp-controller="Attendance" asp-action="AttendanceByDepartment"><i class="bi bi-building me-2" aria-hidden="true"></i>By Department</a>
     </li>
     <li class="nav-item">
-        <a class="nav-link @(currentAction == "Index" ? "active fw-bold text-primary" : "text-dark")" 
-           asp-controller="Attendance" asp-action="Index">
-            📅 Attendance Today
-        </a>
+        <a class="@C("MonthlyReport")" asp-controller="Attendance" asp-action="MonthlyReport"><i class="bi bi-calendar-month me-2" aria-hidden="true"></i>Monthly Report</a>
     </li>
     <li class="nav-item">
-        <a class="nav-link @(currentAction == "AttendanceByDepartment" ? "active fw-bold text-primary" : "text-dark")" 
-           asp-controller="Attendance" asp-action="AttendanceByDepartment">
-            🏢 Att. Summary
-        </a>
+        <a class="@C("Create")" asp-controller="Attendance" asp-action="Create"><i class="bi bi-plus-circle me-2" aria-hidden="true"></i>Add Attendance</a>
     </li>
     <li class="nav-item">
-        <a class="nav-link @(currentAction == "Upload" ? "active fw-bold text-primary" : "text-dark")" 
-           asp-controller="Attendance" asp-action="Upload">
-            📤 Upload CSV
-        </a>
+        <a class="@C("Upload")" asp-controller="Attendance" asp-action="Upload"><i class="bi bi-upload me-2" aria-hidden="true"></i>Upload File</a>
     </li>
     <li class="nav-item">
-        <a class="nav-link @(currentAction == "MonthlyReport" ? "active fw-bold text-primary" : "text-dark")" 
-           asp-controller="Attendance" asp-action="MonthlyReport">
-            📊 Monthly Report
-        </a>
+        <a class="@C("OffDay")" asp-controller="Attendance" asp-action="OffDay"><i class="bi bi-umbrella me-2" aria-hidden="true"></i>Off Days</a>
     </li>
 </ul>
