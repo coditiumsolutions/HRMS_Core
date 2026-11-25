@@ -1,5 +1,5 @@
 # HRMS Database Schema - Proposed Changes (final draft)
-Version: 3.8 | Based on: db.md v1.9 (2026-11-16) | Date: 2026-11-24
+Version: 3.9 | Based on: db.md v1.9 (2026-11-16) | Date: 2026-11-25
 Database: HRBTK
 Server: Teezhost 16GB (production)
 Status: **APPLIED TO PRODUCTION on 2026-11-24 (scripts 01-04, 06-11; see db.md v2.0 and prod_rollout.md section 8). The text below is kept as the design record; db.md is the current schema.** Former status: **FINAL DRAFT. Applied to the local development copy only (2026-11-23; script 08 `EmployeeEvents`, 09 leave days one decimal, 10 legacy leave archive and 11 leave balances view v2 on 2026-11-24); production `HRBTK` is untouched and stays read-only until each script is reviewed and approved (db_standards.md S19).** The re-runnable scripts are in `scripts/database/redesign/` (01-04 expand, 06 contract); the development app is already adapted (value converters keep the legacy text shapes in code, Setup pages manage the new lists). Deviations found while applying: `UX_PayslipDetails_Payslip_Item` is created in phase 4 (after the `ItemType` type change); filtered indexes block `ALTER COLUMN` and column renames (SQL Server error 1934), so the scripts drop and recreate them around those steps; `UX_Attendance_Employee_ShiftDate` was filtered during the expand phase and is unfiltered after the contract phase. This draft implements the rules in db_standards.md (S1-S23) and the answered decisions in decisions.md (T1, T2, T3, T5, T6). Items that wait for an open decision are tagged ⏸ and name the decision (T4, T7, B1-B18). **Data status (2026-11-18):** the data in `HRBTK` is treated as test data. Row counts, "live checks" and findings in this file describe it for design purposes; they are not requirements (for example, the number of projects is not fixed, B3), and the checks are re-run on the real data before a script is applied.
@@ -976,7 +976,8 @@ Keys and indexes
 - 🟢 `FK_SubDepartments_Departments`.
 
 ## Table: dbo.TaxRules [CHANGED]
-Income-tax slabs per tax year. Tax = BasicSalary x TaxPercentage / 100 for the slab containing the basic salary (⏸ B17: basic or gross is open).
+Income-tax slabs per tax year, on **annual** income (2026-11-25): annual tax = `FixedAmount` + `TaxPercentage` % of (annual income - `MinSalary`) for the slab with the highest `MinSalary` not above the income; monthly tax = annual tax / 12, rounded to the rupee. Method, source and slab figures: `docs/reference/pk-income-tax.md`. The taxable base (basic or gross) is still B17.
+- 2026-11-25 (script `12_tax_slabs_annual.sql`, after the production run of 01-11): the flat "basic x percentage" method was wrong. `MinSalary`/`MaxSalary` are now annual income; new `FixedAmount decimal(18,2) NOT NULL DEFAULT 0` with `CK_TaxRules_Fixed`; the old test slabs of 2025 and 2026 are replaced by the real slabs (2025-26 fixed amounts derived by continuity, to be verified).
 Rows on 2026-11-16: 14 (7 for 2025-2026, 7 for 2026-2027).
 - 2026-11-17 (T6): the text label `TaxYear` (`2025-2026`) is replaced by `TaxYearStart smallint` (2025 = 1 Jul 2025 to 30 Jun 2026); the label is derived in the app. This fixes the tax-year bug at its cause: payroll derives the tax year from the payslip (`Month >= 7 ? Year : Year - 1`) instead of comparing the label with `2026`. Expand/contract: add `TaxYearStart`, backfill `LEFT(TaxYear, 4)`, switch the app, drop `TaxYear`. `Configuration` rows `CurrentTaxYear` and `TaxSlabs` are removed afterwards.
 - 2026-11-17: Live check: no duplicate `(TaxYear, MinSalary)`; max percentage is 20.00, so `decimal(5,2)` is safe.
@@ -985,7 +986,8 @@ Rows on 2026-11-16: 14 (7 for 2025-2026, 7 for 2026-2027).
 |---|---|---|---|---|---|
 |  | Id | int | NOT NULL |  | PK, identity. |
 |  | MinSalary | decimal(18,2) | NOT NULL |  |  |
-|  | MaxSalary | decimal(18,2) | NULL |  | NULL or 0 = no upper limit. |
+|  | MaxSalary | decimal(18,2) | NULL |  | NULL or 0 = no upper limit. 2026-11-25: annual income; informational. |
+| 🟢 NEW 2026-11-25 | **FixedAmount** | decimal(18,2) | NOT NULL | 0 | Tax already due at the start of the slab (script 12). `MinSalary` is now the annual income where the slab starts. |
 | 🟡 CHANGED | **TaxPercentage** | decimal(5,2) | NOT NULL |  | was decimal(18,2). S8. |
 | 🔴 DROP | TaxYear | nvarchar(20) | NOT NULL | '2025-2026' | Replaced by TaxYearStart; dropped after the app switch. |
 | 🟢 NEW | **TaxYearStart** | smallint | NOT NULL |  | T6. Calendar year in which the July-June tax year starts. |

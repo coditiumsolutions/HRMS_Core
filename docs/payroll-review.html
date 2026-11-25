@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Payroll module review</title>
+<style>
+:root{--bg:#f7f8fa;--card:#fff;--ink:#1d2433;--mute:#5b6577;--line:#dfe3ea;--accent:#1f5fbf;--bug:#b42318;--gap:#b54708;--inc:#6941c6;--ok:#067647;--code:#eef1f6}
+@media (prefers-color-scheme:dark){:root{--bg:#10141c;--card:#171c26;--ink:#e6e9f0;--mute:#9aa3b5;--line:#2a3140;--accent:#6ea2ff;--bug:#ff8a80;--gap:#ffb866;--inc:#b9a4ff;--ok:#5fd39b;--code:#1e2432}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 "Segoe UI",system-ui,sans-serif}
+.wrap{max-width:1040px;margin:0 auto;padding:24px 16px 80px}
+h1{font-size:26px;margin:0 0 4px}h2{font-size:20px;margin:36px 0 10px;padding-top:8px;border-top:2px solid var(--line)}h3{font-size:16px;margin:22px 0 6px}
+.sub{color:var(--mute);margin:0 0 16px}
+nav{display:flex;flex-wrap:wrap;gap:6px 14px;margin:14px 0 8px;font-size:14px}
+a{color:var(--accent)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin:10px 0}
+table{border-collapse:collapse;width:100%;margin:8px 0;font-size:14px}
+th,td{border:1px solid var(--line);padding:6px 9px;text-align:left;vertical-align:top}
+th{background:var(--code);font-weight:600}
+code,.mono{font-family:Consolas,monospace;font-size:13px;background:var(--code);padding:1px 5px;border-radius:4px}
+pre{background:var(--code);padding:12px;border-radius:8px;overflow:auto;font:13px/1.5 Consolas,monospace}
+.id{display:inline-block;min-width:34px;font:600 12px Consolas,monospace;padding:2px 7px;border-radius:5px;background:var(--code);margin-right:6px}
+.tag{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 7px;border-radius:10px;margin-left:6px;border:1px solid currentColor}
+.bug{color:var(--bug)}.gap{color:var(--gap)}.inc{color:var(--inc)}.ok{color:var(--ok)}
+.item{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--line);border-radius:6px;padding:10px 14px;margin:10px 0}
+.item.bug{border-left-color:var(--bug)}.item.gap{border-left-color:var(--gap)}.item.inc{border-left-color:var(--inc)}
+.item p{margin:4px 0;color:var(--ink)}.item .where{color:var(--mute);font-size:13px}
+.flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}
+.flow span{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:5px 10px;font-size:13px}
+.flow i{font-style:normal;color:var(--mute)}
+.note{color:var(--mute);font-size:13px}
+@media(max-width:640px){th,td{padding:5px 6px;font-size:13px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Payroll module review</h1>
+<p class="sub">Written 2026-11-25 and updated the same day after the income-tax fix, from the code (<code>PayrollController</code>, <code>PayrollCalculationService</code>, <code>PayslipsController</code>, <code>AllowancesController</code>, <code>DeductionsController</code>, <code>TaxController</code>, <code>PayslipLockService</code>) and <code>db.md</code> v2.0. Each item has an ID (S = section, F = finding, P = proposal, B/T = decision in <code>docs/db/decisions.md</code>) so you can say "do F2 and P1".</p>
+
+<div class="card"><b>What I could not check:</b> the production login (<code>sa</code>) was refused today, so I could not read live payroll data. Figures below are the production counts recorded right after the migration on 2026-11-24 (<code>db.md</code>). The app logic is read from code and was not re-run for this review.</div>
+
+<div class="card"><b>Update 2026-11-25: income tax corrected.</b> The flat "basic × slab %" method (old F7) was wrong. Tax is now the annual progressive slab method (fixed amount + rate on the part above the slab start; monthly = annual / 12 rounded to the rupee), slabs hold annual income, and the Tax rules pages show one card per tax year with a "New tax year" page for entering all slabs at once. Source, slab tables and method: <code>docs/reference/pk-income-tax.md</code>. Script <code>12_tax_slabs_annual.sql</code> is run on the dev copy only; <b>production still needs it before the new build is deployed</b> (<code>docs/db/prod_rollout.md</code> section 9). Parts of this review that changed are marked <i>updated</i>.</div>
+
+<nav>
+<a href="#s1">S1 Overview</a><a href="#s2">S2 Data</a><a href="#s3">S3 Calculation</a><a href="#s4">S4 Lifecycle &amp; lock</a><a href="#s5">S5 Findings</a><a href="#s6">S6 Proposal</a><a href="#s7">S7 Decisions</a><a href="#s8">S8 Build order</a>
+</nav>
+
+<!-- ============================================================ -->
+<h2 id="s1">S1. What the module does today</h2>
+<p>Payroll turns each employee's basic salary, active allowances, active deductions and an income-tax slab into one <b>payslip</b> per employee per month. Nothing else feeds it: attendance, leave, joining and leaving dates are not used (see F4).</p>
+
+<h3>Screens (Payroll sidebar and related)</h3>
+<table>
+<tr><th>Screen</th><th>URL</th><th>What it does</th></tr>
+<tr><td>Generate Payroll</td><td><code>/payroll/generate</code></td><td>Employee list with department filter and gross preview (basic + allowances). Tick employees, pick month and year, press generate. Writes <code>Employee.GenStatus</code> text for each.</td></tr>
+<tr><td>Run Payroll</td><td><code>/payroll/run</code></td><td>Month, year, optional department. Generates for <b>all Active</b> employees, skipping those who already have a slip. Refuses if any slip of that month is locked (F2).</td></tr>
+<tr><td>Run Single Pay</td><td><code>/payroll/run/single</code></td><td>One employee by Employee ID.</td></tr>
+<tr><td>(not in sidebar)</td><td><code>/payroll/new</code></td><td>Same as Run Single Pay with a different form (F13).</td></tr>
+<tr><td>All Payrolls</td><td><code>/payroll</code></td><td>List of slips for a chosen month and year (both required), filter by employee and department. View, delete (unlocked only).</td></tr>
+<tr><td>Search Payroll</td><td><code>/payroll/search</code></td><td>Same list with free filters.</td></tr>
+<tr><td>Payroll status</td><td><code>/payroll/status</code></td><td>Active employees for a month, filtered Not Generated / Generated (locked) / Pending (unlocked).</td></tr>
+<tr><td>Dashboard</td><td><code>/payroll/dashboard</code></td><td>Active employees, how many have a slip, how many do not, total net for the month.</td></tr>
+<tr><td>Payslip detail / print</td><td><code>/payroll/{id}</code>, <code>/payslips/{id}</code>, <code>/payslips/{id}/print</code></td><td>Breakdown of basic, allowance lines, deduction lines, tax line, gross, net.</td></tr>
+<tr><td>Payslips list</td><td><code>/payslips</code></td><td>Second list with status filter (Locked / Unlocked) and total net.</td></tr>
+<tr><td>Manual payslip</td><td><code>/payslips/new</code></td><td>Type gross and deductions by hand (F13).</td></tr>
+<tr><td>Allowances</td><td><code>/allowances</code>, <code>/bulk</code>, <code>/new</code>, <code>/{id}/edit</code></td><td>Per-employee allowance rows. Edit locks that employee's slips.</td></tr>
+<tr><td>Deductions</td><td><code>/deductions</code> (same shape)</td><td>Per-employee deduction rows. Edit locks that employee's slips.</td></tr>
+<tr><td>Tax rules <i>(updated)</i></td><td><code>/tax-rules</code>, <code>/tax-rules/years/{year}</code></td><td>One card per tax year (July to June); open a card for its slabs, with checks for gaps and fixed amounts that do not follow from the slab below.</td></tr>
+<tr><td>New tax year <i>(new)</i></td><td><code>/tax-rules/years/new</code></td><td>Set up a whole tax year and all its slabs on one page; can start from a copy of another year.</td></tr>
+<tr><td>New slab <i>(updated)</i></td><td><code>/tax-rules/new</code></td><td>One slab for any tax year. Both forms link to mytaxcalculator.pk and say to contact the software department if a slab needs something the form cannot hold.</td></tr>
+</table>
+<p class="note">Production snapshot (2026-11-24): 99 payslips with 132 lines in about 11 month/year combinations, 23 allowances, 11 deductions (all fixed amounts), 14 tax slabs (old monthly bands with one flat rate; replaced by annual slabs by script 12, dev copy only so far), 848 employees. This is test data, so it says little about real use.</p>
+
+<!-- ============================================================ -->
+<h2 id="s2">S2. Data it uses</h2>
+<table>
+<tr><th>Table</th><th>Role</th><th>Key points</th></tr>
+<tr><td><code>Employee</code></td><td>Source of pay</td><td><code>BasicSalary</code> (nullable), <code>ApplyTax</code> (bit), <code>EmployeeStatus</code>, <code>GenStatus</code>. <code>PayBasis</code> and <code>HourlyRate</code> exist but payroll ignores them. No bank details, no salary history.</td></tr>
+<tr><td><code>Allowances</code></td><td>Additions</td><td>Type, name, frequency, amount, quantity, percentage flag/value, effective and end date, active. Name and type values come from the Configuration lists <code>AllowanceNames</code> and <code>AllowanceTypes</code>.</td></tr>
+<tr><td><code>Deductions</code></td><td>Subtractions</td><td>Type, name, frequency, method (<code>Fixed</code> or <code>Percentage</code>), <code>Amount</code> or <code>Percentage</code>, effective and end date, active.</td></tr>
+<tr><td><code>TaxRules</code> <i>(updated)</i></td><td>Tax slabs</td><td><code>TaxYearStart</code> (2025 = 1 Jul 2025 to 30 Jun 2026); <code>MinSalary</code>/<code>MaxSalary</code> now hold <b>annual</b> income; new <code>FixedAmount</code>; <code>TaxPercentage</code> is the rate on the part above the slab start.</td></tr>
+<tr><td><code>Configuration</code></td><td>Settings</td><td><code>FuelPrice</code> (one global unit price), allowance and deduction name/type lists as comma-separated text.</td></tr>
+<tr><td><code>Payslips</code></td><td>One per employee per month</td><td>Unique on (employee, year, month). Snapshot of basic, allowances total, gross, tax %, tax amount, deductions total, net, lock flag and date, calculation text. <code>WorkingDays</code>, <code>LeaveDays</code>, <code>LeaveBalance</code>, <code>HourlyMinutes</code>, <code>HourlyAmount</code> are never filled.</td></tr>
+<tr><td><code>PayslipDetails</code></td><td>Lines</td><td>Type (<code>Allowance</code>, <code>Deduction</code>, <code>Tax</code>), name, category, amount. Quantity and unit rate are not stored.</td></tr>
+<tr><td><code>AuditLogs</code></td><td>Trail</td><td>Written on allowance/deduction edit and when slips are locked. Not written on create, delete or payslip delete.</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="s3">S3. How one payslip is calculated</h2>
+<p>Code: <code>PayrollCalculationService.GeneratePayslip</code>. The same steps run for every entry point.</p>
+
+<div class="flow">
+<span>1 Period</span><i>→</i><span>2 Pick rows</span><i>→</i><span>3 Allowances</span><i>→</i><span>4 Gross</span><i>→</i><span>5 Deductions</span><i>→</i><span>6 Tax</span><i>→</i><span>7 Net</span><i>→</i><span>8 Save slip + lines</span>
+</div>
+
+<h3>S3.1 Steps and formulas</h3>
+<table>
+<tr><th>#</th><th>Step</th><th>Rule</th></tr>
+<tr><td>1</td><td>Period</td><td>Month name and year. Fails if a slip already exists for that employee and period. Any year 2000 to 2100 is accepted.</td></tr>
+<tr><td>2</td><td>Which rows apply</td><td>Allowance/deduction must be <b>active</b>, <b>started</b> (effective date before the month ends), <b>not ended</b> (end date not before the month starts), and the frequency must match (S3.2).</td></tr>
+<tr><td>3</td><td>Each allowance</td><td>Percentage: <code>basic × % / 100</code>. Fuel Allowance with type <i>Fixed Amount</i>: <code>Amount</code>. Fuel Allowance with type <i>Quantity</i>: <code>FuelPrice × Quantity</code>. Legacy fuel type: <code>Amount</code> if above 0, else <code>FuelPrice × Quantity</code>. Anything else: <code>Amount × Quantity</code>.</td></tr>
+<tr><td>4</td><td>Gross</td><td><code>BasicSalary + sum of allowances</code>. A missing basic counts as 0.</td></tr>
+<tr><td>5</td><td>Each deduction</td><td>Percentage: <code>gross × % / 100</code>. Fixed: the stored amount. The total is rounded to 2 decimals (half away from zero); each line is rounded separately.</td></tr>
+<tr><td>6</td><td>Income tax <i>(updated)</i></td><td>Only if <code>ApplyTax</code> is yes. Tax year = payslip year if month is July or later, otherwise year minus 1. Annual taxable income = <b>basic × 12</b> (allowances are not taxed; the base is still open, B17). Take the slab with the highest start not above that income. <code>Annual tax = fixed amount + rate % × (annual income − slab start)</code>. <code>Monthly tax = annual tax / 12</code>, rounded to the rupee. No slab for that tax year means no tax and the payslip says so. Payslip <code>TaxPercentage</code> holds the slab (marginal) rate.</td></tr>
+<tr><td>7</td><td>Net</td><td><code>Gross − payroll deductions − tax</code>. Not limited to zero (F9).</td></tr>
+<tr><td>8</td><td>Save</td><td>One <code>Payslips</code> row (unlocked) and one <code>PayslipDetails</code> row per allowance, deduction and the tax, plus a text copy of the working in <code>CalculationDetails</code>.</td></tr>
+</table>
+
+<h3>S3.2 Frequency rules</h3>
+<table>
+<tr><th>Frequency</th><th>Applies in a month when</th></tr>
+<tr><td>Monthly</td><td>always (between effective and end date)</td></tr>
+<tr><td>Once</td><td>only the month that contains the effective date</td></tr>
+<tr><td>Annual</td><td>only the same calendar month as the effective date, every year</td></tr>
+<tr><td>Weekly, Bi-Weekly</td><td>treated as Monthly (HR has not defined them). The allowance and deduction forms still offer them (F10)</td></tr>
+</table>
+
+<h3>S3.3 Worked example (illustrative figures, not real data) <i>(updated)</i></h3>
+<p>Basic 60,000. Allowances: Fuel by quantity, 100 litres at a FuelPrice of 280 (28,000); 10% of basic (6,000); fixed 5,000 × quantity 1. Deductions: 5% of gross; fixed 2,000. Tax year 2026-27.</p>
+<pre>Allowances      28,000 + 6,000 + 5,000        = 39,000
+Gross           60,000 + 39,000               = 99,000
+Deductions      5% × 99,000 = 4,950 ; fixed 2,000  = 6,950
+Tax             annual income 60,000 × 12     = 720,000
+                slab 600,000 to 1,200,000: 0 + 1% × (720,000 − 600,000) = 1,200 a year
+                monthly 1,200 / 12            = 100
+Net             99,000 − 6,950 − 100          = 91,950</pre>
+<p class="note">A higher salary shows the fixed amount: basic 200,000 a month = 2,400,000 a year, slab 2,200,000 to 3,200,000: 116,000 + 20% × 200,000 = 156,000 a year, 13,000 a month.
+Deduction percentages still use gross while tax uses basic × 12, so the 39,000 of allowances is never taxed (F8, B17).</p>
+
+<!-- ============================================================ -->
+<h2 id="s4">S4. Lifecycle and locking as built</h2>
+<div class="flow">
+<span>No slip</span><i>→ generate →</i><span>Unlocked ("Payroll Pending")</span><i>→ edit any allowance/deduction of that employee →</i><span>Locked ("Payroll Generated")</span>
+</div>
+<ul>
+<li>A slip can be <b>deleted</b> while unlocked (lines go with it, no audit row). Re-running payroll then recreates it. That is the only way to "regenerate" (decision T4 is still open).</li>
+<li>A locked slip cannot be deleted, edited or unlocked. There is no unlock path (decision B15 is still open).</li>
+<li>Locking is not a deliberate step. It happens as a side effect of <b>editing</b> an allowance or deduction: every unlocked slip of that employee, <b>for every month</b>, is locked and an audit row is written. The service describes the lock as "so stale payroll cannot be paid", yet the Payroll Status screen calls locked "Generated" and unlocked "Pending". The two meanings contradict each other (F1).</li>
+<li>There is no approval, no "paid" state, no payment date and no month-close.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="s5">S5. Findings</h2>
+<p class="note">Tags: <span class="bug">BUG</span> wrong result or blocked work today; <span class="gap">GAP</span> missing behaviour; <span class="inc">INCONSISTENT</span> works but contradicts itself or duplicates.</p>
+
+<div class="item bug" id="F1"><p><span class="id">F1</span><b>Lock means two opposite things</b><span class="tag bug">bug</span></p>
+<p>Editing one allowance locks all of the employee's unlocked slips in every month, including old ones. Locked slips can never be deleted or fixed, so an edit made to correct next month's pay freezes last month's slip with the old figures. The status screen then reports those slips as "Payroll Generated".</p>
+<p class="where"><code>PayslipLockService</code>, <code>AllowancesController.Edit</code>, <code>DeductionsController.Edit</code>, <code>PayrollController.PayrollStatus</code></p></div>
+
+<div class="item bug" id="F2"><p><span class="id">F2</span><b>One locked slip blocks "Run Payroll" for everyone</b><span class="tag bug">bug</span></p>
+<p><code>/payroll/run</code> stops with "Payroll for this month is locked" if any slip in that month is locked, even though the other employees have none yet. A single allowance edit (F1) can therefore block the bulk run. <code>/run/single</code> and <code>/generate/selected</code> do not make this check, so the three routes behave differently. <code>/payslips/new</code> checks it again in a fourth way.</p></div>
+
+<div class="item gap" id="F3"><p><span class="id">F3</span><b>Adding or deleting an allowance/deduction does not touch existing slips and leaves no trail</b><span class="tag gap">gap</span></p>
+<p>Only Edit locks slips and writes an audit row. Create, bulk create and Delete do neither, and Delete is a hard delete. Add an allowance after a slip is generated and the slip silently misses it; delete one and the slip keeps paying it.</p></div>
+
+<div class="item bug" id="F4"><p><span class="id">F4</span><b>Pay ignores attendance, leave, joining and leaving</b><span class="tag bug">bug</span></p>
+<p>Everyone gets the full basic regardless of join date, leaving date, absent days or unpaid leave. <code>Employee.PayBasis</code> and <code>HourlyRate</code> are not read, and the slip's working days, leave days, leave balance and hourly fields stay empty. Needs HR rules B6, B10, B11, B12 before it can be built.</p></div>
+
+<div class="item bug" id="F5"><p><span class="id">F5</span><b>Someone who resigned mid-month cannot get a final payslip</b><span class="tag bug">bug</span></p>
+<p>Every generation route and the status screen require <code>EmployeeStatus = 'Active'</code>. Employee History now sets Resigned or Terminated on a resignation, so once that is recorded the person can no longer be paid for the days worked that month. Joining month has the opposite problem (F4): full month paid.</p></div>
+
+<div class="item gap" id="F6"><p><span class="id">F6</span><b>No sanity checks before generating</b><span class="tag gap">gap</span></p>
+<p>Any month from 2000 to 2100 is accepted, including future months and months before the employee joined. An employee with no basic salary gets a slip of 0.00. There is no preview and no list of warnings before the run.</p></div>
+
+<div class="item gap" id="F7"><p><span class="id">F7</span><b>Tax was a flat percentage of basic, not a progressive slab calculation</b><span class="tag ok">fixed 2026-11-25</span></p>
+<p>Was: the whole monthly basic multiplied by one slab percentage. Now: annual progressive method with a fixed amount per slab (see S3.1 step 6 and <code>docs/reference/pk-income-tax.md</code>). Still open under B17: whether allowances are taxable (the base), the 2025-26 fixed amounts (derived, to be verified against the Finance Act), and the 9% surcharge for 2025-26 incomes above 10 million (not applied). Production gets the fix when script 12 is run there.</p></div>
+
+<div class="item inc" id="F8"><p><span class="id">F8</span><b>Percentage deductions use gross, tax uses basic</b><span class="tag inc">inconsistent</span></p>
+<p>Two bases in one slip (deductions on gross, tax on basic × 12). Might be intended (a provident fund on gross, tax on basic) but nobody has said so; part of B23 and B17.</p></div>
+
+<div class="item bug" id="F9"><p><span class="id">F9</span><b>Net pay can be negative</b><span class="tag bug">bug</span></p>
+<p>A fixed deduction larger than gross, or stacked loans, produce a negative net with no warning and no cap.</p></div>
+
+<div class="item gap" id="F10"><p><span class="id">F10</span><b>Frequencies and loan-style deductions are not really supported</b><span class="tag gap">gap</span></p>
+<p>Weekly and Bi-Weekly are offered but behave as Monthly. A Monthly deduction runs until someone sets an end date; there is no total owed, no instalments and no remaining balance, so "Loan" and "Advance" types cannot stop themselves. The bulk deduction form only offers Once and Monthly, the single form offers all five.</p></div>
+
+<div class="item gap" id="F11"><p><span class="id">F11</span><b>Fuel price has no history and slips do not store quantity or rate</b><span class="tag gap">gap</span></p>
+<p>One <code>FuelPrice</code> value in Configuration is read at generation. Change it and any slip generated afterwards, including a re-run of an old month, uses the new price. A slip line stores only the final amount, so it cannot later show "100 litres at 280".</p></div>
+
+<div class="item inc" id="F12"><p><span class="id">F12</span><b>Rounding is applied in some places and not others</b><span class="tag inc">inconsistent</span></p>
+<p>Allowance lines and gross are unrounded; each deduction line and the deductions total are rounded separately, so the lines can differ from the total by a paisa. No rule for rounding net to whole rupees (decision B27).</p></div>
+
+<div class="item inc" id="F13"><p><span class="id">F13</span><b>Five ways to create a payslip, two payslip lists, two detail pages</b><span class="tag inc">inconsistent</span></p>
+<p><code>/payroll/generate</code>, <code>/payroll/run</code>, <code>/payroll/run/single</code>, <code>/payroll/new</code> and <code>/payslips/new</code>. The last one lets a user type gross and deductions by hand: no tax, no line items, no audit row, bypasses the engine. <code>/payroll/new</code> duplicates <code>/run/single</code>. <code>/payroll</code> and <code>/payslips</code> are two lists, <code>/payroll/{id}</code> and <code>/payslips/{id}</code> two detail pages. Views <code>Payroll/Edit</code>, <code>Delete</code> and <code>Generate</code> have no action behind them. Already noted in <code>docs/routes.md</code> as a behaviour decision.</p></div>
+
+<div class="item inc" id="F14"><p><span class="id">F14</span><b><code>Employee.GenStatus</code> is stored text that goes stale</b><span class="tag inc">inconsistent</span></p>
+<p>Only the "select employees" screen writes text such as "Payroll Created for November 2026" (cut to 50 characters). Other routes do not, and the status screen already derives the real state from the payslips. The column adds nothing and can disagree.</p></div>
+
+<div class="item gap" id="F15"><p><span class="id">F15</span><b>No payroll reports, bank sheet or payment tracking</b><span class="tag gap">gap</span></p>
+<p>Only list, detail and print. No monthly summary by project or department, no bank transfer file, no tax withholding statement, no paid date. The Employee table has no bank details. See B26 and B28.</p></div>
+
+<div class="item gap" id="F16"><p><span class="id">F16</span><b>Anyone logged in can generate, view and delete payroll</b><span class="tag gap">gap</span></p>
+<p>Payroll controllers have no role check (known and deferred, B13). Payslip delete and manual payslip create write no audit row. Raised because salary data is the most sensitive in the system; I have not changed role checks.</p></div>
+
+<div class="item gap" id="F17"><p><span class="id">F17</span><b>Allowance and deduction catalogues are comma-separated text with names built into the logic</b><span class="tag gap">gap</span></p>
+<p>Names and types are CSV lists in Configuration. The calculation looks for the literal names "Fuel Allowance" / "Fuel" and the types "Quantity" / "Fixed Amount". There is no per-type flag for taxable, statutory or recurring. The database standard says lists with attributes should be tables. Also: employees 325 and 376 each hold two active Fuel Allowance rows and both are paid (B22).</p></div>
+
+<div class="item inc" id="F18"><p><span class="id">F18</span><b>AGENTS.md described a tax bug that had been fixed</b><span class="tag ok">fixed 2026-11-25</span></p>
+<p>The "Known payroll gotchas" note was out of date (tax year handling was fixed by T6) and has been rewritten for the annual slab method.</p></div>
+
+<div class="item gap" id="F19"><p><span class="id">F19</span><b>UI of the module has not had the redesign</b><span class="tag gap">ui</span></p>
+<p>Open from earlier: the fixed bottom action bar on the Generate screen overlaps the sidebar, the status grid is not on the Emp ID + name standard, emoji sidebar. To be done after the behaviour is settled so screens are not built twice.</p></div>
+
+<!-- ============================================================ -->
+<h2 id="s6">S6. Proposed way it should work</h2>
+<p>Goal: one monthly <b>payroll run</b> that HR can preview, correct, approve and mark paid, with every figure explainable. Items marked * need an HR answer first (S7).</p>
+
+<div class="flow">
+<span>Open period</span><i>→</i><span>Preview with warnings</span><i>→</i><span>Generate drafts</span><i>→</i><span>Review / recalculate</span><i>→</i><span>Approve (lock)</span><i>→</i><span>Paid</span>
+</div>
+
+<div class="item"><p><span class="id">P1</span><b>One payroll run page per month, three payslip states*</b> (fixes F1, F2, F13)</p>
+<p>Draft (can be regenerated or removed), Approved (locked, only an Admin can reopen with a reason, logged), Paid (date and reference). Approval is a button, not a side effect of editing. Run for all, one department or one employee from the same page. Remove <code>/payroll/new</code>, <code>/payslips/new</code> and the orphan views; keep one list, one detail, one print. Decisions B20, B15, T10.</p></div>
+
+<div class="item"><p><span class="id">P2</span><b>Who gets a slip is decided by dates, not just status*</b> (fixes F5, F6)</p>
+<p>Include an employee when joined on or before the month end and not left before the month start, whatever their current status. Preview lists who is included, who is excluded and why, and warns about: no basic salary, no tax flag set, period in the future, slip already approved. Decision B21 and B10.</p></div>
+
+<div class="item"><p><span class="id">P3</span><b>Proration and attendance as separate, visible lines*</b> (fixes F4)</p>
+<p>Joining or leaving mid-month: a "Proration" line (method per B10). Later, unpaid leave, absent days and hourly days become their own lines fed from Attendance and Leave (B6, B11, B12, B16), so HR sees the reason for each reduction. Build after the rules are answered.</p></div>
+
+<div class="item"><p><span class="id">P4</span><b>Changing an allowance or deduction marks Draft slips "needs recalculation"</b> (fixes F1, F3)</p>
+<p>Never silently locks. Draft slips for the affected months show a flag and can be regenerated in one transaction (T4); Approved slips are never touched, corrections go into the next run as an adjustment line. Create, edit and delete all write the audit row. Decision T11.</p></div>
+
+<div class="item"><p><span class="id">P5</span><b>Tax method confirmed, then built properly*</b> (F7, F8) <i>(partly done 2026-11-25)</i></p>
+<p><b>Done:</b> annual progressive slabs with a fixed amount per slab, tax pages with year cards and a New tax year page. <b>Still to decide (B17):</b> the tax base (basic only today, or taxable gross with a taxable flag per allowance type), the 2025-26 fixed amounts, and the 2025-26 surcharge.</p></div>
+
+<div class="item"><p><span class="id">P6</span><b>Slip lines remember how they were worked out</b> (F11, F12)</p>
+<p>Each line stores quantity, unit rate and a note ("100 litres × 280"). Fuel price is kept with effective dates so an old month recalculates correctly. One rounding rule applied the same way to every line and the total (B27).</p></div>
+
+<div class="item"><p><span class="id">P7</span><b>Net floor and instalment deductions*</b> (F9, F10)</p>
+<p>A warning, and optionally a stop, when net would be below zero. Loans and advances get a total, an instalment amount and a balance that ends the deduction by itself. Weekly and Bi-Weekly are removed unless HR defines them. Decision B23.</p></div>
+
+<div class="item"><p><span class="id">P8</span><b>Catalogues become tables</b> (F17)</p>
+<p>Allowance types and deduction types as managed lists under Setup → Lists, with flags (taxable, statutory, uses quantity, uses fuel price) so the calculation reads flags instead of names. Duplicate rows for the same allowance are flagged on entry (B22).</p></div>
+
+<div class="item"><p><span class="id">P9</span><b>Reports and payment*</b> (F15)</p>
+<p>Monthly summary by project and department, a bank transfer sheet (needs bank details on the employee, kept off grids), tax withholding statement, and paid status. Decisions B26, B28. Salary figures stay off list grids.</p></div>
+
+<div class="item"><p><span class="id">P10</span><b>Clean-ups that need no decision</b></p>
+<p>Make all routes check the same rules (F2); audit payslip delete and allowance/deduction create/delete (F3); drop <code>GenStatus</code> writes (F14); fix the doc line (F18); apply the module redesign (F19).</p></div>
+
+<!-- ============================================================ -->
+<h2 id="s7">S7. Questions and decisions</h2>
+<p>Added to <code>docs/db/decisions.md</code> (v2.7) with suggested answers. Existing ones that this review touches are marked "updated" (a dated note was added).</p>
+<table>
+<tr><th>ID</th><th>Question</th><th>Suggested default</th><th>Needed for</th></tr>
+<tr><td>B20 <i>new</i></td><td>Payslip lifecycle: what do Draft, Approved and Paid mean, who approves, who marks paid?</td><td>Draft → Approved → Paid; HR prepares, Admin approves</td><td>P1</td></tr>
+<tr><td>B21 <i>new</i></td><td>Pay period and who gets a slip: cut-off date, future months, months before joining, leavers' last slip, zero-salary staff.</td><td>Calendar month; by dates; leavers included for days worked</td><td>P2, F5, F6</td></tr>
+<tr><td>B22 <i>new</i></td><td>Allowance catalogue: which allowances exist, which are taxable, can an employee hold two of the same, what do Weekly / Bi-Weekly mean.</td><td>HR lists them; one active row per name unless marked repeatable; drop Weekly / Bi-Weekly</td><td>P5, P8</td></tr>
+<tr><td>B23 <i>new</i></td><td>Deduction rules: base for percentages (basic or gross), loans and advances (instalments, balance), cap, what happens if net would be negative.</td><td>Percentage of basic unless stated; instalment tracking; stop and warn below zero</td><td>P7</td></tr>
+<tr><td>B24 <i>new</i></td><td>Statutory contributions (EOBI, social security, provident fund): which apply, employee share, employer share shown on the slip?</td><td>HR and accountant list them</td><td>P8</td></tr>
+<tr><td>B25 <i>new</i></td><td>Salary changes: need a history of increments? Mid-month raises, back-dated raises and arrears.</td><td>History as an employee event; arrears as a one-time line</td><td>P3, B19</td></tr>
+<tr><td>B26 <i>new</i></td><td>How people are paid (bank, cash, cheque), bank details needed on the employee, payment file, paid reference.</td><td>Bank details on employee; bank sheet export</td><td>P9</td></tr>
+<tr><td>B27 <i>new</i></td><td>Rounding: whole rupees or paisa, per line or on the total.</td><td>Round each line to paisa, net to whole rupee</td><td>P6, F12</td></tr>
+<tr><td>B28 <i>new</i></td><td>Payroll reports and payslip delivery: which reports, who gets them, print or email or portal.</td><td>Monthly summary, bank sheet, tax statement; print for now</td><td>P9</td></tr>
+<tr><td>T9 <i>new</i></td><td>Keep unit rates (quantity, fuel price) on slip lines and fuel price with effective dates.</td><td>Yes</td><td>P6, F11</td></tr>
+<tr><td>T10 <i>new</i></td><td>One way to run payroll: remove manual payslip entry and duplicate screens.</td><td>Keep run page + single employee; adjustments as lines with a reason</td><td>P1, F13</td></tr>
+<tr><td>T11 <i>new</i></td><td>What happens to existing payslips when an allowance or deduction changes.</td><td>Mark Draft as needs recalculation; never touch Approved</td><td>P4, F1, F3</td></tr>
+<tr><td>B10 <i>updated</i></td><td>Mid-month joiners and leavers. Code fact added: Inactive/Resigned staff currently get no slip at all.</td><td>Pro-rate by calendar days</td><td>P2, P3</td></tr>
+<tr><td>B13 <i>updated</i></td><td>Who approves what. Note added: payroll has no role checks; suggest preparer and approver differ.</td><td>HR prepares, Admin approves</td><td>P1, F16</td></tr>
+<tr><td>B17 <i>updated</i></td><td>Tax. Method decided and built (annual progressive slabs with fixed amounts). Still open: the base (basic or gross), 2025-26 fixed amounts, 2025-26 surcharge.</td><td>Accountant to confirm the base and the 2025-26 figures</td><td>P5, F7</td></tr>
+<tr><td>B6, B11, B12, B15, B16, T4</td><td>Already open: hourly pay, deductions for absence, work on off days, unlocking a payslip, forgotten check-outs, regenerating a slip.</td><td>see decisions.md</td><td>P1, P3, P4</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="s8">S8. Suggested build order</h2>
+<ol>
+<li><b>Now, no HR input needed:</b> P10 (consistent checks, audit on create/delete, drop <code>GenStatus</code>) plus F9 warning and F6 sanity checks in a preview step.</li>
+<li><b>After B20, B15, T11:</b> P1 and P4: payslip states, one run page, recalculation instead of silent locks. Biggest improvement to daily use.</li>
+<li><b>After B21, B10:</b> P2 and the proration line of P3.</li>
+<li><b>After B17, B22, B23, B24:</b> tax base, catalogue tables, instalment deductions (P5, P7, P8). The tax method itself is done; run script 12 on production first.</li>
+<li><b>After B6, B11, B12, B16:</b> attendance and leave feed (rest of P3).</li>
+<li><b>Last:</b> reports, bank sheet, payment tracking (P9) and the screen redesign (F19), so nothing is styled twice.</li>
+</ol>
+
+<p class="note">The review itself changed nothing. Changes made afterwards, on 2026-11-25: new questions T9-T11 and B20-B28 in <code>docs/db/decisions.md</code>, the AGENTS.md tax note, and the income-tax correction described at the top (calculator, TaxRules table, Tax rules pages, docs). This file is a snapshot kept in the repo for reference; <code>docs/db/decisions.md</code> is where the open questions are tracked.</p>
+</div>
+</body>
+</html>

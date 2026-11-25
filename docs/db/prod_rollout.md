@@ -1,5 +1,5 @@
 # Production rollout: applying the database redesign to HRBTK
-Version: 1.3 | Date: 2026-11-24
+Version: 1.4 | Date: 2026-11-25
 Applies to: production database `HRBTK` (SQL Server 2022, server "Teezhost 16GB", https://hr.coditium.com)
 Status: **Run on production on 2026-11-24** (all ten scripts, in one session, after a verified full backup). Below sections 1-7 stay as the plan that was followed; section 8 records what happened. Before that, everything had been run only against a local copy (`TAZ\SQLEXPRESS`, test data).
 
@@ -108,3 +108,11 @@ Also compare row counts of the tables that existed before with the backup. Keep 
 - **App test:** the new build (Development environment, connection string for production passed through the environment, no files changed) logged in and loaded employees, employee edit/new, history and leave tabs, Setup (users, config, five lists), payroll (home, run, search, status, dashboard), payslips, allowances, deductions, leave, leave balances, quotas, attendance and salary reports with no errors in the log. Nothing was written to production during the test.
 - **Still to do by hand:** deploy the new build with `scripts\deploy\DeployToIIS.bat` and restore `wwwroot/uploads`; run `scripts/database/tools/backfill-document-hashes.ps1` for the 8 documents; enter `LeaveQuota` rows for new years; HR to review `mig.EmployeeOrgMap` and the department/sub-department split, then drop the `mig` schema; copy the backup files off the server.
 - **Done after the run (2026-11-24):** `farhan` now holds Admin and HR (row added to `UserRoles`).
+
+## 9. Script 12 (tax slabs on the annual method): still to run on production
+Written 2026-11-25, after the main run. Run on the dev copy twice (first run replaced the 2025 and 2026 slabs, second run changed nothing).
+- **What it does:** adds `TaxRules.FixedAmount` (+ `CK_TaxRules_Fixed`), and replaces the slabs of tax years 2025 and 2026 with the annual salaried slabs (`docs/reference/pk-income-tax.md`). Any other tax year is left untouched with a warning, because its old monthly bands are wrong under the new method.
+- **Order:** run it **before** deploying the new build (the app reads `FixedAmount`). Back up first (S19): `sqlcmd -b -I -i scripts\database\redesign\12_tax_slabs_annual.sql`.
+- **Existing payslips are not changed** (they are snapshots; 99 on production, some with tax calculated the old way).
+- **Check afterwards:** `SELECT * FROM dbo.TaxRules ORDER BY TaxYearStart, MinSalary` shows 8 rows for 2026 and 6 for 2025; re-run the script and confirm it says "already on the annual method".
+- **Not run from this session:** the production `sa` login was refused on 2026-11-25 (password probably rotated), so the owner runs it.

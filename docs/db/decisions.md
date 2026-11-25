@@ -1,5 +1,5 @@
 # HRMS Database - Pending Decisions
-Version: 2.6 | Date: 2026-11-24 | Related: db_standards.md, db_changes.md (v3.4-draft), db.md (v1.9)
+Version: 2.8 | Date: 2026-11-25 | Related: db_standards.md, db_changes.md (v3.8), db.md (v2.0)
 
 ## How to use this file
 - Only **pending** decisions are listed here. Answered ones are removed and recorded where they apply (rules in db_standards.md, schema in db_changes.md).
@@ -8,6 +8,7 @@ Version: 2.6 | Date: 2026-11-24 | Related: db_standards.md, db_changes.md (v3.4-
 - **Data status (2026-11-18):** the data now in `HRBTK` is **test data**. Counts and findings quoted below (employees, projects, leave balances, duplicates) describe it for design purposes only; they are not requirements, and the checks are re-run on real data before anything is applied.
 - 2026-11-24: the employee Leave Balance tab is built on the LMS tables; B18 is closed (see below); leave days are kept in one decimal.
 - 2026-11-24: employee history is built (`EmployeeEvents`, see B14, T1, T8, B19 below).
+- 2026-11-25: Payroll review added T9-T11 and B20-B28 and dated notes on B10, B13 and B17. The review itself (findings F1-F19, proposal P1-P10) is kept in `docs/payroll-review.html`.
 - Removed on 2026-11-17 as decided: employee key (`uid` stays, `EmployeeID` is the business key; see S1 and S5) and the attendance migration approach (expand then contract; see S19).
 
 ---
@@ -148,6 +149,54 @@ Status: Closed (2026-11-24)
 
 **Answer:** B, built. **Decided by / date:** Rayder / 24-11-2026, after finding that voiding a promotion left the new designation in place.
 **Notes:** Only the latest live entry can be voided; voiding it reverts its effect (promotion and transfer restore the position stored in the From columns; resignation, termination and rejoin are undone by replaying the remaining entries; a field changed by hand since is left alone and reported). Admins can permanently delete a voided entry so it no longer shows in the history; the deletion is written to `AuditLogs` with the full row. Live entries cannot be deleted.
+
+---
+
+## T9. Unit rates on payslip lines and fuel price history
+Status: Open (added 2026-11-25, Payroll review)
+
+**Context.** The fuel allowance is `FuelPrice x Quantity`, where `FuelPrice` is one value in `Configuration`. It is read at generation time, so changing it changes every slip generated afterwards, including a re-run of an old month. A `PayslipDetails` line stores only the final amount, so it cannot later show "100 litres x 280".
+
+**Suggested key**
+- A ★ Add `Quantity decimal(9,2) NULL`, `UnitAmount decimal(18,2) NULL` and a short note to `PayslipDetails`; keep fuel prices in a small table with an effective-from date (`FuelPrices`), and the calculation picks the price for the payslip month.
+- B Keep one global price; accept that re-running an old month uses today's price.
+- C Store the rate on the allowance row (per employee) instead of a global price.
+
+**Answer:** ______
+**Decided by / date:** ______
+**Notes:** Pairs with B22 (allowance catalogue) and B27 (rounding).
+
+---
+
+## T10. One way to run payroll
+Status: Open (added 2026-11-25, Payroll review)
+
+**Context.** Five screens create a payslip (`/payroll/generate`, `/payroll/run`, `/payroll/run/single`, `/payroll/new`, `/payslips/new`), there are two lists and two detail pages, and `/payslips/new` lets a user type gross and deductions by hand with no tax, no line items and no audit row. `docs/routes.md` already lists the overlap as a behaviour decision.
+
+**Suggested key**
+- A ★ One run page (all, department or one employee) with a preview; one list, one detail, one print. No hand-typed totals: a correction is an **adjustment line** with a reason on a Draft slip or in the next period.
+- B Keep the screens and only make their checks identical.
+- C Keep manual entry for exceptional cases, restricted to Admin and written to `AuditLogs`.
+
+**Answer:** ______
+**Decided by / date:** ______
+**Notes:** Depends on B20 (what states a payslip has).
+
+---
+
+## T11. What happens to existing payslips when an allowance or deduction changes
+Status: Open (added 2026-11-25, Payroll review)
+
+**Context.** Today only **editing** an allowance or deduction locks all of that employee's unlocked payslips, for every month, and a locked payslip can never be deleted or unlocked. Creating or deleting one does nothing to existing slips and writes no audit row. The lock service says locked means "stale, must not be paid", while the status screen calls locked "Payroll Generated". See T4 and B15.
+
+**Suggested key**
+- A ★ Never lock silently. Changing an allowance or deduction marks the employee's **Draft** payslips from the effective date as "needs recalculation" (visible on the list); regenerating is one transaction (T4). Approved and Paid payslips are never touched; a correction goes into the next period as an adjustment line. Create, edit and delete all write `AuditLogs`.
+- B Keep the lock, but only for payslips in the periods the change affects, and add an unlock path (B15).
+- C No link between master data and existing slips; HR deletes and regenerates by hand.
+
+**Answer:** ______
+**Decided by / date:** ______
+**Notes:** Needs B20 (statuses) and B15 (unlocking).
 
 ---
 
@@ -322,6 +371,7 @@ Status: Open
 - C Full month if present on any day.
 
 **Answer:** ______  **Decided by / date:** ______  **Notes:** ______
+**2026-11-25 (code fact):** today payroll pays the full basic in every month whatever the joining or leaving date, and only employees with status `Active` get a payslip. A person recorded as Resigned or Terminated in Employee History (status changes at once) can therefore no longer be paid for the days worked in their last month. Which employees get a slip is B21.
 
 ---
 
@@ -366,6 +416,7 @@ Status: Open
 - B Supervisor approves for their department, HR for the rest (adds a supervisor link on `Departments` or `Employee`).
 
 **Answer:** ______  **Decided by / date:** ______  **Notes:** ______
+**2026-11-25 (Payroll):** the payroll, payslip, allowance, deduction and tax screens have no role check, so any logged-in user can generate, view and delete payslips. Suggested for payroll: HR prepares, Admin approves, and the person who prepared a run cannot approve it (see B20).
 
 ---
 
@@ -448,5 +499,159 @@ Status: Open
 **Suggested key**
 - A ★ Keep basic-only, July-June tax year, per-employee flag; fix the payroll lookup to use the tax-year label.
 - B Tax on gross (specify).
+
+**Answer:** ______  **Decided by / date:** ______  **Notes:** ______
+**2026-11-25 (method decided, built):** Rayder: tax is worked on the **part of income over each slab**, and some slabs carry a fixed amount plus a percentage. Built as the annual progressive method (`TaxRules.FixedAmount`, annual slab bounds, monthly tax = annual / 12 rounded to the rupee); source, slabs and method are in `docs/reference/pk-income-tax.md`. **Still open here: the base** (basic only, as built, or gross / a taxable-allowance flag), the 2025-26 fixed amounts (derived, to be verified against the Finance Act), and the 9% surcharge for 2025-26 incomes above 10 million (not applied). Percentage deductions use gross while tax uses basic (B23).
+
+---
+
+## B20. Payslip lifecycle and approval
+Status: Open (added 2026-11-25, Payroll review)
+**Affects:** `Payslips.IsLocked`, a status column, `AuditLogs`, T10, T11.
+
+**Context.** Today a payslip is either unlocked (shown as "Payroll Pending") or locked (shown as "Payroll Generated"). Locking happens by accident when an allowance or deduction is edited (T11). There is no approval, no paid state and no payment date.
+
+**Question.** What states does a payslip pass through, who moves it on, and what can still be changed in each?
+
+**Suggested key**
+- A ★ Draft (can be regenerated or removed) -> Approved (locked; only an Admin can reopen it, with a reason, logged) -> Paid (date and reference). HR prepares, Admin approves; the preparer cannot approve the same run.
+- B Draft -> Approved only; payment is handled outside the system.
+- C Keep lock/unlock as it is and add an unlock path (B15).
+
+**Answer:** ______  **Decided by / date:** ______  **Notes:** ______
+
+---
+
+## B21. Pay period, cut-off and who gets a payslip
+Status: Open (added 2026-11-25, Payroll review)
+**Affects:** `Payslips`, payroll run screens, `Employee.DateOfJoining/DateOfLeaving/EmployeeStatus`.
+
+**Context.** Any month from 2000 to 2100 can be generated, including future months and months before the person joined; an employee with no basic salary gets a slip of 0.00; only status `Active` is paid (see B10).
+
+**Question.** Is the pay period the calendar month? When is payroll run (before or after month end)? Can a future month be generated? Who gets a slip in the month they leave, and what if their salary is blank or zero?
+
+**Suggested key**
+- A ★ Calendar month; a slip is made for anyone who joined on or before the month end and did not leave before the month start, whatever their status now; future months are refused; a blank or zero salary is a warning that HR must clear.
+- B Only employees who are Active on the day payroll runs.
+- C Other (specify).
+
+**Answer:** ______  **Decided by / date:** ______  **Notes:** ______
+
+---
+
+## B22. Allowance catalogue
+Status: Open (added 2026-11-25, Payroll review)
+**Affects:** `Allowances`, Configuration `AllowanceNames` and `AllowanceTypes` (to become tables).
+
+**Context.** Names and types are comma-separated lists; the calculation depends on the literal names Fuel Allowance, Quantity and Fixed Amount. Employees 325 and 376 each have two active Fuel Allowance rows and both are paid. Weekly and Bi-Weekly frequencies are offered but pay like Monthly.
+
+**Question.** Which allowances exist (fuel, medical, house rent, conveyance, others)? Which are taxable? Is a second row of the same allowance valid (two vehicles) or a duplicate? Is an allowance set per person, or by designation scale? What do Weekly and Bi-Weekly mean, if anything?
+
+**Suggested key**
+- A ★ HR lists the allowances and marks each as taxable or not; one active row per allowance per person unless the allowance is marked repeatable; Weekly and Bi-Weekly are removed; amounts stay per person.
+- B Keep the lists as they are; clean the two duplicates by hand.
+- C Amounts come from a designation scale (needs the scale from HR).
+
+**Answer:** ______  **Decided by / date:** ______  **Notes:** ______
+
+---
+
+## B23. Deduction rules, loans and advances
+Status: Open (added 2026-11-25, Payroll review)
+**Affects:** `Deductions`, payroll calculation.
+
+**Context.** Percentage deductions are taken from gross but tax from basic. A fixed deduction continues every month until someone sets an end date; there is no total owed, instalment or balance, so loans and advances cannot stop themselves. Net pay can go below zero.
+
+**Question.** Is a percentage deduction of basic or of gross? How are loans and advances recovered (total, instalment, start month, early settlement)? Is there a limit on total deductions (for example, net never below a minimum)? If a deduction does not fit in a month, is it carried forward or skipped?
+
+**Suggested key**
+- A ★ Percentage of basic unless stated otherwise per type; loans and advances have a total and an instalment and stop at zero balance; payroll warns and stops recovery that would take net below zero, and the unrecovered part carries to the next month.
+- B Keep percentage of gross; add instalment tracking only.
+- C Other (specify).
+
+**Answer:** ______  **Decided by / date:** ______  **Notes:** ______
+
+---
+
+## B24. Statutory contributions
+Status: Open (added 2026-11-25, Payroll review)
+**Affects:** Payroll calculation, `Deductions`, new catalogue.
+
+**Context.** Nothing in the system is specific to EOBI, social security, provident fund or similar contributions, and there is no employer-side cost on the payslip.
+
+**Question.** Which statutory or company contributions apply to which employees? What are the rates and wage ceilings? Is the employer share shown on the slip or only reported?
+
+**Suggested key**
+- A ★ HR and the accountant list them; each is a deduction type flagged "statutory" with its rate, ceiling and employer share, so rates change in Setup, not in code.
+- B Handle them as ordinary fixed deductions entered per employee.
+- C None apply.
+
+**Answer:** ______  **Decided by / date:** ______  **Notes:** ______
+
+---
+
+## B25. Salary changes and arrears
+Status: Open (added 2026-11-25, Payroll review)
+**Affects:** `Employee.BasicSalary`, `EmployeeEvents` (B19), payroll.
+
+**Context.** There is a single `BasicSalary` on the employee and no history, so a raise changes every slip generated afterwards and an old month regenerated uses the new figure. A raise effective mid-month, or back-dated, has no way to be paid in two parts.
+
+**Question.** Does HR need a salary history (date, old, new, reason)? How is a mid-month or back-dated raise paid? Is an arrears amount shown as its own line?
+
+**Suggested key**
+- A ★ Salary revision is an employee event with an effective date (see B19), the payslip takes the salary in force for the period, and arrears are a one-time line with a reason in the month they are paid.
+- B Keep one salary field; HR types the difference into an allowance.
+- C Other (specify).
+
+**Answer:** ______  **Decided by / date:** ______  **Notes:** ______
+
+---
+
+## B26. How people are paid
+Status: Open (added 2026-11-25, Payroll review)
+**Affects:** `Employee` (bank details), `Payslips` (paid date and reference), reports.
+
+**Context.** The system has no bank name, account number or IBAN, and no record that a payslip has been paid.
+
+**Question.** Is pay by bank transfer, cash, cheque or a mix? Is a bank transfer file or sheet needed, in what format? Should the system record when and how a payslip was paid?
+
+**Suggested key**
+- A ★ Bank details on the employee (never shown on grids), payment method per employee, a bank sheet for each run, and Paid date and reference on the payslip.
+- B Reports only; payment is tracked outside the system.
+- C Other (specify).
+
+**Answer:** ______  **Decided by / date:** ______  **Notes:** ______
+
+---
+
+## B27. Rounding
+Status: Open (added 2026-11-25, Payroll review)
+**Affects:** Payroll calculation, `PayslipDetails`.
+
+**Context.** Allowance lines and gross are not rounded; each deduction line and the deductions total are rounded to two decimals separately, so lines can differ from the total by a paisa.
+
+**Question.** Is pay shown to the paisa or rounded to whole rupees? Is rounding done on each line or on the total only?
+
+**Suggested key**
+- A ★ Every line rounded to the paisa, totals are the sum of the rounded lines, and net pay rounded to the whole rupee with the difference shown.
+- B Paisa everywhere, no whole-rupee rounding.
+- C Whole rupees on every line.
+
+**Answer:** ______  **Decided by / date:** ______  **Notes:** ______
+
+---
+
+## B28. Payroll reports and payslip delivery
+Status: Open (added 2026-11-25, Payroll review)
+**Affects:** Payroll screens, reports.
+
+**Context.** Only the list, the detail page and a print view exist. There is no monthly summary by project or department, no tax statement and no year-end certificate.
+
+**Question.** Which reports do HR, finance and management need each month and each year? How do employees receive their payslip (printed, emailed, portal)?
+
+**Suggested key**
+- A ★ Monthly summary by project and department, bank sheet (B26), tax withholding statement; payslips printed for now. Salary figures stay off list grids.
+- B Only what exists today.
+- C HR lists the reports (specify).
 
 **Answer:** ______  **Decided by / date:** ______  **Notes:** ______

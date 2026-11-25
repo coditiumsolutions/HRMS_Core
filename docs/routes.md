@@ -36,7 +36,7 @@ note: Production still runs the older build with the old URLs (/Home/Login, /Emp
 | Payroll | `/payroll` (list), `/payroll/dashboard`, `/payroll/generate` (pick employees; POST `/payroll/generate/selected`), `/payroll/run` (run for everyone), `/payroll/run/single`, `/payroll/new`, `/payroll/search`, `/payroll/employees`, `/payroll/status`, `/payroll/{id}` |
 | Payslips | `/payslips`, `/payslips/new`, `/payslips/generate` (redirects to `new`), `/payslips/{id}`, `/payslips/{id}/print`, `/payslips/{id}/delete`, JSON `/payslips/lookup/employees-by-department?department=`, `/payslips/lookup/employees/{uid}` |
 | Reports | `/reports`, `/reports/salaries`, `/reports/employees`, `/reports/allowances`, `/reports/deductions`, `/reports/taxes` |
-| Tax | `/tax-rules`, `/tax-rules/new`, `/tax-rules/{id}`, `/tax-rules/{id}/edit`, `/tax-rules/{id}/delete` |
+| Tax | `/tax-rules` (one card per tax year; `?taxYear=2025-2026` redirects), `/tax-rules/years/{startYear}` (slabs of one year), `/tax-rules/years/new` (a whole tax year with all its slabs), `/tax-rules/new` (`?year=` pre-selects the year), `/tax-rules/{id}`, `/tax-rules/{id}/edit`, `/tax-rules/{id}/delete` |
 | Setup (Admin) | `/setup`, `/setup/users`, `/setup/users/new`, `/setup/users/{id}/edit`, `/setup/users/{id}/delete`, `/setup/config`, `/setup/config/new`, `/setup/config/{id}/edit`, `/setup/config/{id}/delete` |
 | Setup lists (Admin, HR) | `/setup/lists/{kind}` where kind is `projects`, `departments`, `subdepartments`, `designations`, `leavetypes`; `/setup/lists/{kind}/new`, `/setup/lists/{kind}/{id}/edit`, POST `/setup/lists/{kind}/{id}/toggle` and `/setup/lists/{kind}/{id}/delete` |
 

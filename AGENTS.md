@@ -36,7 +36,7 @@ There are no tests or linters configured. `dotnet ef` is available via the `Micr
 
 Controllers call `ApplicationDbContext` directly (`Data/ApplicationDbContext.cs`, fluent config in `OnModelCreating`); only these concerns are extracted into `Services/`:
 
-- `Payroll/PayrollCalculationService` - the payroll engine. Gross = basic + active allowances (fuel allowance uses the `FuelPrice` row in the `Configuration` table); deductions are percentage-of-gross or fixed (the fixed amount is stored in `Deduction.PercentageValue`); income tax = basic x slab %, only when `Employee.ApplyTax` is yes/y/true/1. Creates `Payslips` + `PayslipDetails`.
+- `Payroll/PayrollCalculationService` - the payroll engine. Gross = basic + active allowances (fuel allowance uses the `FuelPrice` row in the `Configuration` table); deductions are percentage-of-gross or fixed (the fixed amount is stored in `Deduction.PercentageValue`); income tax = annual progressive slab method on basic x 12 (`Payroll/IncomeTaxCalculator`; fixed amount + rate on the part over the slab start, monthly = annual / 12 rounded to the rupee; `docs/reference/pk-income-tax.md`), only when `Employee.ApplyTax` is yes/y/true/1. Creates `Payslips` + `PayslipDetails`.
 - `Payroll/PayslipLockService` - editing an allowance/deduction locks all of that employee's unlocked payslips and writes an `AuditLogs` row. There is no unlock path.
 - `AttendanceService` (EPPlus Excel/CSV import), `EmployeeDocumentService` (files under `wwwroot/uploads/employees/{uid}/`, soft delete), `AuditLogService`, `LoginPasswordHasher` (PBKDF2; still accepts legacy SHA-256/plain text).
 
@@ -48,7 +48,7 @@ Config-driven dropdowns (Department, Designation, Project, LeaveTypes, Allowance
 
 ## Database redesign (development)
 
-- The redesigned schema (`docs/db/db_changes.md`, standards in `db_standards.md`, decisions in `decisions.md`) is applied to the dev copy and, since 2026-11-24, to production `HRBTK` (how it was done and the results: `docs/db/prod_rollout.md`). Scripts: `scripts/database/redesign/` (01-04 expand, 06 contract, 07 user roles, 08 employee history, 09 leave days one decimal, 10 legacy leave archive, 11 leave balances view v2; run in order, back up first, `sqlcmd -b -I`). New schema changes are written as new re-runnable scripts, tested on the dev copy first.
+- The redesigned schema (`docs/db/db_changes.md`, standards in `db_standards.md`, decisions in `decisions.md`) is applied to the dev copy and, since 2026-11-24, to production `HRBTK` (how it was done and the results: `docs/db/prod_rollout.md`). Scripts: `scripts/database/redesign/` (01-04 expand, 06 contract, 07 user roles, 08 employee history, 09 leave days one decimal, 10 legacy leave archive, 11 leave balances view v2, 12 tax slabs on the annual method (dev copy only until run on production); run in order, back up first, `sqlcmd -b -I`). New schema changes are written as new re-runnable scripts, tested on the dev copy first.
 - The app code targets the redesigned schema. Legacy shapes are kept in code through EF value converters and facade properties (payslip month name, tax year label, `Employee.Department`/`Project`/`Designation` names, attendance `TimeIn`/`TimeOut`/`Status`, deduction `PercentageValue`); in LINQ queries use the real columns/navigations (`e.DepartmentInfo!.DepartmentName`, `a.AttendanceDate`, `d.Percentage`/`d.Amount`).
 - Projects, departments, sub-departments, designations and leave types are managed under Setup -> Lists (`LookupsController`, Admin or HR role). Nothing about them is hard-coded.
 - Always run the app with `ASPNETCORE_ENVIRONMENT=Development` when testing; without it the app reads `appsettings.Production.json` and connects to the production server.
@@ -63,7 +63,7 @@ Config-driven dropdowns (Department, Designation, Project, LeaveTypes, Allowance
 
 ## Known payroll gotchas
 
-- `TaxRules.TaxYear` is stored as `2025-2026`/`2026-2027`, but the payroll lookup compares it to the payslip year (`2026`); nothing matches and all slabs are pooled. Fix this before relying on tax output.
+- Income tax: `TaxRules` slabs hold ANNUAL income (`MinSalary`/`MaxSalary`) with `FixedAmount` + `TaxPercentage` on the part over `MinSalary`; the tax year is July-June (`TaxYearStart`, decision T6) derived from the payslip (`Month >= 7 ? Year : Year - 1`). Monthly tax = annual tax / 12 rounded to the rupee, on basic x 12 only (allowances are not taxed; the base is open, B17). Script 12 must be run on a database before this build is deployed to it. Source and slab figures: `docs/reference/pk-income-tax.md`.
 - Attendance and leave do not feed payroll yet (`Payslips.WorkingDays/LeaveDays/LeaveBalance` are unused). HR requirements for the planned attendance/schedule/leave rework (hourly pay, 7h minimum day, half days with approval, overnight shifts, per-employee leave quotas, Dastarkhuwan staff without leave) are in the project discussion, not in code; `Attendance`/`EmployeeLeaves` are empty in production.
 
 ## UI display
