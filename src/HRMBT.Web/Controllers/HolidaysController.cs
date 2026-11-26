@@ -33,6 +33,10 @@ public class HolidaysController : Controller
 
     private static string Recounted(int n) => n == 0 ? "" : $" {n} leave request(s) were recounted.";
 
+    /// <summary>People marked as working on dates in the range. Marks belong to a date, not to a holiday notice.</summary>
+    private IQueryable<RosterOverride> MarksBetween(DateTime from, DateTime to) =>
+        _context.RosterOverrides.AsNoTracking().Where(o => o.OverrideType == "ExtraDuty" && o.OverrideDate >= from && o.OverrideDate <= to);
+
     private static object Snapshot(GazettedHoliday h) => new
     {
         h.HolidayName, h.HolidayDate, h.EndDate, h.NoticeNumber, h.NoticeDate, h.Description, h.IsOptional
@@ -125,6 +129,7 @@ public class HolidaysController : Controller
             return Page("Form", form);
 
         var actor = User.Identity?.Name;
+        var old = form.Id == 0 ? null : await FindAsync(form.Id);
         int recounted;
         try
         {
@@ -166,18 +171,108 @@ public class HolidaysController : Controller
             return Page("Form", form);
         }
 
-        TempData["SuccessMessage"] = $"{form.Name!.Trim()} ({Fmt.DateRange(from, to)}) saved." + Recounted(recounted);
+        var left = old == null ? 0 : await MarksBetween(old.HolidayDate, old.EndDate).CountAsync(o => o.OverrideDate < from || o.OverrideDate > to);
+        TempData["SuccessMessage"] = $"{form.Name!.Trim()} ({Fmt.DateRange(from, to)}) saved." + Recounted(recounted)
+            + (left == 0 ? "" : $" {left} \"working\" mark(s) are still on dates that are no longer part of it; check those people's schedules.");
         return RedirectToAction(nameof(Index), new { year = from.Year });
     }
 
     private static string? Clean(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
+
+    // ---------- who works a holiday (guards and shift staff) ----------
+
+    /// <summary>The holiday if people can be marked to work it: an optional or one-project holiday is a work day anyway.</summary>
+    private async Task<GazettedHoliday?> FindCompanyAsync(int id) =>
+        await FindAsync(id) is { IsOptional: false, ProjectId: null } h ? h : null;
+
+    private static List<DateTime> DaysOf(GazettedHoliday h) =>
+        Enumerable.Range(0, (h.EndDate - h.HolidayDate).Days + 1).Select(i => h.HolidayDate.AddDays(i).Date).ToList();
+
+    [HttpGet("{id:int}/working")]
+    [Authorize(Roles = Managers)]
+    public async Task<IActionResult> Working(int id, string? department, string? designation)
+    {
+        var h = await FindCompanyAsync(id);
+        if (h == null) return NotFound();
+
+        var marks = (await MarksBetween(h.HolidayDate, h.EndDate).Select(o => new { o.EmployeeId, o.OverrideDate }).ToListAsync())
+            .ToLookup(o => o.EmployeeId, o => o.OverrideDate.Date);
+        var vm = new HolidayWorkingVm
+        {
+            Holiday = h,
+            Days = DaysOf(h),
+            Department = department,
+            Designation = designation,
+            MarkedPeople = marks.Count,
+            Departments = await _context.Departments.AsNoTracking().Where(d => d.DepartmentName != null && d.IsActive)
+                .OrderBy(d => d.DepartmentName).Select(d => d.DepartmentName!).Distinct().ToListAsync(),
+            Designations = await _context.Designations.AsNoTracking().OrderBy(d => d.Name).Select(d => d.Name).Distinct().ToListAsync()
+        };
+
+        var query = _context.Employees.AsNoTracking().AsQueryable();
+        if (!string.IsNullOrWhiteSpace(department))
+            query = query.Where(e => e.DepartmentInfo!.DepartmentName == department);
+        if (!string.IsNullOrWhiteSpace(designation))
+            query = query.Where(e => e.DesignationInfo!.Name == designation);
+        if (vm.Filtered)
+            query = query.Where(e => e.EmployeeStatus == "Active");
+        else
+        {
+            var marked = marks.Select(g => g.Key).ToList();
+            query = query.Where(e => marked.Contains(e.uid));
+        }
+
+        vm.Rows = await query.OrderBy(e => e.EmployeeID)
+            .Select(e => new HolidayWorkerVm
+            {
+                Uid = e.uid, EmployeeCode = e.EmployeeID, Name = e.EmployeeName,
+                Designation = e.DesignationInfo!.Name, Department = e.DepartmentInfo!.DepartmentName, Project = e.ProjectInfo!.Name
+            })
+            .ToListAsync();
+        foreach (var row in vm.Rows)
+            row.Marked = marks[row.Uid].OrderBy(d => d).ToList();
+        return Page("Working", vm);
+    }
+
+    [HttpPost("{id:int}/working")]
+    [Authorize(Roles = Managers)]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SetWorking(int id, string? selectedIds, DateTime[] dates, string? what, string? department, string? designation)
+    {
+        var h = await FindCompanyAsync(id);
+        if (h == null) return NotFound();
+
+        // one comma separated field, so a large selection stays within the form limit
+        var ids = (selectedIds ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(s => int.TryParse(s, out var i) ? i : 0).Where(i => i > 0).Distinct().ToList();
+        var valid = await _context.Employees.AsNoTracking().Where(e => ids.Contains(e.uid)).Select(e => e.uid).ToListAsync();
+        var days = dates.Select(d => d.Date).Intersect(DaysOf(h)).ToList();
+
+        if (valid.Count == 0)
+            TempData["ErrorMessage"] = "Tick at least one employee.";
+        else if (days.Count == 0)
+            TempData["ErrorMessage"] = "Tick at least one day of the holiday.";
+        else if (what is not ("mark" or "remove"))
+            TempData["ErrorMessage"] = "Choose to mark or to remove.";
+        else
+        {
+            var mark = what == "mark";
+            var (marks, recounted) = await _schedules.SetDutyAsync(valid, days, mark, $"Working {h.HolidayName}", User.Identity?.Name);
+            TempData["SuccessMessage"] = (marks == 0
+                ? "Nothing to change: those days were already that way."
+                : $"{marks} employee day(s) {(mark ? "marked as working" : "no longer marked")} for {h.HolidayName}.") + Recounted(recounted);
+        }
+        return RedirectToAction(nameof(Working), new { id, department, designation });
+    }
 
     [HttpGet("{id:int}/delete")]
     [Authorize(Roles = Managers)]
     public async Task<IActionResult> Delete(int id)
     {
         var h = await FindAsync(id);
-        return h == null ? NotFound() : Page("Delete", h);
+        if (h == null) return NotFound();
+        ViewBag.Marks = await MarksBetween(h.HolidayDate, h.EndDate).CountAsync();
+        return Page("Delete", h);
     }
 
     [HttpPost("{id:int}/delete")]

@@ -199,6 +199,65 @@ public class WorkScheduleService
     }
 
     /// <summary>
+    /// Marks (or unmarks) several people as working on several dates, such as guards on Eid. Unmarking removes only
+    /// "working" marks, never a day someone was set as off. Returns the day marks changed and the leave requests recounted.
+    /// </summary>
+    public async Task<(int Marks, int Recounted)> SetDutyAsync(IReadOnlyCollection<int> employeeIds, IReadOnlyCollection<DateTime> dates,
+        bool working, string? reason, string? actor)
+    {
+        var days = dates.Select(d => d.Date).Distinct().OrderBy(d => d).ToList();
+        if (employeeIds.Count == 0 || days.Count == 0) return (0, 0);
+        var (marks, recounted) = (0, 0);
+        await InTransactionAsync(async () =>
+        {
+            marks = 0;
+            var (first, last) = (days[0], days[^1]);
+            var rows = (await _db.RosterOverrides
+                    .Where(o => employeeIds.Contains(o.EmployeeId) && o.OverrideDate >= first && o.OverrideDate <= last)
+                    .ToListAsync())
+                .ToDictionary(o => (o.EmployeeId, o.OverrideDate.Date));
+            var before = new List<object>();
+            foreach (var id in employeeIds)
+                foreach (var day in days)
+                {
+                    var row = rows.GetValueOrDefault((id, day));
+                    if (!working)
+                    {
+                        if (row?.OverrideType != "ExtraDuty") continue;
+                        before.Add(new { row.EmployeeId, row.OverrideDate, row.OverrideType, row.Reason });
+                        _db.RosterOverrides.Remove(row);
+                    }
+                    else
+                    {
+                        if (row?.OverrideType == "ExtraDuty") continue;
+                        if (row == null)
+                        {
+                            row = new RosterOverride { EmployeeId = id, OverrideDate = day, CreatedBy = actor };
+                            _db.RosterOverrides.Add(row);
+                        }
+                        else
+                        {
+                            before.Add(new { row.EmployeeId, row.OverrideDate, row.OverrideType, row.Reason });
+                            row.ModifiedAt = DateTime.Now;
+                            row.ModifiedBy = actor;
+                        }
+                        row.OverrideType = "ExtraDuty";
+                        row.ShiftId = null;
+                        row.SwapWithEmployeeId = null;
+                        row.Reason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim();
+                    }
+                    marks++;
+                }
+            await _db.SaveChangesAsync();
+            if (marks == 0) return;
+            await _audit.WriteAsync("RosterOverrides", working ? "UPDATE" : "DELETE", "bulk", null, before,
+                new { Employees = employeeIds, Dates = days, Working = working, Reason = reason }, "Schedule");
+            recounted = await RecalculateLeaveAsync(employeeIds, first, last, actor);
+        });
+        return (marks, recounted);
+    }
+
+    /// <summary>
     /// Saves a change to the holidays and recounts everyone's open leave on the dates it touches, in one transaction.
     /// <paramref name="change"/> does the saving and returns those dates; it may run again if the connection is retried.
     /// </summary>

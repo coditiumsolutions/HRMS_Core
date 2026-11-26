@@ -2,6 +2,31 @@ using System.ComponentModel.DataAnnotations;
 
 namespace HRMBT.Web.Models.ViewModels;
 
+public sealed class HolidayWorkerVm
+{
+    public int Uid { get; set; }
+    public string? EmployeeCode { get; set; }
+    public string? Name { get; set; }
+    public string? Designation { get; set; }
+    public string? Department { get; set; }
+    public string? Project { get; set; }
+    /// <summary>Days of this holiday the person is marked as working.</summary>
+    public List<DateTime> Marked { get; set; } = new();
+}
+
+public sealed class HolidayWorkingVm
+{
+    public GazettedHoliday Holiday { get; set; } = null!;
+    public List<DateTime> Days { get; set; } = new();
+    public string? Department { get; set; }
+    public string? Designation { get; set; }
+    public List<string> Departments { get; set; } = new();
+    public List<string> Designations { get; set; } = new();
+    public int MarkedPeople { get; set; }
+    public List<HolidayWorkerVm> Rows { get; set; } = new();
+    public bool Filtered => !string.IsNullOrWhiteSpace(Department) || !string.IsNullOrWhiteSpace(Designation);
+}
+
 public class HolidayListVm
 {
     public int Year { get; set; }

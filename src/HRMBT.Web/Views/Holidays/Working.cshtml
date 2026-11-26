@@ -1,0 +1,156 @@
+@model HRMBT.Web.Models.ViewModels.HolidayWorkingVm
+@{
+    var h = Model.Holiday;
+    ViewData["Title"] = "Working " + h.HolidayName;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" crossorigin="anonymous" />
+    <link rel="stylesheet" href="~/css/employee-list.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/schedule.css" asp-append-version="true" />
+}
+
+<div class="employee-list-page py-3">
+    <div class="container-fluid px-0">
+        <partial name="_Alerts" />
+
+        <div class="filter-card filter-card-tight mb-3">
+            <div class="card-header"><span><i class="bi bi-funnel"></i>Search &amp; Filters</span></div>
+            <div class="card-body">
+                <form method="get" asp-action="Working" asp-route-id="@h.Id" class="row g-2 align-items-end">
+                    <div class="col-12 col-md">
+                        <label class="form-label" for="department">Department</label>
+                        <select name="department" id="department" class="form-select form-select-sm">
+                            <option value="">All</option>
+                            @foreach (var d in Model.Departments)
+                            {
+                                <option value="@d" selected="@(Model.Department == d)">@d</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-12 col-md">
+                        <label class="form-label" for="designation">Designation</label>
+                        <select name="designation" id="designation" class="form-select form-select-sm">
+                            <option value="">All</option>
+                            @foreach (var d in Model.Designations)
+                            {
+                                <option value="@d" selected="@(Model.Designation == d)">@d</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-auto">
+                        <button type="submit" class="btn btn-filter-apply w-100"><i class="bi bi-funnel-fill me-1"></i>Apply</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <form method="post" asp-action="SetWorking" asp-route-id="@h.Id" id="dutyForm">
+            <input type="hidden" name="selectedIds" id="selectedIds" />
+            <input type="hidden" name="department" value="@Model.Department" />
+            <input type="hidden" name="designation" value="@Model.Designation" />
+
+            <div class="grid-card mb-3">
+                <div class="card-header"><span><i class="bi bi-people"></i>@h.HolidayName, @Fmt.DateRange(h.HolidayDate, h.EndDate) <span class="text-muted small ms-1">(@Model.MarkedPeople working)</span></span></div>
+                <div class="card-body">
+                    <p class="grid-note">
+                        @(Model.Filtered ? "Active employees matching the filters." : "People marked to work this holiday.")
+                        Pick a department or designation to list people, tick them, then mark the days they work.
+                        A marked day counts as a work day for that person, so leave on it is charged.
+                    </p>
+                    @if (Model.Rows.Count == 0)
+                    {
+                        <div class="empty-state">
+                            <i class="bi bi-inboxes"></i>
+                            <h5 class="mb-1">@(Model.Filtered ? "No active employees match" : "Nobody is marked to work it")</h5>
+                            <p class="mb-0">Use the filters above to choose who works.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="table-wrap table-responsive">
+                            <table class="employee-grid">
+                                <thead>
+                                    <tr>
+                                        <th class="col-pick" data-align="none"><input type="checkbox" class="form-check-input" id="tickAll" aria-label="Tick everyone listed" /></th>
+                                        <th class="col-emp-id">Emp ID</th>
+                                        <th>Employee</th>
+                                        <th>Department</th>
+                                        <th>Project</th>
+                                        <th>Works on</th>
+                                        <th class="col-actions text-center" data-align="none" scope="col">Month</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var r in Model.Rows)
+                                    {
+                                        <tr>
+                                            <td class="col-pick"><input type="checkbox" class="form-check-input duty-tick" value="@r.Uid" aria-label="Include @r.EmployeeCode" /></td>
+                                            <td class="col-emp-id"><span class="text-muted small emp-id-cell" title="@r.EmployeeCode">@r.EmployeeCode</span></td>
+                                            <td>
+                                                <div class="emp-name">@(r.Name ?? "—")</div>
+                                                <div class="emp-meta">@(r.Designation ?? "—")</div>
+                                            </td>
+                                            <td>@(r.Department ?? "—")</td>
+                                            <td>@(r.Project ?? "—")</td>
+                                            <td>@(r.Marked.Count == 0 ? "—" : string.Join(", ", r.Marked.Select(d => Fmt.ShortDate(d))))</td>
+                                            <td class="col-actions">
+                                                <a class="row-action row-action-view" asp-controller="EmployeeSchedule" asp-action="Month" asp-route-id="@r.Uid" asp-route-month="@h.HolidayDate.ToString("yyyy-MM")" title="Month view" aria-label="Month view of @r.EmployeeCode"><i class="bi bi-calendar3"></i></a>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="action-bar">
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <a asp-action="Index" asp-route-year="@h.HolidayDate.Year" class="btn btn-action-outline">Back to holidays</a>
+                    @if (Model.Rows.Count > 0)
+                    {
+                        <span class="small text-muted"><span id="tickCount">0</span> ticked</span>
+                        <span class="workdays-pick" role="group" aria-label="Days of the holiday">
+                            @foreach (var d in Model.Days)
+                            {
+                                var key = d.ToString("yyyy-MM-dd");
+                                <input type="checkbox" class="duty-day" name="dates" id="day-@key" value="@key" checked />
+                                <label for="day-@key" title="@Fmt.LongDate(d)">@d.ToString("ddd") @d.Day</label>
+                            }
+                        </span>
+                        <button type="submit" name="what" value="remove" class="btn btn-action-secondary ms-auto duty-save" disabled>Remove marks</button>
+                        <button type="submit" name="what" value="mark" class="btn btn-action-primary duty-save" disabled>Mark as working</button>
+                    }
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            var form = document.getElementById('dutyForm');
+            var all = document.getElementById('tickAll');
+            var buttons = Array.prototype.slice.call(form.querySelectorAll('.duty-save'));
+            var ticks = Array.prototype.slice.call(form.querySelectorAll('.duty-tick'));
+            if (!buttons.length) return;
+            function ticked() { return ticks.filter(function (t) { return t.checked; }); }
+            function refresh() {
+                var n = ticked().length;
+                document.getElementById('tickCount').textContent = n;
+                buttons.forEach(function (b) { b.disabled = n === 0; });
+                if (all) all.checked = n === ticks.length && n > 0;
+            }
+            if (all) all.addEventListener('change', function () { ticks.forEach(function (t) { t.checked = all.checked; }); refresh(); });
+            ticks.forEach(function (t) { t.addEventListener('change', refresh); });
+            form.addEventListener('submit', function (e) {
+                var remove = e.submitter && e.submitter.value === 'remove';
+                if (!confirm((remove ? 'Remove the marks of ' : 'Mark as working: ') + ticked().length + ' employee(s)? Open leave on those days is recounted.')) { e.preventDefault(); return; }
+                document.getElementById('selectedIds').value = ticked().map(function (t) { return t.value; }).join(',');
+            });
+        })();
+    </script>
+}

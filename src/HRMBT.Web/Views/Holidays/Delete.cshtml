@@ -15,6 +15,10 @@
             <div class="card-header"><span><i class="bi bi-trash3"></i>Remove holiday</span></div>
             <div class="card-body grid-form">
                 <p>These dates become work days again, and open leave on them is recounted and charged.</p>
+                @if (ViewBag.Marks is int marks && marks > 0)
+                {
+                    <div class="alert alert-warning">@marks "working" mark(s) on these dates stay as they are, so those people still have a work day then, even on their weekly day off. Remove the marks first if that is not intended.</div>
+                }
                 <dl class="row mb-0">
                     <dt class="col-sm-3">Holiday</dt>
                     <dd class="col-sm-9">@Model.HolidayName</dd>
