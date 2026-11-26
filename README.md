@@ -82,3 +82,15 @@ The local `HRBTK` database needs the redesigned schema: run the scripts in `scri
 - Payroll: `/payroll/run`, `/payslips`
 - Leave: `/leave`, `/work-weeks`
 
+---
+
+## License
+
+See [LICENSE](LICENSE).
+
+## Credits
+
+**Developed By:**
+
+- Rayder-23
+- Coditium Solutions
