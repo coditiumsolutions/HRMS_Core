@@ -153,13 +153,16 @@ Deduction percentages still use gross while tax uses basic × 12, so the 39,000 
 <p><i>Fixed: the month-wide lock check is gone from <code>/payroll/run</code> and <code>/payslips/new</code>; all routes now use one set of rules (<code>PayrollCalculationService.CheckEmployee</code>).</i> It was: <code>/payroll/run</code> stopped with "Payroll for this month is locked" if any slip in that month is locked, even though the other employees have none yet. A single allowance edit (F1) can therefore block the bulk run. <code>/run/single</code> and <code>/generate/selected</code> do not make this check, so the three routes behave differently. <code>/payslips/new</code> checks it again in a fourth way.</p></div>
 
 <div class="item gap" id="F3"><p><span class="id">F3</span><b>Adding or deleting an allowance/deduction does not touch existing slips</b><span class="tag ok">audit part fixed 2026-11-25</span></p>
-<p><i>Audit is now written for create, bulk create and delete of allowances and deductions, and for payslip delete and manual payslip create.</i> Still open: only Edit locks slips, and Delete is a hard delete. Add an allowance after a slip is generated and the slip silently misses it; delete one and the slip keeps paying it.</p></div>
+<p><i>Since 2026-11-26 an unlocked slip can be <b>regenerated</b> from its page (T4), which picks up such changes. Audit is now written for create, bulk create and delete of allowances and deductions, and for payslip delete and manual payslip create.</i> Still open: only Edit locks slips, and Delete is a hard delete. Add an allowance after a slip is generated and the slip silently misses it; delete one and the slip keeps paying it.</p></div>
 
 <div class="item bug" id="F4"><p><span class="id">F4</span><b>Pay ignores attendance, leave, joining and leaving</b><span class="tag bug">bug</span></p>
 <p>Everyone gets the full basic regardless of join date, leaving date, absent days or unpaid leave. <code>Employee.PayBasis</code> and <code>HourlyRate</code> are not read, and the slip's working days, leave days, leave balance and hourly fields stay empty. Needs HR rules B6, B10, B11, B12 before it can be built.</p></div>
 
 <div class="item bug" id="F5"><p><span class="id">F5</span><b>Someone who resigned mid-month cannot get a final payslip</b><span class="tag bug">bug</span></p>
 <p>Every generation route and the status screen require <code>EmployeeStatus = 'Active'</code>. Employee History now sets Resigned or Terminated on a resignation, so once that is recorded the person can no longer be paid for the days worked that month. Joining month has the opposite problem (F4): full month paid.</p></div>
+
+<div class="item bug" id="F20"><p><span class="id">F20</span><b>Two rows of the same allowance stopped payroll for that employee and everyone after them</b><span class="tag ok">found and fixed 2026-11-26</span></p>
+<p>Not in the original review. Line names are unique per payslip, so an employee with two Fuel Allowance rows could not be generated, and the failed save stayed queued, so every later employee in a bulk run failed too (524 of 848 on the development data). The second line is now named "... (2)" and a failure no longer affects the others. Whether a second row is valid is still B22.</p></div>
 
 <div class="item gap" id="F6"><p><span class="id">F6</span><b>No sanity checks before generating</b><span class="tag ok">preview added 2026-11-25</span></p>
 <p><i>New: <b>Preview</b> on the Run Payroll page (<code>POST /payroll/run/preview</code>) lists who would get a payslip and warns about no basic salary, future month, joined after or left before the month, tax switched on with no slabs, and negative net. Nothing is saved. The single and selected routes show the same warnings in their result message. Warnings do not stop generation (only "not Active" and "already exists" do); the date window for the month and proration wait for B21 and B10.</i></p>
@@ -177,13 +180,15 @@ Deduction percentages still use gross while tax uses basic × 12, so the 39,000 
 <div class="item gap" id="F10"><p><span class="id">F10</span><b>Frequencies and loan-style deductions are not really supported</b><span class="tag gap">gap</span></p>
 <p>Weekly and Bi-Weekly are offered but behave as Monthly. A Monthly deduction runs until someone sets an end date; there is no total owed, no instalments and no remaining balance, so "Loan" and "Advance" types cannot stop themselves. The bulk deduction form only offers Once and Monthly, the single form offers all five.</p></div>
 
-<div class="item gap" id="F11"><p><span class="id">F11</span><b>Fuel price has no history and slips do not store quantity or rate</b><span class="tag gap">gap</span></p>
+<div class="item gap" id="F11"><p><span class="id">F11</span><b>Fuel price has no history and slips do not store quantity or rate</b><span class="tag ok">fixed 2026-11-26</span></p>
+<p><i>Fixed (T9): prices are kept with an effective-from date (Setup, Fuel prices), payroll uses the price on the 1st of the month, and slip lines store quantity and unit amount. Script 13 is on production; the app build is not deployed yet. It was:</i></p>
 <p>One <code>FuelPrice</code> value in Configuration is read at generation. Change it and any slip generated afterwards, including a re-run of an old month, uses the new price. A slip line stores only the final amount, so it cannot later show "100 litres at 280".</p></div>
 
 <div class="item inc" id="F12"><p><span class="id">F12</span><b>Rounding is applied in some places and not others</b><span class="tag inc">inconsistent</span></p>
 <p>Allowance lines and gross are unrounded; each deduction line and the deductions total are rounded separately, so the lines can differ from the total by a paisa. No rule for rounding net to whole rupees (decision B27).</p></div>
 
-<div class="item inc" id="F13"><p><span class="id">F13</span><b>Five ways to create a payslip, two payslip lists, two detail pages</b><span class="tag inc">inconsistent</span></p>
+<div class="item inc" id="F13"><p><span class="id">F13</span><b>Five ways to create a payslip, two payslip lists, two detail pages</b><span class="tag ok">mostly fixed 2026-11-26</span></p>
+<p><i>Fixed (T10): one run page <code>/payroll/run</code> with a tick-box preview, one list <code>/payslips</code>, one detail page; old addresses redirect. Still open: the hand-typed <code>/payslips/new</code> stays until B20. It was:</i></p>
 <p><code>/payroll/generate</code>, <code>/payroll/run</code>, <code>/payroll/run/single</code>, <code>/payroll/new</code> and <code>/payslips/new</code>. The last one lets a user type gross and deductions by hand: no tax, no line items, no audit row, bypasses the engine. <code>/payroll/new</code> duplicates <code>/run/single</code>. <code>/payroll</code> and <code>/payslips</code> are two lists, <code>/payroll/{id}</code> and <code>/payslips/{id}</code> two detail pages. Views <code>Payroll/Edit</code>, <code>Delete</code> and <code>Generate</code> had no action behind them and were removed on 2026-11-25. Already noted in <code>docs/routes.md</code> as a behaviour decision.</p></div>
 
 <div class="item inc" id="F14"><p><span class="id">F14</span><b><code>Employee.GenStatus</code> is stored text that goes stale</b><span class="tag ok">fixed 2026-11-25</span></p>
@@ -270,7 +275,8 @@ Deduction percentages still use gross while tax uses basic × 12, so the 39,000 
 <h2 id="s8">S8. Suggested build order</h2>
 <ol>
 <li><b>Done 2026-11-25 (not yet deployed):</b> P10 (consistent checks, audit on create/delete, drop <code>GenStatus</code>) plus F9 warning and F6 sanity checks in a preview step.</li>
-<li><b>After B20, B15, T11:</b> P1 and P4: payslip states, one run page, recalculation instead of silent locks. Biggest improvement to daily use.</li>
+<li><b>Done 2026-11-26 (not yet deployed; script 13 is on production):</b> T4 regeneration, T9 line rates and fuel price history, T10 one run page, list and detail, and F20.</li>
+<li><b>After B20, B15, T11:</b> P1 and P4: payslip states, recalculation instead of silent locks. Biggest improvement to daily use.</li>
 <li><b>After B21, B10:</b> P2 and the proration line of P3.</li>
 <li><b>After B17, B22, B23, B24:</b> tax base, catalogue tables, instalment deductions (P5, P7, P8). The tax method itself is done; run script 12 on production first.</li>
 <li><b>After B6, B11, B12, B16:</b> attendance and leave feed (rest of P3).</li>

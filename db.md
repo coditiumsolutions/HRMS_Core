@@ -1,5 +1,5 @@
 # HRMS Database Schema
-Version: 2.2 | Last Updated: 2026-11-25
+Version: 2.4 | Last Updated: 2026-11-26
 Database: HRBTK
 Server: Teezhost 16GB (production; hr.coditium.com, SQL Server 2022 16.0.1000.6 Express on port 1433, same machine as the web app). Its connection string is in the git-ignored `src/HRMBT.Web/appsettings.Production.json`. See `docs/deployment.md`.
 
@@ -13,6 +13,8 @@ Server: Teezhost 16GB (production; hr.coditium.com, SQL Server 2022 16.0.1000.6 
 > **2026-11-24: the redesigned schema is live on production.** Scripts 01-04 and 06-11 (`scripts/database/redesign/`) were run on `HRBTK` on 2026-11-24 after a full backup; the old schema (v1.10 of this file) no longer exists, apart from the archive tables below. The reasoning behind the redesign (why each column, decisions, standards) is in `docs/db/db_changes.md`, `db_standards.md` and `decisions.md`; how it was applied is in `docs/db/prod_rollout.md`. The pre-migration state is kept in the backups `HRBTK_pre_redesign_20261124.bak` and `HRBTK_after04_20261124.bak` in the SQL Server default backup folder on the server.
 
 Source of truth for the structure: the live database, read with catalog queries on 2026-11-24 right after the migration (33 tables in `dbo`, 2 views, plus 2 in `mig`). Column notes were carried over from `db_changes.md` ("was ..." = the old definition). EF entities are in `src/HRMBT.Web/Models/`, mapped in `Data/ApplicationDbContext.cs`. Reference SQL: `scripts/database/redesign/` (run in order; scripts 02-04 cannot be re-run once 06 has dropped the old columns) and `scripts/database/tools/`.
+
+> **2026-11-26: script `13_payslip_line_rates_fuel_prices.sql` run on production** (after backup `HRBTK_pre_script13_20261126.bak`). It adds `PayslipDetails.Quantity`, `UnitAmount`, `Note` and the table `FuelPrices`. The build deployed before that date ignores them and still reads the `FuelPrice` row in `Configuration`.
 
 ## Standards in short (db_standards.md)
 - Primary key `Id int IDENTITY` (`bigint` for `AttendancePunches` and `AuditLogs`); `Employee` and `Users` keep `uid`. Foreign key columns are `<Entity>Id`; employee references are `EmployeeId` -> `Employee.uid`. Constraint names: `PK_`, `FK_<Child>_<Parent>`, `IX_`, `UX_` (unique), `CK_`, `DF_`.
@@ -568,6 +570,23 @@ Keys and indexes
 - `PK_EmployeeLegacyLeaveBalances` - primary key, clustered, (EmployeeId)
 - `FK_EmployeeLegacyLeaveBalances_Employee` - foreign key (EmployeeId) -> Employee(uid), no action.
 
+## Table: dbo.FuelPrices
+Fuel price history. Payroll uses the row in force on the 1st of the payslip month; edited under Setup -> Fuel prices.
+- 2026-11-26 (T9): replaces the single `FuelPrice` value in `Configuration`, which applied one price to every month, including a re-run of an old one. Seeded from that value with `EffectiveFrom` 2000-01-01. The `Configuration` row stays for older builds and is no longer read.
+
+| Column | Type | Null | Default | Notes |
+|---|---|---|---|---|
+| Id | int | NOT NULL |  | PK, identity. |
+| EffectiveFrom | date | NOT NULL |  | Unique. |
+| UnitPrice | decimal(18,2) | NOT NULL |  | CHECK > 0. |
+| CreatedAt | datetime2(0) | NOT NULL | (sysdatetime()) |  |
+| CreatedBy | nvarchar(100) | NULL |  |  |
+
+Keys and indexes
+- `PK_FuelPrices` - primary key, clustered, (Id)
+- `UX_FuelPrices_EffectiveFrom` - unique, nonclustered, (EffectiveFrom)
+- `CK_FuelPrices_UnitPrice` - check ([UnitPrice] > 0)
+
 ## Table: dbo.GazettedHolidays
 Public (gazetted) holidays. Empty in production on 2026-11-16.
 - 2026-11-16: Resolves the EF mismatch: the EF entity (`GazettedHoliday`, with `Id`, `HolidayName`) is mapped to this plural table with `ToTable("GazettedHolidays")`; `database-schema.sql` should create the plural name. Empty, so it is rebuilt.
@@ -780,6 +799,9 @@ Rows on 2026-11-24 (right after the migration): 132.
 | ItemCategory | nvarchar(50) | NOT NULL |  |  |
 | Amount | decimal(18,2) | NOT NULL |  |  |
 | SortOrder | int | NULL |  |  |
+| Quantity | decimal(9,2) | NULL |  | 2026-11-26 (T9): quantity behind `Amount`, so a line can show "100 x 280.00". NULL on older lines: it was not stored. |
+| UnitAmount | decimal(18,2) | NULL |  | 2026-11-26 (T9): unit amount (the fuel price for fuel by quantity). |
+| Note | nvarchar(200) | NULL |  | 2026-11-26 (T9): short working, for example "5% of gross". |
 
 Keys and indexes
 - `PK_PayslipDetails` - primary key, clustered, (Id)
@@ -1100,3 +1122,5 @@ Keys and indexes
 - 2026-11-23: Added the migration-pending note (v1.10). No schema change.
 - 2026-11-24: **Redesign applied to production (v2.0).** Full backup first (`HRBTK_pre_redesign_20261124.bak`, verified with `RESTORE VERIFYONLY`, plus `HRBTK_after04_20261124.bak` between 04 and 06). Scripts run in order with `sqlcmd -b -I`: 01 to 04 (migrations `20261123000001` to `20261123000004`), 06 contract, 07 user roles, 08 employee events, 09 leave days one decimal, 10 legacy leave archive, 11 leave balances view v2 (10 new rows in `__EFMigrationsHistory`). Result: 19 tables became 33 (plus 2 migration tables in `mig`); 848 employees, 99 payslips (132 lines), 23 allowances, 11 deductions and 8 documents unchanged; 1 orphan leave request moved to `mig.LeaveRequests_Orphans` (23 remain); 8 projects, 48 departments, 10 sub-departments and 209 designations seeded from the data; 5 `UserRoles` rows; `EmployeeLeaves` dropped; 7 legacy leave columns archived (828 rows) then dropped from `Employee`. Verified: no untrusted foreign keys, leave day columns at one decimal, every dated employee has a `Joined` event; scripts 01 and 06-11 re-ran as no-ops. The app (Development build, production database) loaded all main pages.
 - 2026-11-25: **Tax slabs on the annual method (v2.1).** `TaxRules.FixedAmount` added; `MinSalary`/`MaxSalary` are annual income; slabs of tax years 2025 and 2026 replaced by the salaried slabs (script `12_tax_slabs_annual.sql`, migration `20261125000012_Redesign_Phase12_TaxSlabsAnnual`). Run on the dev copy, then on production the same day. Source and method: `docs/reference/pk-income-tax.md`.
+- 2026-11-26: **Payslip line rates and fuel price history (v2.3), development copy only.** Script `13_payslip_line_rates_fuel_prices.sql` (migration `20261126000013_Redesign_Phase13_LineRatesFuelPrices`), run twice on the dev copy (the second run changed nothing). Not yet run on production.
+- 2026-11-26: **Script 13 run on production (v2.4).** Full copy-only backup with checksum first (`HRBTK_pre_script13_20261126.bak`, verified with `RESTORE VERIFYONLY`). Run twice (the second run changed nothing). `FuelPrices` seeded with 380.00 from 2000-01-01; 848 employees, 99 payslips and 132 lines unchanged; no untrusted foreign keys. A second verified backup was taken after the script (`HRBTK_after_script13_20261126.bak`); both are in the SQL Server default backup folder on the server.

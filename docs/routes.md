@@ -33,14 +33,15 @@ note: Production still runs the older build with the old URLs (/Home/Login, /Emp
 | Deductions | `/deductions`, `/deductions/new`, `/deductions/bulk`, `/deductions/{id}`, `/deductions/{id}/edit`, `/deductions/{id}/delete`, JSON `/deductions/employee-lookup?q=` |
 | Attendance | `/attendance`, `/attendance/new`, `/attendance/off-days`, `/attendance/upload`, `/attendance/monthly-report`, `/attendance/by-department`, `/attendance/{id}`, `/attendance/{id}/edit`, `/attendance/{id}/delete` |
 | Leave | `/leave` (requests), `/leave/new`, `/leave/{id}`, `/leave/{id}/edit`, `/leave/{id}/delete`, `/leave/balances`, `/leave/quotas`, `/leave/quotas/new`, `/leave/quotas/{id}/edit`, `/leave/quotas/{id}/delete` |
-| Payroll | `/payroll` (list), `/payroll/dashboard`, `/payroll/generate` (pick employees; POST `/payroll/generate/selected`), `/payroll/run` (run for everyone; POST `/payroll/run/preview` shows who would get a payslip and the warnings, saves nothing), `/payroll/run/single`, `/payroll/new`, `/payroll/search`, `/payroll/employees`, `/payroll/status`, `/payroll/{id}` |
-| Payslips | `/payslips`, `/payslips/new`, `/payslips/generate` (redirects to `new`), `/payslips/{id}`, `/payslips/{id}/print`, `/payslips/{id}/delete`, JSON `/payslips/lookup/employees-by-department?department=`, `/payslips/lookup/employees/{uid}` |
+| Payroll | `/payroll/dashboard`, `/payroll/run` (the one run page: everyone, a department or one employee; `?employeeId=` and `?department=` pre-fill it), POST `/payroll/run/preview` (who would get a payslip, warnings, tick boxes; saves nothing), `/payroll/status`. Redirects: `/payroll` to `/payslips`; `/payroll/{id}` to `/payslips/{id}`; `/payroll/search` to `/payslips`; `/payroll/run/single`, `/payroll/new`, `/payroll/generate`, `/payroll/employees` to `/payroll/run` |
+| Payslips | `/payslips` (the one list), `/payslips/new` (hand-typed payslip, kept until HR answers B20), `/payslips/generate` (redirects to `new`), `/payslips/{id}`, POST `/payslips/{id}/regenerate`, `/payslips/{id}/print`, `/payslips/{id}/delete`, JSON `/payslips/lookup/employees-by-department?department=`, `/payslips/lookup/employees/{uid}` |
 | Reports | `/reports`, `/reports/salaries`, `/reports/employees`, `/reports/allowances`, `/reports/deductions`, `/reports/taxes` |
 | Tax | `/tax-rules` (one card per tax year; `?taxYear=2025-2026` redirects), `/tax-rules/years/{startYear}` (slabs of one year), `/tax-rules/years/new` (a whole tax year with all its slabs), `/tax-rules/new` (`?year=` pre-selects the year), `/tax-rules/{id}`, `/tax-rules/{id}/edit`, `/tax-rules/{id}/delete` |
 | Setup (Admin) | `/setup`, `/setup/users`, `/setup/users/new`, `/setup/users/{id}/edit`, `/setup/users/{id}/delete`, `/setup/config`, `/setup/config/new`, `/setup/config/{id}/edit`, `/setup/config/{id}/delete` |
+| Setup fuel prices (Admin, HR) | `/setup/fuel-prices` (list, POST adds), POST `/setup/fuel-prices/{id}/delete` |
 | Setup lists (Admin, HR) | `/setup/lists/{kind}` where kind is `projects`, `departments`, `subdepartments`, `designations`, `leavetypes`; `/setup/lists/{kind}/new`, `/setup/lists/{kind}/{id}/edit`, POST `/setup/lists/{kind}/{id}/toggle` and `/setup/lists/{kind}/{id}/delete` |
 
 ## Open points
 
 - Old URLs are redirected, but anything outside the app that holds an absolute old URL (printed documents, monitoring) should be updated. The `/Home/DbHealth` check, if a monitor uses it, is now `/db-health`.
-- Payroll and Payslips overlap in purpose (`/payroll/new` and `/payslips/new` both create a payslip); merging them is a behaviour decision, not a routing one.
+- `/payroll/run` and `/payslips/new` both create a payslip; the hand-typed one goes when HR has answered how corrections are made (B20, decision T10).

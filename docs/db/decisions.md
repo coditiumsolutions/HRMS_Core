@@ -1,5 +1,5 @@
 # HRMS Database - Pending Decisions
-Version: 2.8 | Date: 2026-11-25 | Related: db_standards.md, db_changes.md (v3.8), db.md (v2.0)
+Version: 2.9 | Date: 2026-11-26 | Related: db_standards.md, db_changes.md (v4.0), db.md (v2.4)
 
 ## How to use this file
 - Only **pending** decisions are listed here. Answered ones are removed and recorded where they apply (rules in db_standards.md, schema in db_changes.md).
@@ -7,6 +7,7 @@ Version: 2.8 | Date: 2026-11-25 | Related: db_standards.md, db_changes.md (v3.8)
 - Part A is technical (the dev team decides). Part B is business logic (HR / management decides); each B-item says what it affects in the schema so the answer can go straight into db_changes.md.
 - **Data status (2026-11-18):** the data now in `HRBTK` is **test data**. Counts and findings quoted below (employees, projects, leave balances, duplicates) describe it for design purposes only; they are not requirements, and the checks are re-run on real data before anything is applied.
 - 2026-11-24: the employee Leave Balance tab is built on the LMS tables; B18 is closed (see below); leave days are kept in one decimal.
+- 2026-11-26: T4, T9 and T10 answered (A) and built, apart from the parts of T10 that wait for HR (see its notes).
 - 2026-11-24: employee history is built (`EmployeeEvents`, see B14, T1, T8, B19 below).
 - 2026-11-25: Payroll review added T9-T11 and B20-B28 and dated notes on B10, B13 and B17. The review itself (findings F1-F19, proposal P1-P10) is kept in `docs/payroll-review.html`.
 - Removed on 2026-11-17 as decided: employee key (`uid` stays, `EmployeeID` is the business key; see S1 and S5) and the attendance migration approach (expand then contract; see S19).
@@ -63,7 +64,7 @@ Status: Closed
 ---
 
 ## T4. Regenerating a payslip (unlocked)
-Status: Open
+Status: Closed
 
 **Context.** `Payslips` is unique per employee per month (S17), but `PayslipDetails` has no uniqueness, so regenerating could double the line items unless the old lines are removed first.
 
@@ -71,9 +72,9 @@ Status: Open
 - A ★ Regenerate = in **one transaction**, update the existing `Payslips` row, delete its `PayslipDetails`, insert fresh ones. Add a unique index on `PayslipDetails (PayslipId, ItemType, ItemName)` so a double insert fails loudly. Locked payslips are never regenerated.
 - B Create a new payslip row per generation and mark the old one superseded (keeps history, needs a `SupersededBy` column).
 
-**Answer:** ______
-**Decided by / date:** ______
-**Notes:** Needs B15 (can a locked payslip be unlocked?).
+**Answer:** A
+**Decided by / date:** Rayder / 26-11-2026
+**Notes:** Built 2026-11-26: **Regenerate** on the payslip page (`POST /payslips/{id}/regenerate`), in one transaction with an `AuditLogs` row holding the old and new figures. Locked payslips are refused, so B15 is not needed for this: if unlocking is ever allowed, an unlocked slip follows the same rule. Hand-typed payslips are not regenerated. The unique index already existed (script 04), and it made generation fail for an employee with two rows of the same allowance; the second line is now named `... (2)`. Whether a second row is valid stays with HR (B22).
 
 ---
 
@@ -153,7 +154,7 @@ Status: Closed (2026-11-24)
 ---
 
 ## T9. Unit rates on payslip lines and fuel price history
-Status: Open (added 2026-11-25, Payroll review)
+Status: Closed (added 2026-11-25, Payroll review)
 
 **Context.** The fuel allowance is `FuelPrice x Quantity`, where `FuelPrice` is one value in `Configuration`. It is read at generation time, so changing it changes every slip generated afterwards, including a re-run of an old month. A `PayslipDetails` line stores only the final amount, so it cannot later show "100 litres x 280".
 
@@ -162,14 +163,14 @@ Status: Open (added 2026-11-25, Payroll review)
 - B Keep one global price; accept that re-running an old month uses today's price.
 - C Store the rate on the allowance row (per employee) instead of a global price.
 
-**Answer:** ______
-**Decided by / date:** ______
-**Notes:** Pairs with B22 (allowance catalogue) and B27 (rounding).
+**Answer:** A
+**Decided by / date:** Rayder / 26-11-2026
+**Notes:** Built 2026-11-26 (script 13, run on development and production): `PayslipDetails.Quantity`, `UnitAmount`, `Note`; table `FuelPrices`; screen Setup -> Fuel prices. Payroll takes the price in force on the **1st of the payslip month**, so a mid-month change counts from the next month; HR to confirm. The `FuelPrice` row in `Configuration` is no longer read. Pairs with B22 and B27, which stay open.
 
 ---
 
 ## T10. One way to run payroll
-Status: Open (added 2026-11-25, Payroll review)
+Status: Closed (added 2026-11-25, Payroll review)
 
 **Context.** Five screens create a payslip (`/payroll/generate`, `/payroll/run`, `/payroll/run/single`, `/payroll/new`, `/payslips/new`), there are two lists and two detail pages, and `/payslips/new` lets a user type gross and deductions by hand with no tax, no line items and no audit row. `docs/routes.md` already lists the overlap as a behaviour decision.
 
@@ -178,9 +179,9 @@ Status: Open (added 2026-11-25, Payroll review)
 - B Keep the screens and only make their checks identical.
 - C Keep manual entry for exceptional cases, restricted to Admin and written to `AuditLogs`.
 
-**Answer:** ______
-**Decided by / date:** ______
-**Notes:** Depends on B20 (what states a payslip has).
+**Answer:** A
+**Decided by / date:** Rayder / 26-11-2026
+**Notes:** Built 2026-11-26: one run page `/payroll/run` (everyone, a department or one employee; the preview has tick boxes, replacing "Pick Employees"), one list `/payslips`, one detail and one print page; old addresses redirect. **Left until HR answers:** hand-typed payslips (`/payslips/new`) stay as they are and there are no adjustment lines yet (B20 payslip states); roles are unchanged (B13).
 
 ---
 
@@ -196,7 +197,7 @@ Status: Open (added 2026-11-25, Payroll review)
 
 **Answer:** ______
 **Decided by / date:** ______
-**Notes:** Needs B20 (statuses) and B15 (unlocking).
+**Notes:** Needs B20 (statuses) and B15 (unlocking). The audit rows for create, edit and delete are built.
 
 ---
 

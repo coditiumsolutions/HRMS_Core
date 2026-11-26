@@ -1,5 +1,5 @@
 # HRMS Database Schema - Proposed Changes (final draft)
-Version: 3.9 | Based on: db.md v1.9 (2026-11-16) | Date: 2026-11-25
+Version: 4.0 | Based on: db.md v1.9 (2026-11-16) | Date: 2026-11-26
 Database: HRBTK
 Server: Teezhost 16GB (production)
 Status: **APPLIED TO PRODUCTION on 2026-11-24 (scripts 01-04, 06-11; see db.md v2.0 and prod_rollout.md section 8). The text below is kept as the design record; db.md is the current schema.** Former status: **FINAL DRAFT. Applied to the local development copy only (2026-11-23; script 08 `EmployeeEvents`, 09 leave days one decimal, 10 legacy leave archive and 11 leave balances view v2 on 2026-11-24); production `HRBTK` is untouched and stays read-only until each script is reviewed and approved (db_standards.md S19).** The re-runnable scripts are in `scripts/database/redesign/` (01-04 expand, 06 contract); the development app is already adapted (value converters keep the legacy text shapes in code, Setup pages manage the new lists). Deviations found while applying: `UX_PayslipDetails_Payslip_Item` is created in phase 4 (after the `ItemType` type change); filtered indexes block `ALTER COLUMN` and column renames (SQL Server error 1934), so the scripts drop and recreate them around those steps; `UX_Attendance_Employee_ShiftDate` was filtered during the expand phase and is unfiltered after the contract phase. This draft implements the rules in db_standards.md (S1-S23) and the answered decisions in decisions.md (T1, T2, T3, T5, T6). Items that wait for an open decision are tagged ⏸ and name the decision (T4, T7, B1-B18). **Data status (2026-11-18):** the data in `HRBTK` is treated as test data. Row counts, "live checks" and findings in this file describe it for design purposes; they are not requirements (for example, the number of projects is not fixed, B3), and the checks are re-run on the real data before a script is applied.
@@ -1103,7 +1103,7 @@ All live in decisions.md. The draft shows the assumption it made; nothing below 
 
 | Decision | Assumption in this draft | Tables affected |
 |---|---|---|
-| T4 payslip regeneration | delete and re-insert lines in one transaction | Payslips, PayslipDetails |
+| T4 payslip regeneration | decided 2026-11-26: delete and re-insert lines in one transaction (built) | Payslips, PayslipDetails |
 | T7 notes and remarks | `Notes` column on HR tables + append-only `RecordNotes` (attendance, employee, leave request) | Attendance, Allowances, Deductions, Employee, LeaveRequests, HalfDayRequests, RosterOverrides, ShiftAssignments, RecordNotes |
 | B1 half day vs leave | optional `LeaveRequestId` link on HalfDayRequests | HalfDayRequests, LeaveRequests |
 | B2 departments | decided 2026-11-18: one shared main-department list, independent of project, plus optional `SubDepartments`. Still open at go-live: HR's mapping of the names (`Administrator`, `Mess`, `Transportation`) | Departments, SubDepartments, Employee |
@@ -1121,6 +1121,9 @@ All live in decisions.md. The draft shows the assumption it made; nothing below 
 | B15 payslip unlock | no schema change | Payslips, AuditLogs |
 | B17 tax base | basic salary | TaxRules |
 | B18 legacy leave columns | decided 2026-11-24: archived in `EmployeeLegacyLeaveBalances` and dropped from Employee | Employee, EmployeeLegacyLeaveBalances |
+
+## Phase 13: payslip line rates and fuel prices (2026-11-26, T9)
+Script `13_payslip_line_rates_fuel_prices.sql`, additive and re-runnable: `PayslipDetails.Quantity decimal(9,2)`, `UnitAmount decimal(18,2)`, `Note nvarchar(200)` (all NULL), and `FuelPrices (Id, EffectiveFrom date unique, UnitPrice decimal(18,2) > 0, CreatedAt, CreatedBy)` seeded from the `Configuration` `FuelPrice` value. Applied to the development copy and, after backup `HRBTK_pre_script13_20261126.bak`, to production on 2026-11-26. Column notes are in db.md.
 
 ## Migration order
 **Script map (applied to the local development database on 2026-11-23; production steps in `prod_rollout.md`):**
