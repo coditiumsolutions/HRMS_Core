@@ -1,4 +1,3 @@
-using System.Globalization;
 using HRMBT.Web.Data;
 using HRMBT.Web.Infrastructure;
 using HRMBT.Web.Models;
@@ -7,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace HRMBT.Web.Services.Payroll
 {
@@ -42,7 +42,7 @@ namespace HRMBT.Web.Services.Payroll
         /// <summary>
         /// Computed monetary amount for one allowance row.
         /// Fuel Allowance + Fixed Amount → Amount.
-        /// Fuel Allowance + Quantity → FuelPrice (config) × Quantity.
+        /// Fuel Allowance + Quantity → fuel price for the month × Quantity.
         /// Legacy Fuel type: Amount if &gt; 0, else FuelPrice × Quantity.
         /// Other fixed rows: Amount × Quantity. Percentage: % of basic.
         /// </summary>
@@ -106,60 +106,26 @@ namespace HRMBT.Web.Services.Payroll
         public static decimal SumAllowancesForBasic(decimal basic, IEnumerable<Allowance> allowances, decimal fuelPrice = 0m) =>
             allowances.Sum(a => AllowanceComputedAmount(a, basic, fuelPrice));
 
-        /// <summary>Unit price from dbo.Configuration where ConfigKey = FuelPrice (0 if missing).</summary>
-        public decimal GetFuelPriceFromConfiguration()
+        /// <summary>The fuel price in force on <paramref name="date"/> (dbo.FuelPrices), or 0 when none is set. Payroll passes the 1st of the payslip month (T9).</summary>
+        public decimal GetFuelPrice(DateTime date) =>
+            _context.FuelPrices.AsNoTracking()
+                .Where(f => f.EffectiveFrom <= date)
+                .OrderByDescending(f => f.EffectiveFrom)
+                .Select(f => (decimal?)f.UnitPrice)
+                .FirstOrDefault() ?? 0m;
+
+        /// <summary>True when the row's amount is the fuel price times its quantity (so it needs a fuel price).</summary>
+        private static bool UsesFuelPrice(Allowance a)
         {
-            var rows = _context.HrConfigurations
-                .AsNoTracking()
-                .Where(c => c.ConfigKey != null && c.ConfigValue != null)
-                .ToList();
-
-            var raw = rows
-                .FirstOrDefault(c => string.Equals((c.ConfigKey ?? "").Trim(), "FuelPrice", StringComparison.OrdinalIgnoreCase))
-                ?.ConfigValue;
-
-            if (string.IsNullOrWhiteSpace(raw))
-                return 0m;
-
-            var token = raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .FirstOrDefault() ?? raw.Trim();
-
-            return decimal.TryParse(token, NumberStyles.Number, CultureInfo.InvariantCulture, out var price)
-                ? price
-                : 0m;
-        }
-
-        /// <summary>Preview gross (basic + active allowances) per employee — matches <see cref="GeneratePayslip"/> gross before deductions.</summary>
-        public Dictionary<int, decimal> ComputeGrossPreviewForEmployees(IEnumerable<Employee> employees, DateTime? periodMonth = null)
-        {
-            var periodStart = new DateTime((periodMonth ?? DateTime.Today).Year, (periodMonth ?? DateTime.Today).Month, 1);
-            var periodEndExclusive = periodStart.AddMonths(1);
-            var list = employees?.ToList() ?? new List<Employee>();
-            var result = new Dictionary<int, decimal>();
-            if (list.Count == 0) return result;
-
-            var fuelPrice = GetFuelPriceFromConfiguration();
-            var ids = list.Select(e => e.uid).ToList();
-            var byEmpId = _context.Allowances.AsNoTracking()
-                .Where(a => ids.Contains(a.EmployeeId) && a.IsActive)
-                .ToList()
-                .Where(a => AppliesInPeriod(a.Frequency, a.EffectiveDate, a.EndDate, periodStart, periodEndExclusive))
-                .GroupBy(a => a.EmployeeId)
-                .ToDictionary(g => g.Key, g => g.ToList());
-
-            foreach (var emp in list)
-            {
-                var basic = emp.BasicSalary ?? 0m;
-                byEmpId.TryGetValue(emp.uid, out var allowances);
-                allowances ??= new List<Allowance>();
-                result[emp.uid] = basic + SumAllowancesForBasic(basic, allowances, fuelPrice);
-            }
-
-            return result;
+            if (a.IsPercentage || !(IsFuelAllowanceName(a.Name) || IsFuelAllowanceType(a.AllowanceType)))
+                return false;
+            if (IsFuelFixedAmountType(a.AllowanceType)) return false;
+            return IsFuelQuantityType(a.AllowanceType) || a.Amount <= 0m;
         }
 
         public Payslip GeneratePayslip(int employeeId, string month, int year, string generatedBy)
         {
+            Payslip? payslip = null;
             try
             {
                 var monthName = PayrollMonthHelper.Normalize(month);
@@ -170,98 +136,16 @@ namespace HRMBT.Web.Services.Payroll
                 if (employee == null)
                     throw new InvalidOperationException("Employee not found.");
 
-                var monthNum = PayrollMonthHelper.OrderIndex(monthName);
-                if (monthNum < 1 || monthNum > 12)
-                    monthNum = DateTime.Now.Month;
-
-                var calc = Compute(
-                    employee,
-                    GetFuelPriceFromConfiguration(),
-                    _context.Allowances.Where(a => a.EmployeeId == employeeId && a.IsActive).ToList(),
-                    _context.Deductions.Where(d => d.EmployeeId == employeeId && d.IsActive).ToList(),
-                    monthNum, year, TaxSlabsFromDatabase);
-
-                var basic = calc.Basic;
-                var fuelPrice = calc.FuelPrice;
-                var allowances = calc.Allowances;
-                var deductions = calc.Deductions;
-                var totalAllowances = calc.TotalAllowances;
-                var gross = calc.Gross;
-                var totalPayrollDeductions = calc.TotalDeductions;
-                var taxResult = calc.Tax;
-                var totalWithheld = calc.TotalWithheld;
-                var netSalary = calc.Net;
-
-                var payslip = new Payslip
+                payslip = new Payslip
                 {
                     EmployeeId = employeeId,
                     Month = monthName,
                     Year = year,
-                    BasicSalary = basic,
-                    TotalAllowances = totalAllowances,
-                    GrossSalary = gross,
-                    TaxPercentage = taxResult.TaxPercentage,
-                    TaxAmount = taxResult.TaxAmount,
-                    TotalDeductions = totalPayrollDeductions,
-                    NetSalary = netSalary,
-                    GeneratedDate = DateTime.Now,
-                    GeneratedBy = generatedBy,
                     IsLocked = false,
                     LeaveBalance = "",
-                    Notes = "",
-                    CalculationDetails = BuildDetails(
-                        basic,
-                        totalAllowances,
-                        gross,
-                        allowances,
-                        deductions,
-                        totalPayrollDeductions,
-                        taxResult.TaxPercentage,
-                        taxResult.TaxAmount,
-                        taxResult.Text,
-                        totalWithheld,
-                        netSalary,
-                        fuelPrice)
+                    Notes = ""
                 };
-
-                int sort = 1;
-                foreach (var a in allowances)
-                {
-                    var lineAmount = AllowanceComputedAmount(a, basic, fuelPrice);
-                    payslip.PayslipDetails.Add(new PayslipDetail
-                    {
-                        ItemType = "Allowance",
-                        ItemName = a.Name,
-                        ItemCategory = a.AllowanceType,
-                        Amount = lineAmount,
-                        SortOrder = sort++
-                    });
-                }
-
-                foreach (var d in deductions)
-                {
-                    var lineAmount = Math.Round(DeductionComputedAmount(d, gross), 2, MidpointRounding.AwayFromZero);
-                    payslip.PayslipDetails.Add(new PayslipDetail
-                    {
-                        ItemType = "Deduction",
-                        ItemName = string.IsNullOrWhiteSpace(d.DeductionName) ? d.DeductionType : d.DeductionName,
-                        ItemCategory = d.DeductionType,
-                        Amount = lineAmount,
-                        SortOrder = sort++
-                    });
-                }
-
-                if (taxResult.TaxAmount > 0)
-                {
-                    payslip.PayslipDetails.Add(new PayslipDetail
-                    {
-                        ItemType = "Tax",
-                        ItemName = "Income Tax",
-                        ItemCategory = taxResult.Category,
-                        Amount = taxResult.TaxAmount,
-                        SortOrder = sort++
-                    });
-                }
+                Fill(payslip, ComputeFor(employee, monthName, year), generatedBy);
 
                 _context.Payslips.Add(payslip);
                 _context.SaveChanges();
@@ -270,8 +154,156 @@ namespace HRMBT.Web.Services.Payroll
             }
             catch (Exception ex)
             {
+                // A failed save leaves the new rows queued in the context, where they would make every later save fail too
+                // (a bulk run uses one context for all employees).
+                if (payslip != null)
+                {
+                    foreach (var line in payslip.PayslipDetails.ToList())
+                        _context.Entry(line).State = EntityState.Detached;
+                    _context.Entry(payslip).State = EntityState.Detached;
+                }
                 throw new Exception($"Payroll generation failed for employee {employeeId}: {ex.Message}", ex);
             }
+        }
+
+        /// <summary>A payslip typed in by hand has no lines and no working.</summary>
+        public static bool IsManual(Payslip p) =>
+            string.IsNullOrWhiteSpace(p.CalculationDetails) && p.PayslipDetails.Count == 0;
+
+        /// <summary>
+        /// Works an unlocked payslip out again from the current salary, allowances, deductions, fuel price and tax slabs (decision T4):
+        /// in one transaction the payslip row is updated, its old lines are deleted and fresh ones inserted. Notes and attendance figures are kept.
+        /// <paramref name="snapshot"/> is taken before the change and <paramref name="afterSave"/> runs inside the same transaction (the audit row).
+        /// Returns a message when the payslip may not be regenerated; nothing is changed in that case.
+        /// </summary>
+        public async Task<string?> RegeneratePayslipAsync(int payslipId, string generatedBy,
+            Func<Payslip, object> snapshot, Func<Payslip, object, Task> afterSave)
+        {
+            string? refusal = null;
+            await _context.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
+            {
+                refusal = null;
+                _context.ChangeTracker.Clear();
+                await using var tx = await _context.Database.BeginTransactionAsync();
+
+                var payslip = await _context.Payslips.Include(p => p.PayslipDetails).FirstOrDefaultAsync(p => p.Id == payslipId);
+                if (payslip == null) { refusal = "Payslip not found."; return; }
+                if (payslip.IsLocked) { refusal = "This payslip is locked and cannot be regenerated."; return; }
+                if (IsManual(payslip)) { refusal = "This payslip was typed in by hand, so there is nothing to work out again."; return; }
+
+                var employee = await _context.Employees.FirstOrDefaultAsync(e => e.uid == payslip.EmployeeId);
+                if (employee == null) { refusal = "Employee not found."; return; }
+                var block = CheckEmployee(employee, payslip.Month, payslip.Year, slipExists: false).FirstOrDefault(i => i.Blocks);
+                if (block != null) { refusal = block.Text; return; }
+
+                var before = snapshot(payslip);
+                var calc = ComputeFor(employee, payslip.Month, payslip.Year);
+
+                // Delete first and save: the unique index on the lines would otherwise see old and new rows together.
+                _context.PayslipDetails.RemoveRange(payslip.PayslipDetails.ToList());
+                await _context.SaveChangesAsync();
+                payslip.PayslipDetails.Clear();
+
+                Fill(payslip, calc, generatedBy);
+                await _context.SaveChangesAsync();
+                await afterSave(payslip, before);
+                await tx.CommitAsync();
+            });
+            return refusal;
+        }
+
+        private Calc ComputeFor(Employee employee, string monthName, int year)
+        {
+            var monthNum = PayrollMonthHelper.OrderIndex(monthName);
+            if (monthNum < 1 || monthNum > 12)
+                monthNum = DateTime.Now.Month;
+
+            var uid = employee.uid;
+            return Compute(
+                employee,
+                GetFuelPrice(new DateTime(year, monthNum, 1)),
+                _context.Allowances.AsNoTracking().Where(a => a.EmployeeId == uid && a.IsActive).ToList(),
+                _context.Deductions.AsNoTracking().Where(d => d.EmployeeId == uid && d.IsActive).ToList(),
+                monthNum, year, TaxSlabsFromDatabase);
+        }
+
+        /// <summary>Puts the calculated figures and lines on a payslip that has no lines.</summary>
+        private void Fill(Payslip payslip, Calc calc, string generatedBy)
+        {
+            payslip.BasicSalary = calc.Basic;
+            payslip.TotalAllowances = calc.TotalAllowances;
+            payslip.GrossSalary = calc.Gross;
+            payslip.TaxPercentage = calc.Tax.TaxPercentage;
+            payslip.TaxAmount = calc.Tax.TaxAmount;
+            payslip.TotalDeductions = calc.TotalDeductions;
+            payslip.NetSalary = calc.Net;
+            payslip.GeneratedDate = DateTime.Now;
+            payslip.GeneratedBy = generatedBy;
+            payslip.CalculationDetails = BuildDetails(
+                calc.Basic, calc.TotalAllowances, calc.Gross, calc.Allowances, calc.Deductions, calc.TotalDeductions,
+                calc.Tax.TaxPercentage, calc.Tax.TaxAmount, calc.Tax.Text, calc.TotalWithheld, calc.Net, calc.FuelPrice);
+            foreach (var line in BuildLines(calc))
+                payslip.PayslipDetails.Add(line);
+        }
+
+        private static List<PayslipDetail> BuildLines(Calc calc)
+        {
+            var lines = new List<PayslipDetail>();
+            var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            void Add(string type, string name, string category, decimal amount, decimal? quantity = null, decimal? unit = null, string? note = null) =>
+                lines.Add(new PayslipDetail
+                {
+                    ItemType = type,
+                    ItemName = UniqueName(used, type, name),
+                    ItemCategory = category,
+                    Amount = amount,
+                    Quantity = quantity,
+                    UnitAmount = unit,
+                    Note = note,
+                    SortOrder = lines.Count + 1
+                });
+
+            foreach (var a in calc.Allowances)
+            {
+                var amount = AllowanceComputedAmount(a, calc.Basic, calc.FuelPrice);
+                var qty = (decimal)(a.Quantity < 0 ? 0 : a.Quantity);
+                if (a.IsPercentage)
+                    Add("Allowance", a.Name, a.AllowanceType, amount, note: $"{Fmt.Percent(a.PercentageValue ?? 0m)} of basic");
+                else if (UsesFuelPrice(a))
+                    Add("Allowance", a.Name, a.AllowanceType, amount, qty, calc.FuelPrice);
+                else if (IsFuelAllowanceName(a.Name) || IsFuelAllowanceType(a.AllowanceType))
+                    Add("Allowance", a.Name, a.AllowanceType, amount); // a fixed fuel amount has no unit rate
+                else
+                    Add("Allowance", a.Name, a.AllowanceType, amount, qty, a.Amount);
+            }
+
+            foreach (var d in calc.Deductions)
+            {
+                var amount = Math.Round(DeductionComputedAmount(d, calc.Gross), 2, MidpointRounding.AwayFromZero);
+                Add("Deduction", string.IsNullOrWhiteSpace(d.DeductionName) ? d.DeductionType : d.DeductionName, d.DeductionType, amount,
+                    note: IsPercentageDeduction(d) ? $"{Fmt.Percent(d.PercentageValue ?? 0m)} of gross" : null);
+            }
+
+            if (calc.Tax.TaxAmount > 0)
+                Add("Tax", "Income Tax", calc.Tax.Category, calc.Tax.TaxAmount);
+
+            return lines;
+        }
+
+        /// <summary>
+        /// A payslip may not hold two lines with the same type and name (UX_PayslipDetails_Payslip_Item), but an employee can have
+        /// two rows of the same allowance or deduction and both are paid, so the second line is named "... (2)".
+        /// </summary>
+        private static string UniqueName(HashSet<string> used, string type, string name)
+        {
+            const int max = 200;
+            var baseName = (name ?? string.Empty).Trim();
+            if (baseName.Length > max - 6) baseName = baseName[..(max - 6)];
+            var candidate = baseName;
+            for (var n = 2; !used.Add(type + "|" + candidate); n++)
+                candidate = $"{baseName} ({n})";
+            return candidate;
         }
 
         /// <summary>
@@ -375,7 +407,7 @@ namespace HRMBT.Web.Services.Payroll
             var monthName = PayrollMonthHelper.Normalize(month);
             var monthNum = PayrollMonthHelper.OrderIndex(monthName);
             var ids = list.Select(e => e.uid).ToList();
-            var fuelPrice = GetFuelPriceFromConfiguration();
+            var fuelPrice = GetFuelPrice(new DateTime(year, monthNum, 1));
             var allowances = _context.Allowances.AsNoTracking().Where(a => ids.Contains(a.EmployeeId) && a.IsActive).ToList()
                 .GroupBy(a => a.EmployeeId).ToDictionary(g => g.Key, g => g.ToList());
             var deductions = _context.Deductions.AsNoTracking().Where(d => ids.Contains(d.EmployeeId) && d.IsActive).ToList()
@@ -398,6 +430,8 @@ namespace HRMBT.Web.Services.Payroll
                     allowances.GetValueOrDefault(e.uid) ?? new List<Allowance>(),
                     deductions.GetValueOrDefault(e.uid) ?? new List<Deduction>(),
                     monthNum, year, SlabsFor);
+                if (calc.FuelPrice <= 0m && calc.Allowances.Any(UsesFuelPrice))
+                    issues.Add(new PayrollIssue(false, "No fuel price is set for this month; fuel by quantity would be 0.00."));
                 if (calc.Net < 0m)
                     issues.Add(new PayrollIssue(false, "Net pay would be negative (deductions and tax are more than gross)."));
                 if (ShouldApplyIncomeTax(e.ApplyTax) && calc.Tax.Text.Contains("no slabs are set up"))

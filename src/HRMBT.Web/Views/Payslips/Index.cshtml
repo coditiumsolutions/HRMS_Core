@@ -1,328 +1,296 @@
-@using HRMBT.Web.Infrastructure
+﻿@using HRMBT.Web.Infrastructure
 @model HRMBT.Web.Models.PaginatedList<HRMBT.Web.Models.Payslip>
 
 @{
+    // The one payslip list (decision T10). No salary figures on the grid.
     ViewData["Title"] = "Payslips";
+    ViewData["Module"] = "Payroll";
     var selectedMonthFilter = ViewBag.Month as string;
-
-    string Initials(string? name)
-    {
-        if (string.IsNullOrWhiteSpace(name)) return "?";
-        var parts = name.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length == 1) return parts[0].Substring(0, Math.Min(2, parts[0].Length)).ToUpperInvariant();
-        return (parts[0][0].ToString() + parts[^1][0].ToString()).ToUpperInvariant();
-    }
+    var detailsBaseUrl = Url.Action("Details", "Payslips", new { id = "__id__" });
+    var selectedStatus = ViewBag.Status as string;
 }
 
 @section Styles {
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" crossorigin="anonymous" />
-    <link rel="stylesheet" href="~/css/payslips.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/employee-list.css" asp-append-version="true" />
 }
 
-<div class="payslip-page py-4">
-    <div class="container-fluid px-3 px-lg-4">
+<div class="employee-list-page py-4">
+    <div class="container-fluid px-0">
 
-        <!-- Breadcrumb -->
-        <nav aria-label="breadcrumb" class="mb-3">
-            <ol class="breadcrumb mb-0 small">
-                <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Home</a></li>
-                <li class="breadcrumb-item"><a asp-controller="Payroll" asp-action="Index">Payroll</a></li>
-                <li class="breadcrumb-item active" aria-current="page">Payslips</li>
-            </ol>
-        </nav>
-
-        <!-- Header -->
-        <div class="page-header-card p-4 mb-4">
-            <div class="row align-items-center g-3">
-                <div class="col-lg">
-                    <h1 class="h2 mb-1 fw-bold text-dark">
-                        <i class="bi bi-receipt text-primary me-2"></i>Payslips
-                    </h1>
-                    <p class="text-muted mb-0">Search, filter, view, print, and manage employee payslips.</p>
-                </div>
-                <div class="col-lg-auto">
-                    <div class="d-flex flex-wrap align-items-center gap-2">
-                        <a asp-action="Create" class="btn btn-action-primary">
-                            <i class="bi bi-plus-lg me-1"></i>Generate Payslip
-                        </a>
-                        <a asp-action="Index" class="btn btn-action-outline">
-                            <i class="bi bi-arrow-clockwise me-1"></i>Refresh
-                        </a>
-                    </div>
-                </div>
+        @if (TempData["Message"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show d-flex align-items-center gap-2 mb-4" role="alert">
+                <i class="bi bi-check-circle-fill"></i>
+                <div>@TempData["Message"]</div>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
             </div>
-
-            @if (Model.TotalCount > 0)
-            {
-                <div class="d-flex flex-wrap align-items-center gap-2 mt-3">
-                    <span class="badge rounded-pill text-bg-light border px-3 py-2">
-                        <i class="bi bi-list-ul me-1 text-primary"></i><strong class="text-dark">@Model.TotalCount</strong> total
-                    </span>
-                    <span class="badge rounded-pill text-bg-light border px-3 py-2">
-                        <i class="bi bi-eye me-1 text-success"></i><strong class="text-dark">@Model.StartRecord–@Model.EndRecord</strong> showing
-                    </span>
-                    <span class="badge rounded-pill text-bg-light border px-3 py-2">
-                        <i class="bi bi-cash-coin me-1 text-warning"></i>Net (filtered period): <strong class="text-dark ms-1">PKR @Fmt.Int((decimal)ViewBag.TotalAmount)</strong>
-                    </span>
-                </div>
-            }
-        </div>
-
+        }
         @if (TempData["SuccessMessage"] != null)
         {
-            <div class="alert alert-success d-flex align-items-center gap-2 mb-4">
+            <div class="alert alert-success alert-dismissible fade show d-flex align-items-center gap-2 mb-4" role="alert">
                 <i class="bi bi-check-circle-fill"></i>
                 <div>@TempData["SuccessMessage"]</div>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
             </div>
         }
         @if (TempData["ErrorMessage"] != null)
         {
-            <div class="alert alert-danger d-flex align-items-center gap-2 mb-4">
-                <i class="bi bi-exclamation-triangle-fill"></i>
-                <div>@TempData["ErrorMessage"]</div>
+            <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    <div>@TempData["ErrorMessage"]</div>
+                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+                </div>
             </div>
         }
 
-        <!-- Filters -->
-        <div class="filter-card mb-4">
-            <div class="card-header"><i class="bi bi-funnel"></i>Search &amp; Filters</div>
-            <div class="card-body p-3 p-lg-4">
-                <form asp-action="Index" method="get" class="row g-3 align-items-end">
-                    <div class="col-12 col-md">
-                        <label class="form-label">Search</label>
-                        <input type="text" name="employeeQuery" class="form-control" placeholder="Name or Employee ID…" value="@ViewBag.EmployeeQuery" />
-                    </div>
-                    <div class="col-12 col-md">
-                        <label class="form-label">Department</label>
-                        <select name="department" class="form-select">
-                            <option value="">All</option>
-                            @if (ViewBag.Departments != null)
-                            {
-                                foreach (var d in ViewBag.Departments)
+        <div class="filter-card filter-card-compact mb-3">
+            <div class="card-header">
+                <span><i class="bi bi-funnel"></i>Search &amp; Filters</span>
+            </div>
+            <div class="card-body p-2 p-lg-3">
+                @{
+                    var selectedYearFilter = ViewBag.Year as int?;
+                    var yearNow = DateTime.Now.Year;
+                    var yearMin = yearNow - 10;
+                    if (selectedYearFilter.HasValue && selectedYearFilter.Value < yearMin)
+                    {
+                        yearMin = selectedYearFilter.Value;
+                    }
+                }
+                <form asp-action="Index" method="get" onsubmit="document.getElementById('pageInput').value = '1';">
+                    <input type="hidden" name="page" id="pageInput" value="1" />
+                    <input type="hidden" name="employeeId" value="@ViewBag.EmployeeId" />
+                    <input type="hidden" name="pageSize" value="@(ViewBag.CurrentPageSize ?? 20)" />
+                    <div class="row g-1 g-md-2 align-items-center">
+                        <div class="col-6 col-md">
+                            <select name="month" id="month" class="form-select form-select-sm" aria-label="Month">
+                                <option value="">All Months</option>
+                                @foreach (var monthName in PayrollMonthHelper.AllMonthNames)
                                 {
-                                    <option value="@d" selected="@(ViewBag.Department as string == (string)d)">@d</option>
+                                    <option value="@monthName" selected="@(string.Equals(selectedMonthFilter, monthName, StringComparison.OrdinalIgnoreCase))">@monthName</option>
                                 }
-                            }
-                        </select>
-                    </div>
-                    <div class="col-12 col-md">
-                        <label class="form-label">Employee</label>
-                        <select name="employeeId" class="form-select">
-                            <option value="">All employees</option>
-                            @{
-                                var employeeOptions = ViewBag.Employees as IEnumerable<HRMBT.Web.Models.ViewModels.PayslipEmployeeOption>
-                                    ?? Enumerable.Empty<HRMBT.Web.Models.ViewModels.PayslipEmployeeOption>();
-                                int? selectedEmpId = ViewBag.EmployeeId as int?;
-                            }
-                            @foreach (var opt in employeeOptions)
-                            {
-                                <option value="@opt.Uid" selected="@(selectedEmpId == opt.Uid)">@opt.EmployeeID — @opt.EmployeeName</option>
-                            }
-                        </select>
-                    </div>
-                    <div class="col-12 col-md">
-                        <label class="form-label">Month</label>
-                        <select name="month" class="form-select">
-                            <option value="">All</option>
-                            @foreach (var monthName in PayrollMonthHelper.AllMonthNames)
-                            {
-                                <option value="@monthName" selected="@(string.Equals(selectedMonthFilter, monthName, StringComparison.OrdinalIgnoreCase))">@monthName</option>
-                            }
-                        </select>
-                    </div>
-                    <div class="col-12 col-md">
-                        <label class="form-label">Year</label>
-                        <select name="year" class="form-select">
-                            <option value="">All</option>
-                            @for (int y = DateTime.Now.Year - 5; y <= DateTime.Now.Year + 1; y++)
-                            {
-                                <option value="@y" selected="@(ViewBag.Year as int? == y)">@y</option>
-                            }
-                        </select>
-                    </div>
-                    <div class="col-12 col-md">
-                        <label class="form-label">Status</label>
-                        <select name="status" class="form-select">
-                            <option value="">All</option>
-                            <option value="Locked" selected="@(string.Equals(ViewBag.Status as string, "Locked", StringComparison.OrdinalIgnoreCase))">Locked</option>
-                            <option value="Unlocked" selected="@(string.Equals(ViewBag.Status as string, "Unlocked", StringComparison.OrdinalIgnoreCase))">Unlocked</option>
-                        </select>
-                    </div>
-                    <div class="col-12 col-md-auto">
-                        <label class="form-label">Per page</label>
-                        <select name="pageSize" class="form-select">
-                            @if (ViewBag.PageSizeOptions != null)
-                            {
-                                foreach (var s in ViewBag.PageSizeOptions)
+                            </select>
+                        </div>
+                        <div class="col-6 col-md">
+                            <select name="year" id="year" class="form-select form-select-sm" aria-label="Year">
+                                <option value="">All Years</option>
+                                @for (int y = yearNow + 1; y >= yearMin; y--)
                                 {
-                                    <option value="@s" selected="@(ViewBag.CurrentPageSize == s)">@s</option>
+                                    <option value="@y" selected="@(selectedYearFilter == y)">@y</option>
                                 }
-                            }
-                        </select>
-                    </div>
-                    <div class="col-12 col-md-auto d-flex gap-2">
-                        <button type="submit" class="btn btn-action-primary">
-                            <i class="bi bi-funnel-fill me-1"></i>Apply
-                        </button>
-                        <a asp-action="Index" class="btn btn-action-secondary">
-                            <i class="bi bi-x-lg me-1"></i>Clear
-                        </a>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md">
+                            <input type="text" name="employeeQuery" id="employeeQuery" class="form-control form-control-sm"
+                                   value="@ViewBag.EmployeeQuery" placeholder="Name or Employee ID…" aria-label="Search by name or employee ID" />
+                        </div>
+                        <div class="col-12 col-md">
+                            <select name="department" id="department" class="form-select form-select-sm" aria-label="Department">
+                                <option value="">All Departments</option>
+                                @if (ViewBag.Departments != null)
+                                {
+                                    foreach (var dept in ViewBag.Departments)
+                                    {
+                                        var deptSelected = ViewBag.Department != null && ViewBag.Department.ToString() == dept;
+                                        <option value="@dept" selected="@deptSelected">@dept</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <div class="col-6 col-md">
+                            <select name="status" id="status" class="form-select form-select-sm" aria-label="Status">
+                                <option value="">All Statuses</option>
+                                <option value="Locked" selected="@(string.Equals(selectedStatus, "Locked", StringComparison.OrdinalIgnoreCase))">Locked</option>
+                                <option value="Unlocked" selected="@(string.Equals(selectedStatus, "Unlocked", StringComparison.OrdinalIgnoreCase))">Unlocked</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-auto">
+                            <button type="submit" class="btn btn-filter-apply btn-action-primary">
+                                <i class="bi bi-funnel-fill me-1"></i>Apply
+                            </button>
+                        </div>
                     </div>
                 </form>
             </div>
         </div>
 
-        <!-- Grid -->
         <div class="grid-card mb-4">
-            <div class="card-header d-flex align-items-center justify-content-between">
+            <div class="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
                 <span><i class="bi bi-table"></i>Payslips</span>
-                @if (Model.TotalCount > 0)
-                {
-                    <span class="small">@Model.StartRecord–@Model.EndRecord of @Model.TotalCount</span>
-                }
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <a class="btn btn-sm btn-grid-edit" asp-controller="Payroll" asp-action="GeneratePayslips"><i class="bi bi-play-fill me-1"></i>Run payroll</a>
+                    <a class="btn btn-sm btn-grid-edit" asp-action="Create"><i class="bi bi-pencil-square me-1"></i>Manual payslip</a>
+                </div>
             </div>
             <div class="card-body">
-                @if (!Model.Any())
-                {
-                    <div class="empty-state">
-                        <i class="bi bi-inboxes"></i>
-                        <h5 class="mb-1">No payslips found</h5>
-                        <p class="mb-3">Try adjusting filters or generate a new payslip.</p>
-                        <a asp-action="Create" class="btn btn-action-primary">
-                            <i class="bi bi-plus-lg me-1"></i>Generate Payslip
-                        </a>
-                    </div>
-                }
-                else
+                @if (Model != null && Model.Any())
                 {
                     <div class="table-wrap table-responsive">
-                        <table class="payslip-grid">
+                        <table class="employee-grid hrms-selectable-grid" id="payrollGrid"
+                               data-details-base="@detailsBaseUrl">
                             <thead>
                                 <tr>
-                                    <th style="width:56px;">&nbsp;</th>
+                                    <th class="text-nowrap">Emp ID</th>
                                     <th>Employee</th>
                                     <th>Department</th>
-                                    <th>Period</th>
+                                    <th class="text-nowrap">Period</th>
                                     <th>Status</th>
-                                    <th class="text-end" style="width:160px;">Actions</th>
+                                    <th class="col-actions text-center" data-align="none" scope="col">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach (var p in Model)
+                                @foreach (var item in Model)
                                 {
-                                    <tr>
+                                    <tr data-record-id="@item.Id" data-can-edit="false" title="Double-click to open">
+                                        <td class="text-nowrap">@(item.Employee?.EmployeeID ?? ("#" + item.EmployeeId))</td>
                                         <td>
-                                            <span class="d-inline-flex align-items-center justify-content-center rounded-circle text-white fw-bold"
-                                                  style="width:36px;height:36px;font-size:.85rem;background:linear-gradient(135deg,#336b87 0%,#00203f 100%);">
-                                                @Initials(p.Employee?.EmployeeName)
-                                            </span>
+                                            <div class="emp-name">@(item.Employee?.EmployeeName ?? "—")</div>
+                                            <div class="emp-meta">@(item.Employee?.Designation ?? "—")</div>
                                         </td>
+                                        <td>@(item.Employee?.Department ?? "—")</td>
+                                        <td class="text-nowrap">@item.Month @item.Year</td>
                                         <td>
-                                            <div class="fw-semibold">@(p.Employee?.EmployeeName ?? "—")</div>
-                                            <div class="text-muted small">@(p.Employee?.EmployeeID ?? "—")</div>
-                                        </td>
-                                        <td>@(p.Employee?.Department ?? "—")</td>
-                                        <td class="text-nowrap">@p.Month @p.Year</td>
-                                        <td>
-                                            @if (p.IsLocked)
+                                            @if (item.IsLocked)
                                             {
-                                                <span class="status-pill status-locked">Locked</span>
+                                                <span class="status-pill status-inactive">Locked</span>
                                             }
                                             else
                                             {
-                                                <span class="status-pill status-unlocked">Unlocked</span>
+                                                <span class="status-pill status-active">Unlocked</span>
                                             }
                                         </td>
-                                        <td class="text-end">
-                                            <div class="row-actions">
-                                                <a class="btn btn-view" asp-action="Details" asp-route-id="@p.Id" title="View"><i class="bi bi-eye"></i></a>
-                                                <a class="btn btn-print" asp-action="Print" asp-route-id="@p.Id" title="Print" target="_blank"><i class="bi bi-printer"></i></a>
-                                                <a class="btn btn-delete" asp-action="Delete" asp-route-id="@p.Id" title="Delete"><i class="bi bi-trash"></i></a>
-                                            </div>
+                                        <td class="col-actions">
+                                            <a class="row-action row-action-view" asp-action="Details" asp-route-id="@item.Id" title="View payslip" aria-label="View payslip"><i class="bi bi-eye"></i></a>
+                                            <a class="row-action row-action-view" asp-action="Print" asp-route-id="@item.Id" target="_blank" title="Print payslip" aria-label="Print payslip"><i class="bi bi-printer"></i></a>
+                                            @if (!item.IsLocked)
+                                            {
+                                                <a class="row-action row-action-delete" asp-action="Delete" asp-route-id="@item.Id" title="Delete payslip" aria-label="Delete payslip"><i class="bi bi-trash3"></i></a>
+                                            }
                                         </td>
                                     </tr>
                                 }
                             </tbody>
                         </table>
                     </div>
+
+                    <p class="text-muted small px-3 py-2 mb-0 border-top">
+                        Showing @Model.StartRecord to @Model.EndRecord of @Model.TotalCount payslip(s)
+                        @{
+                            var filters = new List<string>();
+                            if (!string.IsNullOrWhiteSpace(selectedMonthFilter))
+                            {
+                                filters.Add(selectedMonthFilter);
+                            }
+                            if (ViewBag.Year != null)
+                            {
+                                filters.Add(ViewBag.Year.ToString());
+                            }
+                            if (ViewBag.EmployeeQuery != null)
+                            {
+                                filters.Add($"Search: {ViewBag.EmployeeQuery}");
+                            }
+                            if (ViewBag.Department != null)
+                            {
+                                filters.Add(ViewBag.Department.ToString());
+                            }
+                        }
+                        @if (filters.Any())
+                        {
+                            <span> — @string.Join(", ", filters)</span>
+                        }
+                    </p>
+
+                    @if (Model.TotalPages > 1)
+                    {
+                        <nav aria-label="Payslip pagination" class="mt-2 px-3 pb-3">
+                            <ul class="pagination justify-content-center mb-2">
+                                @{
+                                    var prevDisabled = !Model.HasPreviousPage ? "disabled" : "";
+                                    var nextDisabled = !Model.HasNextPage ? "disabled" : "";
+                                    int startPage = Math.Max(1, Model.PageIndex - 2);
+                                    int endPage = Math.Min(Model.TotalPages, Model.PageIndex + 2);
+                                    if (endPage - startPage < 4)
+                                    {
+                                        if (startPage == 1) { endPage = Math.Min(Model.TotalPages, startPage + 4); }
+                                        else if (endPage == Model.TotalPages) { startPage = Math.Max(1, endPage - 4); }
+                                    }
+                                }
+
+                                <li class="page-item @prevDisabled">
+                                    <a class="page-link" asp-action="Index"
+                                       asp-route-page="1"
+                                       asp-route-pageSize="@ViewBag.CurrentPageSize"
+                                       asp-route-month="@ViewBag.Month"
+                                       asp-route-year="@ViewBag.Year"
+                                       asp-route-employeeQuery="@ViewBag.EmployeeQuery"
+                                       asp-route-department="@ViewBag.Department" asp-route-status="@ViewBag.Status" asp-route-employeeId="@ViewBag.EmployeeId">&laquo;&laquo;</a>
+                                </li>
+
+                                <li class="page-item @prevDisabled">
+                                    <a class="page-link" asp-action="Index"
+                                       asp-route-page="@(Model.PageIndex - 1)"
+                                       asp-route-pageSize="@ViewBag.CurrentPageSize"
+                                       asp-route-month="@ViewBag.Month"
+                                       asp-route-year="@ViewBag.Year"
+                                       asp-route-employeeQuery="@ViewBag.EmployeeQuery"
+                                       asp-route-department="@ViewBag.Department" asp-route-status="@ViewBag.Status" asp-route-employeeId="@ViewBag.EmployeeId">&laquo;</a>
+                                </li>
+
+                                @for (int i = startPage; i <= endPage; i++)
+                                {
+                                    var active = i == Model.PageIndex ? "active" : "";
+                                    <li class="page-item @active">
+                                        <a class="page-link" asp-action="Index"
+                                           asp-route-page="@i"
+                                           asp-route-pageSize="@ViewBag.CurrentPageSize"
+                                           asp-route-month="@ViewBag.Month"
+                                           asp-route-year="@ViewBag.Year"
+                                           asp-route-employeeQuery="@ViewBag.EmployeeQuery"
+                                           asp-route-department="@ViewBag.Department" asp-route-status="@ViewBag.Status" asp-route-employeeId="@ViewBag.EmployeeId">@i</a>
+                                    </li>
+                                }
+
+                                <li class="page-item @nextDisabled">
+                                    <a class="page-link" asp-action="Index"
+                                       asp-route-page="@(Model.PageIndex + 1)"
+                                       asp-route-pageSize="@ViewBag.CurrentPageSize"
+                                       asp-route-month="@ViewBag.Month"
+                                       asp-route-year="@ViewBag.Year"
+                                       asp-route-employeeQuery="@ViewBag.EmployeeQuery"
+                                       asp-route-department="@ViewBag.Department" asp-route-status="@ViewBag.Status" asp-route-employeeId="@ViewBag.EmployeeId">&raquo;</a>
+                                </li>
+
+                                <li class="page-item @nextDisabled">
+                                    <a class="page-link" asp-action="Index"
+                                       asp-route-page="@Model.TotalPages"
+                                       asp-route-pageSize="@ViewBag.CurrentPageSize"
+                                       asp-route-month="@ViewBag.Month"
+                                       asp-route-year="@ViewBag.Year"
+                                       asp-route-employeeQuery="@ViewBag.EmployeeQuery"
+                                       asp-route-department="@ViewBag.Department" asp-route-status="@ViewBag.Status" asp-route-employeeId="@ViewBag.EmployeeId">&raquo;&raquo;</a>
+                                </li>
+                            </ul>
+                            <div class="text-center text-muted small">
+                                Page @Model.PageIndex of @Model.TotalPages (Total: @Model.TotalCount records)
+                            </div>
+                        </nav>
+                    }
+                }
+                else
+                {
+                    <div class="empty-state">
+                        <i class="bi bi-inboxes"></i>
+                        <h5 class="mb-1">No payslips found</h5>
+                        <p class="mb-0">No payslips match the selected filters.</p>
+                    </div>
                 }
             </div>
         </div>
-
-        <!-- Pagination -->
-        @if (Model.TotalPages > 1)
-        {
-            <nav aria-label="Payslip pagination" class="mb-2">
-                <ul class="pagination justify-content-center flex-wrap">
-                    @{
-                        int startPage = Math.Max(1, Model.PageIndex - 2);
-                        int endPage = Math.Min(Model.TotalPages, Model.PageIndex + 2);
-                        if (endPage - startPage < 4)
-                        {
-                            if (startPage == 1) endPage = Math.Min(Model.TotalPages, startPage + 4);
-                            else if (endPage == Model.TotalPages) startPage = Math.Max(1, endPage - 4);
-                        }
-                        string Disabled(bool d) => d ? "disabled" : "";
-                    }
-
-                    <li class="page-item @Disabled(!Model.HasPreviousPage)">
-                        <a class="page-link" asp-action="Index" asp-route-page="1"
-                           asp-route-employeeQuery="@ViewBag.EmployeeQuery"
-                           asp-route-department="@ViewBag.Department"
-                           asp-route-employeeId="@ViewBag.EmployeeId"
-                           asp-route-month="@ViewBag.Month"
-                           asp-route-year="@ViewBag.Year"
-                           asp-route-status="@ViewBag.Status"
-                           asp-route-pageSize="@ViewBag.CurrentPageSize"><i class="bi bi-chevron-bar-left"></i></a>
-                    </li>
-                    <li class="page-item @Disabled(!Model.HasPreviousPage)">
-                        <a class="page-link" asp-action="Index" asp-route-page="@(Model.PageIndex - 1)"
-                           asp-route-employeeQuery="@ViewBag.EmployeeQuery"
-                           asp-route-department="@ViewBag.Department"
-                           asp-route-employeeId="@ViewBag.EmployeeId"
-                           asp-route-month="@ViewBag.Month"
-                           asp-route-year="@ViewBag.Year"
-                           asp-route-status="@ViewBag.Status"
-                           asp-route-pageSize="@ViewBag.CurrentPageSize"><i class="bi bi-chevron-left"></i></a>
-                    </li>
-                    @for (int i = startPage; i <= endPage; i++)
-                    {
-                        <li class="page-item @(i == Model.PageIndex ? "active" : "")">
-                            <a class="page-link" asp-action="Index" asp-route-page="@i"
-                               asp-route-employeeQuery="@ViewBag.EmployeeQuery"
-                               asp-route-department="@ViewBag.Department"
-                               asp-route-employeeId="@ViewBag.EmployeeId"
-                               asp-route-month="@ViewBag.Month"
-                               asp-route-year="@ViewBag.Year"
-                               asp-route-status="@ViewBag.Status"
-                               asp-route-pageSize="@ViewBag.CurrentPageSize">@i</a>
-                        </li>
-                    }
-                    <li class="page-item @Disabled(!Model.HasNextPage)">
-                        <a class="page-link" asp-action="Index" asp-route-page="@(Model.PageIndex + 1)"
-                           asp-route-employeeQuery="@ViewBag.EmployeeQuery"
-                           asp-route-department="@ViewBag.Department"
-                           asp-route-employeeId="@ViewBag.EmployeeId"
-                           asp-route-month="@ViewBag.Month"
-                           asp-route-year="@ViewBag.Year"
-                           asp-route-status="@ViewBag.Status"
-                           asp-route-pageSize="@ViewBag.CurrentPageSize"><i class="bi bi-chevron-right"></i></a>
-                    </li>
-                    <li class="page-item @Disabled(!Model.HasNextPage)">
-                        <a class="page-link" asp-action="Index" asp-route-page="@Model.TotalPages"
-                           asp-route-employeeQuery="@ViewBag.EmployeeQuery"
-                           asp-route-department="@ViewBag.Department"
-                           asp-route-employeeId="@ViewBag.EmployeeId"
-                           asp-route-month="@ViewBag.Month"
-                           asp-route-year="@ViewBag.Year"
-                           asp-route-status="@ViewBag.Status"
-                           asp-route-pageSize="@ViewBag.CurrentPageSize"><i class="bi bi-chevron-bar-right"></i></a>
-                    </li>
-                </ul>
-            </nav>
-            <div class="text-center text-muted small mb-0">
-                Page @Model.PageIndex of @Model.TotalPages
-            </div>
-        }
     </div>
 </div>
+
+@section Scripts {
+    @await Html.PartialAsync("_HrmsGridSelectionScript")
+}

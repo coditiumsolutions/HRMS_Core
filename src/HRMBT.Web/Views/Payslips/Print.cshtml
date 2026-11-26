@@ -88,7 +88,7 @@
                         @foreach (var line in allowanceLines)
                         {
                             <tr>
-                                <td>@line.ItemName (@line.ItemCategory)</td>
+                                <td>@line.ItemName (@line.ItemCategory)@(Fmt.LineWorking(line) is { Length: > 0 } working ? " · " + working : "")</td>
                                 <td class="amount">@Fmt.Amount(line.Amount)</td>
                             </tr>
                         }
@@ -106,7 +106,7 @@
                         @foreach (var line in deductionLines)
                         {
                             <tr>
-                                <td>@line.ItemName (@line.ItemCategory)</td>
+                                <td>@line.ItemName (@line.ItemCategory)@(Fmt.LineWorking(line) is { Length: > 0 } working ? " · " + working : "")</td>
                                 <td class="amount">- @Fmt.Amount(line.Amount)</td>
                             </tr>
                         }
@@ -126,7 +126,7 @@
                         @foreach (var line in taxLines)
                         {
                             <tr>
-                                <td>@line.ItemName (@line.ItemCategory)</td>
+                                <td>@line.ItemName (@line.ItemCategory)@(Fmt.LineWorking(line) is { Length: > 0 } working ? " · " + working : "")</td>
                                 <td class="amount">- @Fmt.Amount(line.Amount)</td>
                             </tr>
                         }

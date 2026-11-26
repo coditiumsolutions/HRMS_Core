@@ -21,6 +21,7 @@ namespace HRMBT.Web.Data
         public DbSet<AttendanceUploadLog> AttendanceUploadLogs { get; set; }
         public DbSet<LeaveRequest> LeaveRequests { get; set; }
         public DbSet<TaxRule> TaxRules { get; set; }
+        public DbSet<FuelPrice> FuelPrices { get; set; }
 
         // LMS module
         public DbSet<LeaveQuota> LeaveQuotas { get; set; }
@@ -323,11 +324,21 @@ namespace HRMBT.Web.Data
                 entity.Property(d => d.CreatedBy).HasMaxLength(100).IsRequired();
                 entity.Property(d => d.ModifiedBy).HasMaxLength(100);
             });
+            modelBuilder.Entity<FuelPrice>(entity =>
+            {
+                entity.ToTable("FuelPrices");
+                entity.Property(f => f.EffectiveFrom).HasColumnType("date");
+                entity.Property(f => f.UnitPrice).HasColumnType("decimal(18,2)");
+                entity.Property(f => f.CreatedAt).HasColumnType("datetime2(0)").HasDefaultValueSql("sysdatetime()");
+            });
             modelBuilder.Entity<PayslipDetail>(entity =>
             {
                 entity.Property(d => d.Amount).HasColumnType("decimal(18,2)");
                 entity.ToTable("PayslipDetails");
                 entity.Property(d => d.ItemType).HasMaxLength(20).IsUnicode(false);
+                entity.Property(d => d.Quantity).HasColumnType("decimal(9,2)");
+                entity.Property(d => d.UnitAmount).HasColumnType("decimal(18,2)");
+                entity.Property(d => d.Note).HasMaxLength(200);
                 entity.HasOne(d => d.Payslip)
                     .WithMany(p => p.PayslipDetails)
                     .HasForeignKey(d => d.PayslipId)

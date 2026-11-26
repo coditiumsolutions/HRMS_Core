@@ -20,6 +20,10 @@
         .Where(d => string.Equals(d.ItemType, "Deduction", StringComparison.OrdinalIgnoreCase))
         .OrderBy(d => d.SortOrder ?? int.MaxValue)
         .ToList();
+    var taxLines = (Model.PayslipDetails ?? Enumerable.Empty<HRMBT.Web.Models.PayslipDetail>())
+        .Where(d => string.Equals(d.ItemType, "Tax", StringComparison.OrdinalIgnoreCase))
+        .OrderBy(d => d.SortOrder ?? int.MaxValue)
+        .ToList();
     var payrollDedTotal = deductionLines.Count > 0 ? deductionLines.Sum(l => l.Amount) : Model.TotalDeductions;
 }
 
@@ -38,6 +42,21 @@
                 <li class="breadcrumb-item active" aria-current="page">Details</li>
             </ol>
         </nav>
+
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success d-flex align-items-center gap-2 mb-4">
+                <i class="bi bi-check-circle-fill"></i>
+                <div>@TempData["SuccessMessage"]</div>
+            </div>
+        }
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-danger d-flex align-items-center gap-2 mb-4">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                <div>@TempData["ErrorMessage"]</div>
+            </div>
+        }
 
         <div class="page-header-card p-4 mb-4">
             <div class="row align-items-center g-3">
@@ -115,7 +134,10 @@
                                         @foreach (var line in allowanceLines)
                                         {
                                             <tr>
-                                                <td>@line.ItemName <span class="text-muted small">(@line.ItemCategory)</span></td>
+                                                <td>
+                                                    @line.ItemName <span class="text-muted small">(@line.ItemCategory)</span>
+                                                    @if (Fmt.LineWorking(line) is { Length: > 0 } working) { <div class="text-muted small">@working</div> }
+                                                </td>
                                                 <td class="text-end">@Fmt.Amount(line.Amount)</td>
                                             </tr>
                                         }
@@ -135,6 +157,31 @@
                                     </thead>
                                     <tbody>
                                         @foreach (var line in deductionLines)
+                                        {
+                                            <tr>
+                                                <td>
+                                                    @line.ItemName <span class="text-muted small">(@line.ItemCategory)</span>
+                                                    @if (Fmt.LineWorking(line) is { Length: > 0 } working) { <div class="text-muted small">@working</div> }
+                                                </td>
+                                                <td class="text-end">@Fmt.Amount(line.Amount)</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        @if (taxLines.Count > 0)
+                        {
+                            <div class="table-responsive mt-3">
+                                <table class="table table-sm table-bordered mb-0 align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Tax</th>
+                                            <th class="text-end">Amount (PKR)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var line in taxLines)
                                         {
                                             <tr>
                                                 <td>@line.ItemName <span class="text-muted small">(@line.ItemCategory)</span></td>
@@ -267,6 +314,13 @@
                             <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-grid-delete">
                                 <i class="bi bi-trash me-1"></i>Delete
                             </a>
+                        }
+                        @if (ViewBag.CanRegenerate == true)
+                        {
+                            <form asp-action="Regenerate" asp-route-id="@Model.Id" method="post" class="m-0"
+                                  onsubmit="return confirm('Work this payslip out again from the current salary, allowances, deductions and tax rules? The figures on it will be replaced.');">
+                                <button type="submit" class="btn btn-action-secondary"><i class="bi bi-arrow-repeat me-1"></i>Regenerate</button>
+                            </form>
                         }
                         <a asp-action="Print" asp-route-id="@Model.Id" class="btn btn-action-success" target="_blank">
                             <i class="bi bi-printer me-1"></i>Print payslip

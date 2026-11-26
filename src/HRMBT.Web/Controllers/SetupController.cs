@@ -14,16 +14,84 @@ namespace HRMBT.Web.Controllers;
 public class SetupController : Controller
 {
     private readonly ApplicationDbContext _context;
+    private readonly IAuditLogService _auditLog;
 
-    public SetupController(ApplicationDbContext context)
+    public SetupController(ApplicationDbContext context, IAuditLogService auditLog)
     {
         _context = context;
+        _auditLog = auditLog;
     }
 
     [HttpGet("")]
     public IActionResult Index()
     {
         return View();
+    }
+
+    // ---------- fuel prices (T9) ----------
+
+    [HttpGet("fuel-prices")]
+    public async Task<IActionResult> FuelPrices()
+    {
+        ViewData["Module"] = "Setup";
+        return View(await _context.FuelPrices.AsNoTracking().OrderByDescending(f => f.EffectiveFrom).ToListAsync());
+    }
+
+    [HttpPost("fuel-prices")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AddFuelPrice(DateTime? effectiveFrom, decimal? unitPrice)
+    {
+        if (effectiveFrom == null || effectiveFrom.Value.Year < 2000 || effectiveFrom.Value.Year > 2100)
+            TempData["ErrorMessage"] = "Enter the date the price starts from.";
+        else if (unitPrice is not > 0 or > 1_000_000)
+            TempData["ErrorMessage"] = "Enter a price above zero.";
+        else if (await _context.FuelPrices.AnyAsync(f => f.EffectiveFrom == effectiveFrom.Value.Date))
+            TempData["ErrorMessage"] = "There is already a price from that date. Remove it first to replace it.";
+        else
+        {
+            var row = new FuelPrice
+            {
+                EffectiveFrom = effectiveFrom.Value.Date,
+                UnitPrice = Math.Round(unitPrice.Value, 2, MidpointRounding.AwayFromZero),
+                CreatedBy = User.Identity?.Name
+            };
+            _context.FuelPrices.Add(row);
+            await _context.SaveChangesAsync();
+            await _auditLog.WriteAsync("FuelPrices", "INSERT", row.Id.ToString(), null, null, new { row.EffectiveFrom, row.UnitPrice }, "Setup");
+            TempData["SuccessMessage"] = "Fuel price added. Existing payslips keep the price they were generated with.";
+        }
+        return RedirectToAction(nameof(FuelPrices));
+    }
+
+    [HttpPost("fuel-prices/{id:int}/delete")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteFuelPrice(int id)
+    {
+        var row = await _context.FuelPrices.FindAsync(id);
+        if (row == null)
+            return NotFound();
+        if (await _context.FuelPrices.CountAsync() == 1)
+        {
+            TempData["ErrorMessage"] = "This is the only fuel price. Add another before removing it.";
+            return RedirectToAction(nameof(FuelPrices));
+        }
+
+        var old = new { row.EffectiveFrom, row.UnitPrice };
+        _context.FuelPrices.Remove(row);
+        await _context.SaveChangesAsync();
+        await _auditLog.WriteAsync("FuelPrices", "DELETE", id.ToString(), null, old, null, "Setup");
+        TempData["SuccessMessage"] = "Fuel price removed.";
+        return RedirectToAction(nameof(FuelPrices));
+    }
+
+    /// <summary>The old single FuelPrice entry in Configuration is no longer read; editing it would change nothing.</summary>
+    private static bool IsRetiredFuelKey(string? key) =>
+        string.Equals((key ?? "").Trim(), "FuelPrice", StringComparison.OrdinalIgnoreCase);
+
+    private IActionResult FuelPriceMoved()
+    {
+        TempData["ErrorMessage"] = "The fuel price is now kept here, with the date each price starts from.";
+        return RedirectToAction(nameof(FuelPrices));
     }
 
     [HttpGet("config")]
@@ -46,6 +114,9 @@ public class SetupController : Controller
         if (!ModelState.IsValid)
             return View(model);
 
+        if (IsRetiredFuelKey(model.ConfigKey))
+            return FuelPriceMoved();
+
         var row = new HrConfiguration
         {
             ConfigKey = string.IsNullOrWhiteSpace(model.ConfigKey) ? null : model.ConfigKey.Trim(),
@@ -63,6 +134,8 @@ public class SetupController : Controller
         var row = await _context.HrConfigurations.AsNoTracking().FirstOrDefaultAsync(c => c.UID == id);
         if (row == null)
             return NotFound();
+        if (IsRetiredFuelKey(row.ConfigKey))
+            return FuelPriceMoved();
 
         var vm = new ConfigEditVm
         {
@@ -86,6 +159,8 @@ public class SetupController : Controller
         var row = await _context.HrConfigurations.FindAsync(id);
         if (row == null)
             return NotFound();
+        if (IsRetiredFuelKey(row.ConfigKey) || IsRetiredFuelKey(model.ConfigKey))
+            return FuelPriceMoved();
 
         row.ConfigKey = string.IsNullOrWhiteSpace(model.ConfigKey) ? null : model.ConfigKey.Trim();
         row.ConfigValue = string.IsNullOrWhiteSpace(model.ConfigValue) ? null : model.ConfigValue.Trim();

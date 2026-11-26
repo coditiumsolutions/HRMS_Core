@@ -1,0 +1,107 @@
+﻿@model List<HRMBT.Web.Models.FuelPrice>
+@{
+    ViewData["Title"] = "Fuel prices";
+    var thisMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+    var current = Model.FirstOrDefault(f => f.EffectiveFrom <= thisMonth);
+}
+
+@section Styles {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" crossorigin="anonymous" />
+    <link rel="stylesheet" href="~/css/employee-list.css" asp-append-version="true" />
+}
+
+<div class="employee-list-page py-3">
+    <div class="container-fluid px-0">
+
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show d-flex align-items-center gap-2 mb-3" role="alert">
+                <i class="bi bi-check-circle-fill"></i>
+                <div>@TempData["SuccessMessage"]</div>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+            </div>
+        }
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center gap-2 mb-3" role="alert">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                <div>@TempData["ErrorMessage"]</div>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+            </div>
+        }
+
+        <div class="grid-card mb-3">
+            <div class="card-header"><span><i class="bi bi-plus-circle"></i>Add a price</span></div>
+            <div class="card-body grid-form">
+                <form asp-action="AddFuelPrice" method="post" class="row g-2 align-items-end">
+                    <div class="col-12 col-md-4">
+                        <label for="effectiveFrom" class="form-label">Starts from</label>
+                        <input type="date" name="effectiveFrom" id="effectiveFrom" class="form-control form-control-sm" min="2000-01-01" max="2100-12-31" required />
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <label for="unitPrice" class="form-label">Price per unit (PKR)</label>
+                        <input type="number" name="unitPrice" id="unitPrice" class="form-control form-control-sm" min="0.01" max="1000000" step="0.01" required />
+                    </div>
+                    <div class="col-12 col-md-auto">
+                        <button type="submit" class="btn btn-sm btn-action-primary"><i class="bi bi-plus-lg me-1"></i>Add</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="grid-card mb-4">
+            <div class="card-header"><span><i class="bi bi-fuel-pump"></i>Fuel prices <span class="text-muted small ms-1">(@Model.Count)</span></span></div>
+            <div class="card-body">
+                <p class="grid-note">
+                    Payroll uses the price in force on the 1st of the payslip month, so a price that starts mid-month counts from the next month.
+                    Payslips already generated keep the price they used.
+                </p>
+                @if (Model.Count == 0)
+                {
+                    <div class="empty-state">
+                        <i class="bi bi-inbox"></i>
+                        <h5 class="mb-1">No fuel price yet</h5>
+                        <p class="mb-0">Fuel allowances by quantity are 0.00 until a price is added.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-wrap table-responsive">
+                        <table class="employee-grid">
+                            <thead>
+                                <tr>
+                                    <th>Starts from</th>
+                                    <th class="text-end">Price per unit (PKR)</th>
+                                    <th>Status</th>
+                                    <th>Added by</th>
+                                    <th class="col-actions text-center" data-align="none" scope="col">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var f in Model)
+                                {
+                                    <tr>
+                                        <td>@Fmt.ShortDate(f.EffectiveFrom)</td>
+                                        <td class="text-end">@Fmt.Amount(f.UnitPrice)</td>
+                                        <td>
+                                            @if (current != null && f.Id == current.Id) { <span class="status-pill status-active">In use this month</span> }
+                                            else if (f.EffectiveFrom > thisMonth) { <span class="status-pill status-inactive">Upcoming</span> }
+                                            else { <span class="text-muted">Past</span> }
+                                        </td>
+                                        <td>@(f.CreatedBy ?? "—")</td>
+                                        <td class="col-actions">
+                                            <form asp-action="DeleteFuelPrice" asp-route-id="@f.Id" method="post" class="d-inline m-0"
+                                                  onsubmit="return confirm('Remove this fuel price?');">
+                                                <button type="submit" class="row-action row-action-delete border-0" title="Remove price" aria-label="Remove price"><i class="bi bi-trash3"></i></button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

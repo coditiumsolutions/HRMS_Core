@@ -78,7 +78,7 @@
                         <form asp-action="Delete" method="post" class="d-flex flex-wrap gap-2 mt-4">
                             @Html.AntiForgeryToken()
                             <input type="hidden" name="id" value="@Model.Id" />
-                            <a asp-controller="Payroll" asp-action="Index" class="btn btn-action-outline">
+                            <a asp-action="Index" class="btn btn-action-outline">
                                 <i class="bi bi-arrow-left-short me-1"></i>Cancel
                             </a>
                             <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-action-secondary">

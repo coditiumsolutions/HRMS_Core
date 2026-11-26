@@ -13,16 +13,27 @@ namespace HRMBT.Web.Controllers
         private readonly ApplicationDbContext _context;
         private readonly HRMBT.Web.Services.IAuditLogService _auditLog;
 
-        public PayslipsController(ApplicationDbContext context, HRMBT.Web.Services.IAuditLogService auditLog)
+        private readonly HRMBT.Web.Services.Payroll.PayrollCalculationService _payrollService;
+
+        public PayslipsController(ApplicationDbContext context, HRMBT.Web.Services.IAuditLogService auditLog,
+            HRMBT.Web.Services.Payroll.PayrollCalculationService payrollService)
         {
             _context = context;
             _auditLog = auditLog;
+            _payrollService = payrollService;
         }
 
         private static object PayslipSnapshot(Payslip p) => new
         {
             p.Id, p.EmployeeId, p.Month, p.Year, p.BasicSalary, p.TotalAllowances, p.GrossSalary,
             p.TaxAmount, p.TotalDeductions, p.NetSalary, p.IsLocked, p.GeneratedBy
+        };
+
+        private static object PayslipWithLines(Payslip p) => new
+        {
+            Payslip = PayslipSnapshot(p),
+            Lines = p.PayslipDetails.OrderBy(d => d.SortOrder)
+                .Select(d => new { d.ItemType, d.ItemName, d.Quantity, d.UnitAmount, d.Amount }).ToList()
         };
 
         // GET: /Payslips
@@ -98,19 +109,6 @@ namespace HRMBT.Web.Controllers
                 .OrderBy(d => d)
                 .ToListAsync();
 
-            ViewBag.Employees = await _context.Employees
-                .OrderBy(e => e.EmployeeName)
-                .Select(e => new PayslipEmployeeOption
-                {
-                    Uid = e.uid,
-                    EmployeeID = e.EmployeeID,
-                    EmployeeName = e.EmployeeName,
-                    Department = e.DepartmentInfo!.DepartmentName,
-                    Designation = e.DesignationInfo!.Name,
-                    BasicSalary = e.BasicSalary ?? 0m
-                })
-                .ToListAsync();
-
             ViewBag.EmployeeQuery = employeeQuery;
             ViewBag.Department = department;
             ViewBag.EmployeeId = employeeId;
@@ -118,12 +116,6 @@ namespace HRMBT.Web.Controllers
             ViewBag.Year = year;
             ViewBag.Status = status;
             ViewBag.CurrentPageSize = pageSize;
-            ViewBag.PageSizeOptions = new List<int> { 10, 20, 50, 100 };
-
-            ViewBag.TotalAmount = await _context.Payslips
-                .Where(p => (monthFilter == null || p.Month == monthFilter)
-                         && (!year.HasValue || p.Year == year.Value))
-                .SumAsync(p => (decimal?)p.NetSalary) ?? 0m;
 
             return View(paginated);
         }
@@ -258,7 +250,29 @@ namespace HRMBT.Web.Controllers
 
             if (payslip == null) return NotFound();
 
+            ViewBag.CanRegenerate = !payslip.IsLocked && !HRMBT.Web.Services.Payroll.PayrollCalculationService.IsManual(payslip);
             return View(payslip);
+        }
+
+        // POST: /payslips/5/regenerate  (T4: update the same payslip and replace its lines)
+        [HttpPost("{id:int}/regenerate")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Regenerate(int id)
+        {
+            try
+            {
+                var refusal = await _payrollService.RegeneratePayslipAsync(id, User.Identity?.Name ?? "System", PayslipWithLines,
+                    (p, before) => _auditLog.WriteAsync("Payslips", "UPDATE", p.Id.ToString(), p.EmployeeId, before, PayslipWithLines(p), "Payroll (regenerate)"));
+                if (refusal == null)
+                    TempData["SuccessMessage"] = "Payslip regenerated from the current salary, allowances, deductions and tax rules.";
+                else
+                    TempData["ErrorMessage"] = refusal;
+            }
+            catch (DbUpdateException)
+            {
+                TempData["ErrorMessage"] = "The payslip could not be regenerated. It was left as it was.";
+            }
+            return RedirectToAction(nameof(Details), new { id });
         }
 
         // GET: /Payslips/Print/5
@@ -309,7 +323,7 @@ namespace HRMBT.Web.Controllers
                 if (payslip.IsLocked)
                 {
                     TempData["ErrorMessage"] = "This payslip is locked and cannot be deleted.";
-                    return RedirectToAction("Index", "Payroll");
+                    return RedirectToAction(nameof(Index));
                 }
 
                 var oldSnapshot = PayslipSnapshot(payslip);
@@ -323,7 +337,7 @@ namespace HRMBT.Web.Controllers
                 TempData["SuccessMessage"] = "Payslip deleted.";
             }
 
-            return RedirectToAction("Index", "Payroll");
+            return RedirectToAction(nameof(Index));
         }
 
         // ---------- AJAX ----------

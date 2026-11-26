@@ -72,27 +72,15 @@ public class AllowancesController : Controller
     private Task<List<string>> GetAllowanceNamesFromConfigurationAsync() =>
         GetConfigValuesAsync(AllowanceNamesConfigKey);
 
-    private async Task<decimal> GetFuelUnitPriceFromConfigurationAsync()
+    /// <summary>Fuel price in force on the 1st of this month (dbo.FuelPrices), 0 if none: what payroll would use now (T9).</summary>
+    private async Task<decimal> GetFuelUnitPriceAsync()
     {
-        var rows = await _context.HrConfigurations
-            .AsNoTracking()
-            .Where(c => c.ConfigKey != null && c.ConfigValue != null)
-            .ToListAsync();
-
-        var raw = rows
-            .Where(c => ConfigKeyMatches(c.ConfigKey, "FuelPrice"))
-            .Select(c => c.ConfigValue)
-            .FirstOrDefault();
-
-        if (string.IsNullOrWhiteSpace(raw))
-            return 0m;
-
-        // Prefer first CSV token if multiple values are stored.
-        var token = SplitConfigCsv(raw).FirstOrDefault() ?? raw.Trim();
-        return decimal.TryParse(token, System.Globalization.NumberStyles.Number,
-            System.Globalization.CultureInfo.InvariantCulture, out var price)
-            ? price
-            : 0m;
+        var firstOfMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+        return await _context.FuelPrices.AsNoTracking()
+            .Where(f => f.EffectiveFrom <= firstOfMonth)
+            .OrderByDescending(f => f.EffectiveFrom)
+            .Select(f => (decimal?)f.UnitPrice)
+            .FirstOrDefaultAsync() ?? 0m;
     }
 
     private static bool IsFuelAllowanceName(string? allowanceName) =>
@@ -585,11 +573,11 @@ public class AllowancesController : Controller
         return RedirectToAction(nameof(Add), routeValues);
     }
 
-    /// <summary>Unit fuel price from dbo.Configuration where ConfigKey = FuelPrice (0 if missing).</summary>
+    /// <summary>Unit fuel price for the form hint.</summary>
     [HttpGet("fuel-price")]
     public async Task<IActionResult> FuelPrice()
     {
-        var unit = await GetFuelUnitPriceFromConfigurationAsync();
+        var unit = await GetFuelUnitPriceAsync();
         return Json(new { unitPrice = unit, found = unit > 0 });
     }
 

@@ -49,6 +49,16 @@ public static class Fmt
     /// <summary>Percentage given as 12.5 (not 0.125): 12.5%.</summary>
     public static string Percent(decimal? v) => v.HasValue ? v.Value.ToString("#,##0.##", C) + "%" : Empty;
 
+    /// <summary>How a payslip line was worked out: its note, or "100 × 280.00". Empty when there is nothing to add to the amount.</summary>
+    public static string LineWorking(HRMBT.Web.Models.PayslipDetail line)
+    {
+        if (!string.IsNullOrWhiteSpace(line.Note))
+            return line.Note;
+        if (line.Quantity is not { } quantity || line.UnitAmount is not { } unit)
+            return string.Empty;
+        return quantity == 1m && unit == line.Amount ? string.Empty : $"{Number(quantity)} × {Amount(unit)}";
+    }
+
     // ---- ranges ----
 
     /// <summary>Number range with an en dash: 10 – 20. A missing upper end reads "50,000 and above"; a missing lower end "up to 20".</summary>

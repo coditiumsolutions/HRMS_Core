@@ -182,14 +182,14 @@
                                             @if (hasPayslip)
                                             {
                                                 <div class="row-actions">
-                                                    <a class="btn btn-view" asp-action="Details" asp-route-id="@payslipLookup[item.uid].Id" title="View Payslip" data-bs-toggle="tooltip">
+                                                    <a class="btn btn-view" asp-controller="Payslips" asp-action="Details" asp-route-id="@payslipLookup[item.uid].Id" title="View Payslip" data-bs-toggle="tooltip">
                                                         <i class="bi bi-eye"></i>
                                                     </a>
                                                 </div>
                                             }
                                             else
                                             {
-                                                <a asp-action="GenerateIndividual" class="btn btn-action-success btn-sm">Generate</a>
+                                                <a asp-action="GeneratePayslips" asp-route-employeeId="@item.EmployeeID" class="btn btn-action-success btn-sm">Generate</a>
                                             }
                                         </td>
                                     </tr>

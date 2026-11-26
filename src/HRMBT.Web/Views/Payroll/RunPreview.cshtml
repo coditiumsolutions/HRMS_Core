@@ -9,6 +9,8 @@
     var skipped = rows.Count(r => !r.WillCreate);
     var withWarnings = rows.Count(r => r.WillCreate && r.Issues.Count > 0);
     var period = HRMBT.Web.Infrastructure.PayrollMonthHelper.FormatPeriod(Model.Month, Model.Year);
+    var scope = Model.IsSingleEmployee ? $"Employee {Model.EmployeeID}"
+        : string.IsNullOrWhiteSpace(Model.Department) ? "All departments" : Model.Department;
 }
 
 @section Styles {
@@ -18,12 +20,20 @@
 
 <div class="payslip-page py-4">
     <div class="container-fluid px-0">
+        <form asp-action="GeneratePayslips" method="post" id="runPreviewForm">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="Department" value="@Model.Department" />
+            <input type="hidden" name="EmployeeID" value="@Model.EmployeeID" />
+            <input type="hidden" name="Month" value="@Model.Month" />
+            <input type="hidden" name="Year" value="@Model.Year" />
+            <input type="hidden" name="FromPreview" value="true" />
+            <input type="hidden" name="SelectedIds" id="selectedIds" />
 
         <div class="page-header-card p-4 mb-4">
             <h1 class="h2 mb-1 fw-bold text-dark"><i class="bi bi-search text-primary me-2"></i>Payroll preview: @period</h1>
             <p class="text-muted mb-0">
-                @(string.IsNullOrWhiteSpace(Model.Department) ? "All departments" : Model.Department).
-                Nothing has been saved. Employees with a warning are listed first.
+                @scope.
+                Nothing has been saved. Employees with a warning are listed first; untick anyone to leave them out.
             </p>
         </div>
 
@@ -48,6 +58,9 @@
                         <table class="payslip-grid">
                             <thead>
                                 <tr>
+                                    <th style="width: 3rem;" data-align="none">
+                                        <input type="checkbox" class="form-check-input" id="tickAll" checked aria-label="Tick or untick everyone" />
+                                    </th>
                                     <th>Emp ID</th>
                                     <th>Employee</th>
                                     <th>Result</th>
@@ -58,6 +71,12 @@
                                 @foreach (var r in rows)
                                 {
                                     <tr>
+                                        <td>
+                                            @if (r.WillCreate)
+                                            {
+                                                <input type="checkbox" class="form-check-input run-tick" value="@r.Employee.uid" checked aria-label="Include @r.Employee.EmployeeID" />
+                                            }
+                                        </td>
                                         <td class="font-monospace text-nowrap">@r.Employee.EmployeeID</td>
                                         <td>
                                             <div class="fw-semibold">@r.Employee.EmployeeName</div>
@@ -87,15 +106,47 @@
             </div>
         </div>
 
-        <form asp-action="GeneratePayslips" method="post" class="d-flex flex-wrap gap-2">
-            @Html.AntiForgeryToken()
-            <input type="hidden" name="Department" value="@Model.Department" />
-            <input type="hidden" name="Month" value="@Model.Month" />
-            <input type="hidden" name="Year" value="@Model.Year" />
-            <a asp-action="GeneratePayslips" class="btn btn-action-outline"><i class="bi bi-arrow-left-short me-1"></i>Back</a>
-            <button type="submit" class="btn btn-action-primary" @(willCreate == 0 ? "disabled" : null)>
-                <i class="bi bi-play-fill me-1"></i>Generate @willCreate payslip(s)
-            </button>
+            <div class="action-bar">
+                <div class="container-fluid px-3 px-lg-4">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <div class="small text-muted d-none d-md-block"><i class="bi bi-shield-lock me-1"></i>Payslips are saved only when you generate.</div>
+                        <div class="d-flex flex-wrap align-items-center gap-2 ms-md-auto">
+                            <a asp-action="GeneratePayslips" asp-route-department="@Model.Department" asp-route-employeeId="@Model.EmployeeID" class="btn btn-action-outline"><i class="bi bi-arrow-left-short me-1"></i>Back</a>
+                            <button type="submit" class="btn btn-action-primary" id="runGenerate" @(willCreate == 0 ? "disabled" : null)>
+                                <i class="bi bi-play-fill me-1"></i>Generate <span id="tickCount">@willCreate</span> payslip(s)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </form>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        (function () {
+            var form = document.getElementById('runPreviewForm');
+            var all = document.getElementById('tickAll');
+            var count = document.getElementById('tickCount');
+            var button = document.getElementById('runGenerate');
+            var ticks = Array.prototype.slice.call(document.querySelectorAll('.run-tick'));
+            function ticked() { return ticks.filter(function (t) { return t.checked; }); }
+            function refresh() {
+                var n = ticked().length;
+                count.textContent = n;
+                button.disabled = n === 0;
+                if (all) all.checked = n === ticks.length && n > 0;
+            }
+            if (all) all.addEventListener('change', function () {
+                ticks.forEach(function (t) { t.checked = all.checked; });
+                refresh();
+            });
+            ticks.forEach(function (t) { t.addEventListener('change', refresh); });
+            form.addEventListener('submit', function () {
+                document.getElementById('selectedIds').value = ticked().map(function (t) { return t.value; }).join(',');
+                button.disabled = true;
+            });
+        })();
+    </script>
+}
