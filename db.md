@@ -1,5 +1,5 @@
 # HRMS Database Schema
-Version: 2.7 | Last Updated: 2026-11-26
+Version: 2.9 | Last Updated: 2026-11-26
 Database: HRBTK
 Server: Teezhost 16GB (production; hr.coditium.com, SQL Server 2022 16.0.1000.6 Express on port 1433, same machine as the web app). Its connection string is in the git-ignored `src/HRMBT.Web/appsettings.Production.json`. See `docs/deployment.md`.
 
@@ -17,7 +17,9 @@ Source of truth for the structure: the live database, read with catalog queries 
 
 > **2026-11-26: script `13_payslip_line_rates_fuel_prices.sql` run on production** (after backup `HRBTK_pre_script13_20261126.bak`). It adds `PayslipDetails.Quantity`, `UnitAmount`, `Note` and the table `FuelPrices`. The build deployed before that date ignores them and still reads the `FuelPrice` row in `Configuration`.
 
-> **2026-11-26: script `14_work_weeks.sql` run on production** (copy-only backups: `HRBTK_pre_script14_20261126.bak` before, `HRBTK_after_script14_20261126.bak` after). It makes `ShiftAssignments.ShiftId` nullable and lets an `ExtraDuty` roster day have no shift. No script is pending on production.
+> **2026-11-26: script `14_work_weeks.sql` run on production** (copy-only backups: `HRBTK_pre_script14_20261126.bak` before, `HRBTK_after_script14_20261126.bak` after). It makes `ShiftAssignments.ShiftId` nullable and lets an `ExtraDuty` roster day have no shift.
+
+> **2026-11-26: script `15_holiday_notices.sql` run on production** (copy-only backups: `HRBTK_pre_script15_20261126.bak` before, `HRBTK_after_script15_20261126.bak` after). It adds `GazettedHolidays.EndDate`, `NoticeNumber`, `NoticeDate` and `CK_GazettedHolidays_Dates`, and widens `Description`. No script is pending on production.
 
 ## Standards in short (db_standards.md)
 - Primary key `Id int IDENTITY` (`bigint` for `AttendancePunches` and `AuditLogs`); `Employee` and `Users` keep `uid`. Foreign key columns are `<Entity>Id`; employee references are `EmployeeId` -> `Employee.uid`. Constraint names: `PK_`, `FK_<Child>_<Parent>`, `IX_`, `UX_` (unique), `CK_`, `DF_`.
@@ -592,6 +594,7 @@ Keys and indexes
 
 ## Table: dbo.GazettedHolidays
 Public (gazetted) holidays. Empty in production on 2026-11-16.
+- 2026-11-26: One row is one **holiday notice** and may cover several days (`HolidayDate` to `EndDate`). Managed at `/holidays`. A company-wide, non-optional holiday is not a work day (`WorkScheduleService`), so leave on it is not charged; a `RosterOverrides` row for one employee wins over it. Adding, changing or removing a holiday recounts the open leave on those dates. The app refuses overlapping notices (a range cannot be enforced by an index) and does not use `ProjectId` yet (decisions B29-B31, T12).
 - 2026-11-16: Resolves the EF mismatch: the EF entity (`GazettedHoliday`, with `Id`, `HolidayName`) is mapped to this plural table with `ToTable("GazettedHolidays")`; `database-schema.sql` should create the plural name. Empty, so it is rebuilt.
 - 2026-11-16: `ProjectId` NULL = holiday for everyone; a value = project-specific. SQL Server unique indexes treat NULLs as equal, so the key below allows one company-wide row plus one row per project for the same date.
 Rows on 2026-11-24 (right after the migration): 0.
@@ -599,21 +602,25 @@ Rows on 2026-11-24 (right after the migration): 0.
 | Column | Type | Null | Default | Notes |
 |---|---|---|---|---|
 | Id | int | NOT NULL |  | PK, identity (EF entity key). |
-| HolidayDate | date | NOT NULL |  | Type unchanged; was the PK. Now part of a unique key with ProjectId. |
+| HolidayDate | date | NOT NULL |  | First day. Type unchanged; was the PK. Now part of a unique key with ProjectId. |
 | HolidayName | nvarchar(100) | NOT NULL |  | In the EF entity. |
-| Description | nvarchar(255) | NULL |  |  |
+| Description | nvarchar(1000) | NULL |  | The text of the notice. was nvarchar(255); widened 2026-11-26 (script 15). |
 | ProjectId | int | NULL |  | FK -> Projects.Id. NULL = all projects. |
 | IsOptional | bit | NOT NULL | 0 | Optional holidays (employees may work); not auto-applied by processing. |
 | CreatedAt | datetime2(0) | NOT NULL | (sysdatetime() |  |
 | CreatedBy | nvarchar(100) | NULL |  |  |
 | ModifiedAt | datetime2(0) | NULL |  |  |
 | ModifiedBy | nvarchar(100) | NULL |  |  |
+| EndDate | date | NOT NULL |  | 2026-11-26 (script 15): last day; equals HolidayDate for one day. 2026-11-26: Eid and similar run over several days under one notice. |
+| NoticeNumber | nvarchar(50) | NULL |  | 2026-11-26 (script 15): HR's reference on the notice. |
+| NoticeDate | date | NULL |  | 2026-11-26 (script 15): date the notice was issued. |
 
 Keys and indexes
 - `PK_GazettedHolidays` - primary key, clustered, (Id)
 - `IX_GazettedHolidays_ProjectId` - nonclustered, (ProjectId) WHERE ([ProjectId] IS NOT NULL)
 - `UX_GazettedHolidays_Date_Project` - unique, nonclustered, (HolidayDate, ProjectId)
 - `FK_GazettedHolidays_Projects` - foreign key (ProjectId) -> Projects(Id), no action.
+- `CK_GazettedHolidays_Dates` - check ([EndDate]>=[HolidayDate]).
 
 ## Table: dbo.HalfDayRequests
 Half-day requests with approval and documentation. HR rule: half days (until at least 12-1pm) need approval with documentation; whether the employee must still check out depends on the approval and the case, so it is a per-request flag.
@@ -1131,3 +1138,5 @@ Keys and indexes
 - 2026-11-26: **Work weeks (v2.5), development copy only.** Script `14_work_weeks.sql` (migration `20261126000014_Redesign_Phase14_WorkWeeks`), run twice on the dev copy. Not yet run on production.
 - 2026-11-26: Documentation only (v2.6): this file is now the single tracking file for the schema; `docs/db/db_changes.md` retired.
 - 2026-11-26: **Script 14 run on production (v2.7).** Backups first and after (copy-only, checksum, verified with `RESTORE VERIFYONLY`: `HRBTK_pre_script14_20261126.bak` before, `HRBTK_after_script14_20261126.bak` after). Run twice (the second run changed nothing); both schedule tables were empty, 23 leave requests and 848 employees unchanged, no untrusted foreign keys or checks. This file was then compared with the live catalog: 34 tables, 2 views, columns, types, nullability, keys, indexes and constraints.
+- 2026-11-26: **Holiday notices (v2.8), development copy only.** Script `15_holiday_notices.sql` (migration `20261126000015_Redesign_Phase15_HolidayNotices`), run twice on the dev copy; `GazettedHolidays` was empty. Not yet run on production.
+- 2026-11-26: **Script 15 run on production (v2.9).** Backups first and after (copy-only, checksum, verified with `RESTORE VERIFYONLY`: `HRBTK_pre_script15_20261126.bak` before, `HRBTK_after_script15_20261126.bak` after). Run twice (the second run changed nothing); `GazettedHolidays` was empty, 23 leave requests (95 days) and 848 employees unchanged, no untrusted foreign keys or checks.

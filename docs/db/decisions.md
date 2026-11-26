@@ -1,5 +1,5 @@
 # HRMS Database - Pending Decisions
-Version: 3.1 | Date: 2026-11-26 | Related: db_standards.md, db.md (v2.7)
+Version: 3.2 | Date: 2026-11-26 | Related: db_standards.md, db.md (v2.9)
 
 ## How to use this file
 - Only **pending** decisions are listed here. Answered ones are removed and recorded where they apply (rules in db_standards.md, schema in db.md).
@@ -8,6 +8,7 @@ Version: 3.1 | Date: 2026-11-26 | Related: db_standards.md, db.md (v2.7)
 - **Data status (2026-11-18):** the data now in `HRBTK` is **test data**. Counts and findings quoted below (employees, projects, leave balances, duplicates) describe it for design purposes only; they are not requirements, and the checks are re-run on real data before anything is applied.
 - 2026-11-24: the employee Leave Balance tab is built on the LMS tables; B18 is closed (see below); leave days are kept in one decimal.
 - 2026-11-26: work week defined (see the notes under B5 and B8).
+- 2026-11-26: holiday screen built; the choices it had to make are T12 and B29-B31.
 - 2026-11-26: T4, T9 and T10 answered (A) and built, apart from the parts of T10 that wait for HR (see its notes).
 - 2026-11-24: employee history is built (`EmployeeEvents`, see B14, T1, T8, B19 below).
 - 2026-11-25: Payroll review added T9-T11 and B20-B28 and dated notes on B10, B13 and B17. The review itself (findings F1-F19, proposal P1-P10) is kept in `docs/payroll-review.html`.
@@ -202,6 +203,21 @@ Status: Open (added 2026-11-25, Payroll review)
 
 ---
 
+## T12. A withdrawn or mistaken holiday notice
+Status: Open (added 2026-11-26, Holidays)
+
+**Context.** Holiday dates change (Eid depends on the moon sighting) and a notice can be withdrawn. Built for now: the notice is edited in place, or removed from the table; both write the old values to `AuditLogs`, and open leave on the dates is recounted. The screen does not show removed or earlier versions.
+
+**Suggested key**
+- A ★ Keep it as built until HR asks to see withdrawn notices (the audit log holds them).
+- B Never delete: add a `Withdrawn` status, keep the row visible on the screen, and record a changed date as a new notice that replaces the old one.
+
+**Answer:** ______
+**Decided by / date:** ______
+**Notes:** ______
+
+---
+
 # Part B. Business logic questions (HR)
 
 ## B1. Half days: separate request or part of leave?
@@ -299,7 +315,7 @@ Status: Open
 
 **Answer:** ______  **Decided by / date:** ______  **Notes (2-6):** ______
 **Built 2026-11-24 without waiting for the answers:** carry-forward eligibility and the cap are data on `LeaveTypes` (`AllowsCarryForward`, default 1 except Unpaid and Compensation; `MaxCarryForwardDays`, NULL = no cap) and the year-end rollover reads them, so HR's answer to question 4 is a Setup change, not a code change.
-**2026-11-26 (question 5, weekly offs; Rayder):** leave is counted on the employee's **work days** only; weekly days off inside a leave period are not charged. Built. **Still open: gazetted holidays** (today they are charged like any work day; there is no holiday screen) and questions 1-4 and 6. Blocking leave beyond the balance is also undecided: the app warns.
+**2026-11-26 (question 5, weekly offs; Rayder):** leave is counted on the employee's **work days** only; weekly days off inside a leave period are not charged. Built. **Gazetted holidays:** built the same day (`/holidays`); a company holiday is not charged, pending HR's confirmation (B29). **Still open:** questions 1-4 and 6. Blocking leave beyond the balance is also undecided: the app warns.
 
 ---
 
@@ -658,5 +674,54 @@ Status: Open (added 2026-11-25, Payroll review)
 - A ★ Monthly summary by project and department, bank sheet (B26), tax withholding statement; payslips printed for now. Salary figures stay off list grids.
 - B Only what exists today.
 - C HR lists the reports (specify).
+
+**Answer:** ______  **Decided by / date:** ______  **Notes:** ______
+
+---
+
+## B29. Holidays and leave
+Status: Open (added 2026-11-26, Holidays; **built on A so it can be used**, confirm or change)
+**Affects:** `LeaveRequests.TotalDays`, leave balances, `GazettedHolidays`.
+
+**Questions.** Is a holiday inside a leave period free, or charged as leave (the "sandwich" rule, for example leave on the days before and after Eid)? When a holiday is entered or changed after leave was approved, even for past dates, should that leave be recounted?
+
+**Suggested key**
+- A ★ (built) A holiday is never charged, and open (pending and approved) leave is always recounted, past dates included.
+- B A holiday is free only at the start or end of a leave; one with leave on both sides is charged.
+- C As A, but approved leave that has already been taken is never recounted.
+
+**Answer:** ______  **Decided by / date:** ______  **Notes:** ______
+
+---
+
+## B30. Who a holiday applies to
+Status: Open (added 2026-11-26, Holidays)
+**Affects:** `GazettedHolidays.ProjectId` and `IsOptional`, `RosterOverrides`, pay (B12).
+
+**Context.** Built: every holiday applies to all employees of all projects. Guards or others who must work one are marked as working for that day, one person at a time, on their schedule page. An **optional** holiday is only recorded: it stays a work day and leave on it is charged.
+
+**Questions.** Do any projects, departments or religions have holidays the others do not? How are optional holidays meant to work (a limit per person per year, approval)? Are whole groups (guards) expected to work holidays, so that HR needs to mark many people at once? Is working a holiday paid extra or given back as a day off (B12)?
+
+**Suggested key**
+- A ★ Company-wide holidays only. Add a "these people work this holiday" selection for guards and shift staff. Optional holidays stay informational.
+- B Holidays can also be limited to one project (the column exists; the screen and the rules would use it).
+- C Other (specify).
+
+**Answer:** ______  **Decided by / date:** ______  **Notes:** ______
+
+---
+
+## B31. The holiday notice itself, and who manages it
+Status: Open (added 2026-11-26, Holidays)
+**Affects:** `GazettedHolidays` (notice fields), `EmployeeDocuments` or a new file store, the Holidays screen.
+
+**Context.** Built: the screen records the holiday with its notice number, notice date and text. It does not print, store or send a notice. Everyone signed in can see the list; Admin and HR can add, change and remove.
+
+**Questions.** Should the system print the notice (what letterhead, wording and signatory), keep a scan of the signed notice, or send it to employees? Is the notice number HR's own series, and must it be filled in and unique? Should adding a holiday need an Admin's approval (see B13)?
+
+**Suggested key**
+- A ★ Upload the signed notice as a file on the holiday; no printing or sending yet. Admin and HR manage, no approval step.
+- B The system prints the notice from a template HR provides.
+- C Record only, as built.
 
 **Answer:** ______  **Decided by / date:** ______  **Notes:** ______
