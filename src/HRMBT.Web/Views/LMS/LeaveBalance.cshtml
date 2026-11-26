@@ -10,27 +10,27 @@
 }
 
 <div class="employee-list-page py-4">
-    <div class="container-fluid px-3 px-lg-4">
+    <div class="container-fluid px-0">
 
-        <div class="toolbar-card mb-4">
-            <div class="toolbar-header d-flex flex-wrap justify-content-between align-items-center gap-2">
-                <span><i class="bi bi-pie-chart"></i>Leave balance report</span>
-                <div class="toolbar-actions d-flex flex-wrap gap-2">
-                    <a asp-action="Rollover" asp-route-year="@(int.TryParse(Model.SelectedYear, out var selYear) ? selYear - 1 : DateTime.Now.Year - 1)" class="btn btn-action-secondary">Year-end rollover</a>
-                    <a asp-action="Index" class="btn btn-action-secondary">Back to leave requests</a>
-                </div>
+        <partial name="_Alerts" />
+        @if (ViewBag.EmployeeId != null)
+        {
+            <div class="alert alert-secondary d-flex flex-wrap align-items-center gap-2">
+                <span>Showing one employee.</span>
+                <a asp-action="LeaveBalance" asp-route-year="@Model.SelectedYear" class="ms-auto">Show everyone</a>
             </div>
-        </div>
+        }
 
-        <div class="filter-card mb-4">
+        <div class="filter-card filter-card-tight mb-3">
             <div class="card-header">
-                <span><i class="bi bi-funnel"></i>Filters</span>
+                <span><i class="bi bi-funnel"></i>Search &amp; Filters</span>
             </div>
-            <div class="card-body p-3 p-lg-4">
-                <form asp-action="LeaveBalance" method="get" class="row g-3 align-items-end">
+            <div class="card-body">
+                <form asp-action="LeaveBalance" method="get" class="row g-2 align-items-end">
+                    <input type="hidden" name="employeeId" value="@ViewBag.EmployeeId" />
                     <div class="col-12 col-md">
                         <label class="form-label" for="year">Year</label>
-                        <select name="year" id="year" class="form-select" required>
+                        <select name="year" id="year" class="form-select form-select-sm" required>
                             @foreach (var y in Model.YearChoices)
                             {
                                 var ySel = string.Equals(y, Model.SelectedYear, StringComparison.OrdinalIgnoreCase);
@@ -47,7 +47,7 @@
                     </div>
                     <div class="col-12 col-md">
                         <label class="form-label" for="department">Department</label>
-                        <select name="department" id="department" class="form-select">
+                        <select name="department" id="department" class="form-select form-select-sm">
                             @foreach (var d in Model.DepartmentChoices)
                             {
                                 var dSel = string.Equals(d.Value, Model.SelectedDepartment, StringComparison.OrdinalIgnoreCase);
@@ -63,7 +63,7 @@
                         </select>
                     </div>
                     <div class="col-12 col-md-auto d-flex align-items-end">
-                        <button type="submit" class="btn btn-action-primary w-100">
+                        <button type="submit" class="btn btn-filter-apply w-100">
                             <i class="bi bi-funnel-fill me-1"></i>Apply
                         </button>
                     </div>
@@ -71,13 +71,14 @@
             </div>
         </div>
 
-        <div class="grid-card mb-4">
-            <div class="card-header">
+        <div class="grid-card mb-3">
+            <div class="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
                 <span><i class="bi bi-table"></i>Leave balances</span>
+                <a class="btn btn-sm btn-grid-edit" asp-action="Rollover" asp-route-year="@(int.TryParse(Model.SelectedYear, out var selYear) ? selYear - 1 : DateTime.Now.Year - 1)">Year-end rollover</a>
             </div>
             <div class="card-body">
-                <p class="text-muted small px-3 pt-3 mb-0">
-                    For each leave type, <strong>balance</strong> = <strong>available</strong> quota for the year minus leave days from <strong>approved or applied</strong> requests that fall in that year.
+                <p class="grid-note">
+                    For each leave type, <strong>balance</strong> = <strong>available</strong> (quota, carry-forward and adjustments) minus days of <strong>approved</strong> requests in that year. Pending requests are shown but not yet subtracted.
                 </p>
 
                 @if (Model.Rows.Count == 0)
@@ -94,28 +95,35 @@
                         <table class="employee-grid">
                             <thead>
                                 <tr>
+                                    <th class="col-emp-id">Emp ID</th>
                                     <th>Employee</th>
-                                    <th>Name</th>
                                     <th>Leave type</th>
                                     <th class="text-end">Carried forward</th>
                                     <th class="text-end">Available leave</th>
                                     <th class="text-end">Availed leave</th>
                                     <th class="text-end">Pending</th>
                                     <th class="text-end">Balance leave</th>
+                                    <th class="col-actions text-center" data-align="none" scope="col">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach (var row in Model.Rows)
                                 {
                                     <tr>
-                                        <td>@row.EmployeeCode</td>
-                                        <td>@(row.EmployeeName ?? "—")</td>
-                                        <td>@row.LeaveTypeName</td>
+                                        <td class="col-emp-id"><span class="text-muted small emp-id-cell" title="@row.EmployeeCode">@row.EmployeeCode</span></td>
+                                        <td>
+                                            <div class="emp-name">@(row.EmployeeName ?? "—")</div>
+                                            <div class="emp-meta">@(row.Designation ?? "—")</div>
+                                        </td>
+                                        <td class="text-nowrap">@row.LeaveTypeName</td>
                                         <td class="text-end">@Fmt.Days(row.CarryForwardLeaves)</td>
                                         <td class="text-end">@Fmt.Days(row.AvailableLeaves)</td>
                                         <td class="text-end">@Fmt.Days(row.AvailedLeaves)</td>
                                         <td class="text-end">@Fmt.Days(row.PendingLeaves)</td>
                                         <td class="text-end @(row.BalanceLeaves < 0 ? "text-danger" : "")">@Fmt.Days(row.BalanceLeaves)</td>
+                                        <td class="col-actions">
+                                            <a class="row-action row-action-view" asp-controller="EmployeeSchedule" asp-action="Month" asp-route-id="@row.EmployeeUid" title="Month view" aria-label="Month view of @row.EmployeeCode"><i class="bi bi-calendar3"></i></a>
+                                        </td>
                                     </tr>
                                 }
                             </tbody>

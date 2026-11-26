@@ -132,7 +132,7 @@
                                data-details-base="@detailsBaseUrl">
                             <thead>
                                 <tr>
-                                    <th class="text-nowrap">Emp ID</th>
+                                    <th class="col-emp-id">Emp ID</th>
                                     <th>Employee</th>
                                     <th>Department</th>
                                     <th class="text-nowrap">Period</th>
@@ -144,7 +144,7 @@
                                 @foreach (var item in Model)
                                 {
                                     <tr data-record-id="@item.Id" data-can-edit="false" title="Double-click to open">
-                                        <td class="text-nowrap">@(item.Employee?.EmployeeID ?? ("#" + item.EmployeeId))</td>
+                                        <td class="col-emp-id"><span class="text-muted small emp-id-cell">@(item.Employee?.EmployeeID ?? "—")</span></td>
                                         <td>
                                             <div class="emp-name">@(item.Employee?.EmployeeName ?? "—")</div>
                                             <div class="emp-meta">@(item.Employee?.Designation ?? "—")</div>

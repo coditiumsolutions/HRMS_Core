@@ -1,0 +1,12 @@
+@model byte
+@* Seven working-day toggles posting "days". The model is the mask to pre-tick. *@
+@using HRMBT.Web.Services
+<div class="workdays-pick" role="group" aria-label="Working days">
+    @foreach (var day in WorkWeek.Days)
+    {
+        <span>
+            <input type="checkbox" name="days" id="day-@day" value="@((int)day)" checked="@((Model & WorkWeek.Bit(day)) != 0)" />
+            <label for="day-@day">@day.ToString().Substring(0, 3)</label>
+        </span>
+    }
+</div>

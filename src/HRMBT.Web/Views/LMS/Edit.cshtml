@@ -1,80 +1,17 @@
-@model HRMBT.Web.Models.LeaveRequest
-
+﻿@model HRMBT.Web.Models.LeaveRequest
 @{
     ViewData["Title"] = "Edit leave request";
 }
 
-<div class="container-fluid py-3">
-    <nav aria-label="breadcrumb" class="mb-3">
-        <ol class="breadcrumb mb-0 small">
-            <li class="breadcrumb-item"><a asp-action="Index">Leave Management</a></li>
-            <li class="breadcrumb-item"><a asp-action="Details" asp-route-id="@Model.Id">Request #@Model.Id</a></li>
-            <li class="breadcrumb-item active" aria-current="page">Edit</li>
-        </ol>
-    </nav>
+@section Styles {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" crossorigin="anonymous" />
+    <link rel="stylesheet" href="~/css/employee-list.css" asp-append-version="true" />
+}
 
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="card shadow-sm border-0 rounded-3">
-                <div class="card-header bg-white py-3 border-bottom">
-                    <h3 class="h5 mb-0"><i class="bi bi-pencil-square me-2 text-primary"></i>Edit leave request</h3>
-                    <small class="text-muted">dbo.LeaveRequests · Id @Model.Id</small>
-                </div>
-                <div class="card-body p-4">
-                    <form asp-action="Edit" method="post">
-                        <input type="hidden" asp-for="RowVersion" />
-                        <input type="hidden" asp-for="Id" />
-                        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
-
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-6">
-                                <label asp-for="EmployeeId" class="form-label">Employee <span class="text-danger">*</span></label>
-                                <select asp-for="EmployeeId" class="form-select form-select-lg" asp-items="ViewBag.Employees">
-                                    <option value="0">Choose employee…</option>
-                                </select>
-                                <span asp-validation-for="EmployeeId" class="text-danger small"></span>
-                            </div>
-                            <div class="col-md-6">
-                                <label asp-for="LeaveType" class="form-label">Leave type <span class="text-danger">*</span></label>
-                                <select asp-for="LeaveType" class="form-select form-select-lg" asp-items="ViewBag.LeaveTypes">
-                                    <option value="">Choose type…</option>
-                                </select>
-                                <span asp-validation-for="LeaveType" class="text-danger small"></span>
-                            </div>
-                        </div>
-
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-6">
-                                <label asp-for="FromDate" class="form-label">From date <span class="text-danger">*</span></label>
-                                <input asp-for="FromDate" class="form-control form-control-lg" type="date" />
-                                <span asp-validation-for="FromDate" class="text-danger small"></span>
-                            </div>
-                            <div class="col-md-6">
-                                <label asp-for="ToDate" class="form-label">To date <span class="text-danger">*</span></label>
-                                <input asp-for="ToDate" class="form-control form-control-lg" type="date" />
-                                <span asp-validation-for="ToDate" class="text-danger small"></span>
-                            </div>
-                        </div>
-
-                        <div class="row g-3 mb-4">
-                            <div class="col-md-6">
-                                <label asp-for="Status" class="form-label">Status</label>
-                                <select asp-for="Status" class="form-select" asp-items="ViewBag.Statuses"></select>
-                                <span asp-validation-for="Status" class="text-danger small"></span>
-                            </div>
-                        </div>
-
-                        <div class="action-bar action-bar--inline">
-                            <a asp-action="Index" class="btn btn-action-secondary">List</a>
-                            <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-action-secondary">Cancel</a>
-                            <button type="submit" class="btn btn-action-primary">
-                                <i class="bi bi-check2-circle me-1"></i>Save changes
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
+<div class="employee-list-page py-3">
+    <div class="container-fluid px-0">
+        <partial name="_Alerts" />
+        <partial name="_RequestForm" model="Model" />
     </div>
 </div>
 

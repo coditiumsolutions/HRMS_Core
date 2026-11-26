@@ -1,0 +1,140 @@
+﻿@model HRMBT.Web.Models.ViewModels.LeaveAdjustmentsVm
+@{
+    var e = Model.Employee;
+    ViewData["Title"] = $"{e.EmployeeName} — leave adjustments";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" crossorigin="anonymous" />
+    <link rel="stylesheet" href="~/css/employee-create.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/employee-dossier.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/employee-list.css" asp-append-version="true" />
+}
+
+<div class="employee-create-page dossier-page dossier-page--static py-3">
+    <div class="container-fluid px-0">
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb emp-breadcrumb mb-0">
+                <li class="breadcrumb-item"><a asp-controller="Employee" asp-action="Index">Employees</a></li>
+                <li class="breadcrumb-item"><a asp-controller="Employee" asp-action="Details" asp-route-id="@e.uid">@e.EmployeeName</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Leave adjustments</li>
+            </ol>
+        </nav>
+
+        <partial name="~/Views/Employee/_DossierHero.cshtml" model="e" />
+        <partial name="_Alerts" />
+
+        <div class="employee-list-page">
+
+        @if (!Model.Managed)
+        {
+            <div class="alert alert-secondary">Leave is not managed for this employee's project, so there is nothing to adjust.</div>
+        }
+        else
+        {
+            <div class="grid-card mb-3">
+                <div class="card-header"><span><i class="bi bi-plus-slash-minus"></i>Adjust entitlement</span></div>
+                <div class="card-body grid-form">
+                    <p class="text-muted small">Everyone has the same quota; use this to give one person more or fewer days in a specific case. Entries are kept: correct a mistake with the opposite entry.</p>
+                    <form asp-action="AddAdjustment" asp-route-id="@e.uid" method="post" class="row g-2 align-items-end">
+                        <input type="hidden" name="requestId" value="@Model.RequestId" />
+                        <div class="col-6 col-md-2">
+                            <label class="form-label" for="year">Year</label>
+                            <input type="number" name="year" id="year" class="form-control form-control-sm" min="2000" max="2100" value="@Model.Year" required />
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <label class="form-label" for="leaveTypeId">Leave type</label>
+                            <select name="leaveTypeId" id="leaveTypeId" class="form-select form-select-sm" required>
+                                <option value="">Choose…</option>
+                                @foreach (var t in Model.Types)
+                                {
+                                    <option value="@t.Id">@t.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-6 col-md-2">
+                            <label class="form-label" for="days">Days (+ or −)</label>
+                            <input type="number" name="days" id="days" class="form-control form-control-sm" step="0.5" min="-366" max="366" required />
+                        </div>
+                        <div class="col-12 col-md">
+                            <label class="form-label" for="reason">Reason</label>
+                            <input type="text" name="reason" id="reason" class="form-control form-control-sm" maxlength="500" required />
+                        </div>
+                        <div class="col-12 col-md-auto">
+                            <button type="submit" class="btn btn-sm btn-action-primary">Save adjustment</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="grid-card mb-3">
+                <div class="card-header"><span><i class="bi bi-table"></i>Balance @Model.Year</span></div>
+                <div class="card-body">
+                    @if (Model.Balances.Count == 0)
+                    {
+                        <p class="grid-note">No quota or leave is recorded for @Model.Year yet.</p>
+                    }
+                    else
+                    {
+                        <div class="table-wrap table-responsive">
+                            <table class="employee-grid">
+                                <thead>
+                                    <tr><th>Leave type</th><th class="text-end">Quota</th><th class="text-end">Carried forward</th><th class="text-end">Adjusted</th><th class="text-end">Taken</th><th class="text-end">Pending</th><th class="text-end">Remaining</th></tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var t in Model.Types)
+                                    {
+                                        var b = Model.Balances.FirstOrDefault(x => x.LeaveTypeId == t.Id);
+                                        if (b == null) { continue; }
+                                        <tr>
+                                            <td>@t.Name</td>
+                                            <td class="text-end">@Fmt.Days(b.BaseDays)</td>
+                                            <td class="text-end">@Fmt.Days(b.CarryForward)</td>
+                                            <td class="text-end">@Fmt.Days(b.Adjustment)</td>
+                                            <td class="text-end">@Fmt.Days(b.Taken)</td>
+                                            <td class="text-end">@Fmt.Days(b.Pending)</td>
+                                            <td class="text-end fw-bold @(b.Remaining < 0 ? "text-danger" : "")">@Fmt.Days(b.Remaining)</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        <div class="grid-card mb-3">
+            <div class="card-header"><span><i class="bi bi-clock-history"></i>Adjustments made</span></div>
+            <div class="card-body">
+                @if (Model.History.Count == 0)
+                {
+                    <p class="grid-note">None yet.</p>
+                }
+                else
+                {
+                    <div class="table-wrap table-responsive">
+                        <table class="employee-grid">
+                            <thead><tr><th>Entered</th><th>Leave type</th><th>Year</th><th class="text-end">Days</th><th>Reason</th><th>By</th></tr></thead>
+                            <tbody>
+                                @foreach (var h in Model.History)
+                                {
+                                    <tr>
+                                        <td class="text-nowrap">@Fmt.DateAndTime(h.CreatedAt)</td>
+                                        <td>@h.LeaveType</td>
+                                        <td>@h.Year</td>
+                                        <td class="text-end">@(h.Total != null ? "Total set to " + Fmt.Days(h.Total) : Fmt.Days(h.Days))</td>
+                                        <td>@h.Reason</td>
+                                        <td>@(h.CreatedBy ?? "—")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+        </div>
+    </div>
+</div>

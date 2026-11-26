@@ -153,11 +153,6 @@ public class EmployeeController : Controller
             .ToList();
 
         bool IsActive(string? s) => string.Equals((s ?? string.Empty).Trim(), "Active", StringComparison.OrdinalIgnoreCase);
-        bool IsLeave(string? s)
-        {
-            var t = (s ?? string.Empty).Trim();
-            return t.Equals("On Leave", StringComparison.OrdinalIgnoreCase) || t.Equals("Leave", StringComparison.OrdinalIgnoreCase);
-        }
         bool IsInactive(string? s)
         {
             var t = (s ?? string.Empty).Trim();
@@ -166,12 +161,18 @@ public class EmployeeController : Controller
                 || t.Equals("Resigned", StringComparison.OrdinalIgnoreCase);
         }
 
+        var today = DateTime.Today;
+        var onLeaveToday = await _context.LeaveRequests.AsNoTracking()
+            .Where(l => l.Status == "Approved" && l.FromDate <= today && l.ToDate >= today
+                        && _context.Employees.Any(x => x.uid == l.EmployeeId && x.EmployeeStatus == "Active"))
+            .Select(l => l.EmployeeId).Distinct().CountAsync();
+
         var vm = new EmployeeDashboardVM
         {
             TotalEmployees = employees.Count,
             ActiveEmployees = employees.Count(e => IsActive(e.EmployeeStatus)),
             InactiveEmployees = employees.Count(e => IsInactive(e.EmployeeStatus)),
-            OnLeaveEmployees = employees.Count(e => IsLeave(e.EmployeeStatus)),
+            OnLeaveEmployees = onLeaveToday,
             DepartmentCount = byDept.Count,
             ByDepartment = byDept,
             TopDepartment = byDept.FirstOrDefault(),

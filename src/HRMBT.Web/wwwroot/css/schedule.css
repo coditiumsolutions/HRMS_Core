@@ -1,0 +1,48 @@
+/* Work schedule month view and work day picker. Colours follow the navy and brass of hrms-theme.css. */
+
+.workdays-pick { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.workdays-pick input { position: absolute; opacity: 0; pointer-events: none; }
+.workdays-pick label {
+  min-width: 3.1rem; text-align: center; cursor: pointer; user-select: none;
+  padding: 0.3rem 0.55rem; border: 1px solid #cfd6df; border-radius: 0.4rem;
+  font-size: 0.82rem; font-weight: 600; color: #6a7688; background: #fff;
+}
+.workdays-pick input:checked + label { background: #00203f; border-color: #00203f; color: #fff; }
+.workdays-pick input:focus-visible + label { outline: 2px solid #d4af37; outline-offset: 2px; }
+
+/* in the bulk action bar the picker stays on one line with the other fields */
+.action-bar .workdays-pick { gap: 0.2rem; }
+.action-bar .workdays-pick label { min-width: 2.4rem; padding: 0.2rem 0.35rem; font-size: 0.75rem; margin: 0; }
+.action-bar input[type="text"] { max-width: 11rem; }
+
+.month-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 0.6rem; }
+.month-tile { background: #fff; border: 1px solid #e4e8ee; border-left: 3px solid #d4af37; border-radius: 0.5rem; padding: 0.55rem 0.8rem; }
+.month-tile strong { display: block; font-size: 1.45rem; line-height: 1.2; color: #00203f; }
+.month-tile span { font-size: 0.78rem; color: #6a7688; }
+
+.month-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0.25rem; }
+.month-head { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #6a7688; text-align: center; padding: 0.25rem 0; }
+.month-day {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 0.15rem;
+  min-height: 4.4rem; padding: 0.35rem 0.45rem; text-align: left;
+  background: #fff; border: 1px solid #e4e8ee; border-radius: 0.4rem; color: #14213a; overflow: hidden;
+}
+button.month-day { cursor: pointer; }
+button.month-day:hover { border-color: #d4af37; }
+button.month-day:focus-visible, .month-day.is-picked { outline: 2px solid #d4af37; outline-offset: -2px; }
+.month-day .num { font-weight: 700; font-size: 0.9rem; }
+.month-day .what { font-size: 0.72rem; line-height: 1.25; overflow-wrap: anywhere; }
+.month-day--off { background: #f1f3f6; color: #8a94a3; }
+.month-day--leave { background: #fdf3d8; border-color: #d4af37; }
+.month-day--pending { background: #fffaf0; border: 1px dashed #d4af37; }
+.month-day--out { background: transparent; border-style: dashed; color: #b4bcc8; }
+.month-day--today .num { text-decoration: underline; text-decoration-color: #d4af37; text-decoration-thickness: 3px; }
+.month-day--changed::after { content: "changed"; font-size: 0.62rem; font-weight: 700; text-transform: uppercase; color: #8a6d0b; margin-top: auto; }
+.month-key { display: flex; flex-wrap: wrap; gap: 0.9rem; font-size: 0.78rem; color: #6a7688; }
+.month-key i { display: inline-block; width: 0.8rem; height: 0.8rem; margin-right: 0.3rem; border: 1px solid #e4e8ee; border-radius: 0.2rem; vertical-align: -0.1rem; }
+
+@media (max-width: 40rem) {
+  .month-day { min-height: 3.2rem; padding: 0.2rem; }
+  .month-day .what { font-size: 0.6rem; }
+  .month-day--changed::after { content: "•"; }
+}

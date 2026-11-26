@@ -12,7 +12,6 @@ public class LmsLeaveRowVm
     public DateTime FromDate { get; set; }
     public DateTime ToDate { get; set; }
     public string? Status { get; set; }
-
-    public int CalendarDays =>
-        ToDate >= FromDate ? (ToDate.Date - FromDate.Date).Days + 1 : 0;
+    /// <summary>Days charged to the balance (work days of the employee's schedule).</summary>
+    public decimal TotalDays { get; set; }
 }

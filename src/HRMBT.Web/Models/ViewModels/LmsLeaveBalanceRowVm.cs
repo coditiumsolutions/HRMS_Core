@@ -3,7 +3,9 @@ namespace HRMBT.Web.Models.ViewModels;
 /// <summary>One row for LMS leave balance: quota vs availed from <c>EmployeeLeaves</c> for a year.</summary>
 public class LmsLeaveBalanceRowVm
 {
+    public int EmployeeUid { get; set; }
     public string EmployeeCode { get; set; } = string.Empty;
+    public string? Designation { get; set; }
     public string? EmployeeName { get; set; }
     public string LeaveTypeName { get; set; } = string.Empty;
     public decimal CarryForwardLeaves { get; set; }

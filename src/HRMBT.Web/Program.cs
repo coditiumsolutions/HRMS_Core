@@ -57,6 +57,8 @@ builder.Services.Configure<EmployeeDocumentOptions>(
 builder.Services.AddScoped<IEmployeeDocumentService, EmployeeDocumentService>();
 builder.Services.AddScoped<EmployeeEventService>();
 builder.Services.AddScoped<LeaveBalanceService>();
+builder.Services.AddScoped<HRMBT.Web.Services.WorkScheduleService>();
+builder.Services.AddScoped<HRMBT.Web.Services.LeaveRulesService>();
 
 builder.Services.Configure<FormOptions>(options =>
 {

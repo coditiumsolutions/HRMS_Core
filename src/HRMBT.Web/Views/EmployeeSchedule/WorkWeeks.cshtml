@@ -1,0 +1,152 @@
+@model HRMBT.Web.Models.ViewModels.WorkWeeksVm
+@using HRMBT.Web.Services
+@{
+    ViewData["Title"] = "Work weeks";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" crossorigin="anonymous" />
+    <link rel="stylesheet" href="~/css/employee-list.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/schedule.css" asp-append-version="true" />
+}
+
+<div class="employee-list-page py-3">
+    <div class="container-fluid px-0">
+        <partial name="_Alerts" />
+
+        <div class="filter-card filter-card-tight mb-3">
+            <div class="card-header"><span><i class="bi bi-funnel"></i>Search &amp; Filters</span></div>
+            <div class="card-body">
+                <form method="get" asp-action="WorkWeeks" class="row g-2 align-items-end">
+                    <div class="col-12 col-md">
+                        <label class="form-label" for="department">Department</label>
+                        <select name="department" id="department" class="form-select form-select-sm">
+                            <option value="">All</option>
+                            @foreach (var d in Model.Departments)
+                            {
+                                <option value="@d" selected="@(Model.Department == d)">@d</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-12 col-md">
+                        <label class="form-label" for="designation">Designation</label>
+                        <select name="designation" id="designation" class="form-select form-select-sm">
+                            <option value="">All</option>
+                            @foreach (var d in Model.Designations)
+                            {
+                                <option value="@d" selected="@(Model.Designation == d)">@d</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-auto">
+                        <button type="submit" class="btn btn-filter-apply w-100"><i class="bi bi-funnel-fill me-1"></i>Apply</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <form method="post" asp-action="SetWorkWeeks" id="workWeeksForm">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="selectedIds" id="selectedIds" />
+            <input type="hidden" name="department" value="@Model.Department" />
+            <input type="hidden" name="designation" value="@Model.Designation" />
+
+            <div class="grid-card mb-3">
+                <div class="card-header"><span><i class="bi bi-calendar-week"></i>@(Model.Filtered ? "Employees" : "Employees who do not work Mon–Sat") <span class="text-muted small ms-1">(@Model.Rows.Count)</span></span></div>
+                <div class="card-body">
+                    <p class="grid-note">
+                        Everyone works @WorkWeek.Describe(WorkWeek.Default) unless set otherwise here or on their schedule page.
+                        Pick a department or designation to list people, tick them, then set their work week below.
+                    </p>
+                    @if (Model.Rows.Count == 0)
+                    {
+                        <div class="empty-state">
+                            <i class="bi bi-inbox"></i>
+                            <h5 class="mb-1">@(Model.Filtered ? "No active employees match" : "Nobody has a different work week")</h5>
+                            <p class="mb-0">Use the filters above to choose who to change.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="table-wrap table-responsive">
+                            <table class="employee-grid">
+                                <thead>
+                                    <tr>
+                                        <th class="col-pick" data-align="none"><input type="checkbox" class="form-check-input" id="tickAll" aria-label="Tick everyone listed" /></th>
+                                        <th class="col-emp-id">Emp ID</th>
+                                        <th>Employee</th>
+                                        <th>Department</th>
+                                        <th>Project</th>
+                                        <th>Work week</th>
+                                        <th>Since</th>
+                                        <th class="col-actions text-center" data-align="none" scope="col">Month</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var r in Model.Rows)
+                                    {
+                                        <tr>
+                                            <td class="col-pick"><input type="checkbox" class="form-check-input week-tick" value="@r.Uid" aria-label="Include @r.EmployeeCode" /></td>
+                                            <td class="col-emp-id"><span class="text-muted small emp-id-cell" title="@r.EmployeeCode">@r.EmployeeCode</span></td>
+                                            <td>
+                                                <div class="emp-name">@(r.Name ?? "—")</div>
+                                                <div class="emp-meta">@(r.Designation ?? "—")</div>
+                                            </td>
+                                            <td>@(r.Department ?? "—")</td>
+                                            <td>@(r.Project ?? "—")</td>
+                                            <td>@WorkWeek.Describe(r.Mask)@if (!r.Own) { <span class="text-muted small"> (default)</span> }</td>
+                                            <td class="text-nowrap">@(r.Since == null ? "—" : Fmt.ShortDate(r.Since))</td>
+                                            <td class="col-actions">
+                                                <a class="row-action row-action-view" asp-action="Month" asp-route-id="@r.Uid" title="Month view" aria-label="Month view of @r.EmployeeCode"><i class="bi bi-calendar3"></i></a>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            @if (Model.Rows.Count > 0)
+            {
+                <div class="action-bar">
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        <span class="small text-muted"><span id="tickCount">0</span> ticked</span>
+                        <partial name="_WorkDayPicker" model="WorkWeek.Default" />
+                        <label class="small mb-0" for="from">from</label>
+                        <input type="date" name="from" id="from" class="form-control form-control-sm w-auto" value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+                        <input type="text" name="notes" class="form-control form-control-sm w-auto" maxlength="1000" placeholder="Note" aria-label="Note" />
+                        <button type="submit" class="btn btn-action-primary ms-auto" id="saveWeeks" disabled>Set work week</button>
+                    </div>
+                </div>
+            }
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            var form = document.getElementById('workWeeksForm');
+            var all = document.getElementById('tickAll');
+            var button = document.getElementById('saveWeeks');
+            var ticks = Array.prototype.slice.call(document.querySelectorAll('.week-tick'));
+            if (!button) return;
+            function ticked() { return ticks.filter(function (t) { return t.checked; }); }
+            function refresh() {
+                var n = ticked().length;
+                document.getElementById('tickCount').textContent = n;
+                button.disabled = n === 0;
+                if (all) all.checked = n === ticks.length && n > 0;
+            }
+            if (all) all.addEventListener('change', function () { ticks.forEach(function (t) { t.checked = all.checked; }); refresh(); });
+            ticks.forEach(function (t) { t.addEventListener('change', refresh); });
+            form.addEventListener('submit', function (e) {
+                if (!confirm('Change the work week of ' + ticked().length + ' employee(s)? Open leave from that date on is recounted.')) { e.preventDefault(); return; }
+                document.getElementById('selectedIds').value = ticked().map(function (t) { return t.value; }).join(',');
+                button.disabled = true;
+            });
+        })();
+    </script>
+}

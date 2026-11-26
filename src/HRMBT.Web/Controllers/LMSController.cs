@@ -11,32 +11,20 @@ namespace HRMBT.Web.Controllers
 [Route("leave")]
     public class LMSController : Controller
     {
-        private const string LeaveTypesConfigKey = "LeaveTypes";
-        private const string DepartmentConfigKey = "Department";
-
         private readonly ApplicationDbContext _context;
         private readonly HRMBT.Web.Services.LeaveBalanceService _leaveBalances;
         private readonly HRMBT.Web.Services.IAuditLogService _audit;
 
-        public LMSController(ApplicationDbContext context, HRMBT.Web.Services.LeaveBalanceService leaveBalances, HRMBT.Web.Services.IAuditLogService audit)
+        private readonly HRMBT.Web.Services.LeaveRulesService _rules;
+
+        public LMSController(ApplicationDbContext context, HRMBT.Web.Services.LeaveBalanceService leaveBalances, HRMBT.Web.Services.IAuditLogService audit,
+            HRMBT.Web.Services.LeaveRulesService rules)
         {
+            _rules = rules;
             _context = context;
             _leaveBalances = leaveBalances;
             _audit = audit;
         }
-
-        private static IEnumerable<string> SplitConfigCsv(string? csv)
-        {
-            if (string.IsNullOrWhiteSpace(csv)) yield break;
-            foreach (var item in csv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            {
-                if (!string.IsNullOrWhiteSpace(item))
-                    yield return item;
-            }
-        }
-
-        private static bool ConfigKeyMatches(string? key, string match) =>
-            !string.IsNullOrWhiteSpace(key) && string.Equals(key.Trim(), match, StringComparison.OrdinalIgnoreCase);
 
         /// <summary>Active leave type names from dbo.LeaveTypes.</summary>
         private async Task<List<string>> GetLeaveTypeNamesAsync()
@@ -70,44 +58,15 @@ namespace HRMBT.Web.Controllers
                 .ToListAsync();
         }
 
-        /// <summary>
-        /// An employee cannot have two open (Pending or Approved) leave requests covering the same day.
-        /// Returns a message naming the conflicting request, or null. Rejected and Cancelled requests never conflict.
-        /// </summary>
-        private async Task<string?> FindLeaveOverlapAsync(int employeeUid, DateTime from, DateTime to, string? status, int? ignoreRequestId)
-        {
-            if (!LeaveRequestCountsAsAvailed(status))
-                return null;
-
-            var other = await _context.LeaveRequests.AsNoTracking()
-                .Where(l => l.EmployeeId == employeeUid
-                            && (ignoreRequestId == null || l.Id != ignoreRequestId)
-                            && (l.Status == "Pending" || l.Status == "Approved")
-                            && l.FromDate <= to && l.ToDate >= from)
-                .OrderBy(l => l.FromDate)
-                .Select(l => new { l.Id, l.FromDate, l.ToDate, l.Status })
-                .FirstOrDefaultAsync();
-
-            return other == null
-                ? null
-                : $"This employee already has a {other.Status} leave request (#{other.Id}) from {Fmt.ShortDate(other.FromDate)} to {Fmt.ShortDate(other.ToDate)} that overlaps these dates.";
-        }
-
-        /// <summary>Leave rows that consume quota (adjust if your workflow uses other statuses).</summary>
-        private static bool LeaveRequestCountsAsAvailed(string? status)
-        {
-            if (string.IsNullOrWhiteSpace(status)) return false;
-            var s = status.Trim();
-            return string.Equals(s, "Approved", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(s, "Pending", StringComparison.OrdinalIgnoreCase);
-        }
+        private Task AuditAsync(string table, string operation, object recordId, int? employeeId, object? before, object? after) =>
+            _audit.WriteAsync(table, operation, recordId.ToString(), employeeId, before, after, "LMS");
 
         // GET: LMS — lists dbo.LeaveRequests joined with Employee for display.
         [HttpGet("")]
-        public async Task<IActionResult> Index(string? search, string? employeeId, string? status, string? leaveType)
+        public async Task<IActionResult> Index(string? search, int? employeeId, string? status, string? leaveType)
         {
             ViewData["Module"] = "LMS";
-            var searchTerm = (search ?? employeeId)?.Trim();
+            var searchTerm = search?.Trim();
             if (string.IsNullOrWhiteSpace(searchTerm)) searchTerm = null;
             status = string.IsNullOrWhiteSpace(status) ? null : status.Trim();
             leaveType = string.IsNullOrWhiteSpace(leaveType) ? null : leaveType.Trim();
@@ -124,6 +83,13 @@ namespace HRMBT.Web.Controllers
                     x.e != null &&
                     ((x.e.EmployeeID != null && x.e.EmployeeID.Contains(searchTerm)) ||
                      (x.e.EmployeeName != null && x.e.EmployeeName.Contains(searchTerm))));
+            }
+
+            if (employeeId is > 0)
+            {
+                // exactly this employee: a text search for the ID would also match other IDs that contain it
+                query = query.Where(x => x.lr.EmployeeId == employeeId);
+                ViewBag.Employee = await _context.Employees.AsNoTracking().FirstOrDefaultAsync(e => e.uid == employeeId);
             }
 
             if (!string.IsNullOrEmpty(status))
@@ -145,6 +111,7 @@ namespace HRMBT.Web.Controllers
                     LeaveType = x.lr.LeaveTypeInfo!.Name,
                     FromDate = x.lr.FromDate,
                     ToDate = x.lr.ToDate,
+                    TotalDays = x.lr.TotalDays,
                     Status = x.lr.Status
                 })
                 .ToListAsync();
@@ -195,6 +162,7 @@ namespace HRMBT.Web.Controllers
             {
                 _context.LeaveQuotas.Add(model);
                 await _context.SaveChangesAsync();
+                await AuditAsync("LeaveQuota", "INSERT", model.UID, null, null, new { model.LeaveTypeId, model.Year, model.TotalLeaves });
                 TempData["SuccessMessage"] = $"Leave quota for {model.LeaveTypeName} ({model.Year}) created.";
                 return RedirectToAction(nameof(LeaveQuota));
             }
@@ -232,8 +200,11 @@ namespace HRMBT.Web.Controllers
             {
                 try
                 {
+                    var old = await _context.LeaveQuotas.AsNoTracking().Where(q => q.UID == model.UID)
+                        .Select(q => new { q.LeaveTypeId, q.Year, q.TotalLeaves }).FirstOrDefaultAsync();
                     _context.Update(model);
                     await _context.SaveChangesAsync();
+                    await AuditAsync("LeaveQuota", "UPDATE", model.UID, null, old, new { model.LeaveTypeId, model.Year, model.TotalLeaves });
                     TempData["SuccessMessage"] = $"Leave quota for {model.LeaveTypeName} ({model.Year}) updated.";
                     return RedirectToAction(nameof(LeaveQuota));
                 }
@@ -274,16 +245,40 @@ namespace HRMBT.Web.Controllers
             {
                 _context.LeaveQuotas.Remove(quota);
                 await _context.SaveChangesAsync();
+                await AuditAsync("LeaveQuota", "DELETE", id, null, new { quota.LeaveTypeId, quota.Year, quota.TotalLeaves }, null);
                 TempData["SuccessMessage"] = $"Leave quota for {quota.LeaveTypeName} ({quota.Year}) deleted.";
             }
 
             return RedirectToAction(nameof(LeaveQuota));
         }
 
+        /// <summary>Gives <paramref name="year"/> + 1 the same quota for every leave type that has none there yet.</summary>
+        [HttpPost("quotas/copy")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CopyLeaveQuotas(int year)
+        {
+            var next = (year + 1).ToString();
+            var from = year.ToString();
+            var source = await _context.LeaveQuotas.AsNoTracking().Where(q => q.Year == from).ToListAsync();
+            var have = (await _context.LeaveQuotas.AsNoTracking().Where(q => q.Year == next).Select(q => q.LeaveTypeId).ToListAsync()).ToHashSet();
+            var add = source.Where(q => !have.Contains(q.LeaveTypeId))
+                .Select(q => new LeaveQuota { LeaveTypeId = q.LeaveTypeId, Year = next, TotalLeaves = q.TotalLeaves }).ToList();
+            if (add.Count > 0)
+            {
+                _context.LeaveQuotas.AddRange(add);
+                await _context.SaveChangesAsync();
+                await AuditAsync("LeaveQuota", "INSERT", $"{year}->{next}", null, null, add.Select(q => new { q.LeaveTypeId, q.Year, q.TotalLeaves }).ToList());
+            }
+            TempData["SuccessMessage"] = source.Count == 0 ? $"There are no quotas for {year} to copy."
+                : add.Count == 0 ? $"{next} already has a quota for every leave type set in {year}."
+                : $"{add.Count} quota(s) copied from {year} to {next}.";
+            return RedirectToAction(nameof(LeaveQuota));
+        }
+
         // GET: LMS/LeaveBalance: entitled (quota + carry-forward + adjustments) minus approved leave for the selected year.
         // Reads dbo.vLeaveBalances through LeaveBalanceService, the same source as the employee Leave Balance tab.
         [HttpGet("balances")]
-        public async Task<IActionResult> LeaveBalance(string? year, string? department)
+        public async Task<IActionResult> LeaveBalance(string? year, string? department, int? employeeId)
         {
             ViewData["Module"] = "LMS";
             var yearStr = string.IsNullOrWhiteSpace(year) ? DateTime.Now.Year.ToString() : year!.Trim();
@@ -309,7 +304,7 @@ namespace HRMBT.Web.Controllers
             var activeEmployees = await _context.Employees.AsNoTracking()
                 .Where(e => e.EmployeeStatus == "Active")
                 .OrderBy(e => e.EmployeeName)
-                .Select(e => new { e.uid, e.EmployeeID, e.EmployeeName, Department = e.DepartmentInfo!.DepartmentName })
+                .Select(e => new { e.uid, e.EmployeeID, e.EmployeeName, Department = e.DepartmentInfo!.DepartmentName, Designation = e.DesignationInfo!.Name })
                 .ToListAsync();
 
             var allActive = activeEmployees;
@@ -318,6 +313,12 @@ namespace HRMBT.Web.Controllers
                 allActive = activeEmployees
                     .Where(e => e.Department != null && string.Equals(e.Department.Trim(), deptFilter, StringComparison.OrdinalIgnoreCase))
                     .ToList();
+            }
+
+            if (employeeId is > 0)
+            {
+                allActive = allActive.Where(e => e.uid == employeeId).ToList();
+                ViewBag.EmployeeId = employeeId;
             }
 
             var uids = allActive.Select(e => e.uid).ToList();
@@ -332,7 +333,9 @@ namespace HRMBT.Web.Controllers
                 {
                     rows.Add(new LmsLeaveBalanceRowVm
                     {
+                        EmployeeUid = emp.uid,
                         EmployeeCode = emp.EmployeeID,
+                        Designation = emp.Designation,
                         EmployeeName = emp.EmployeeName,
                         LeaveTypeName = typeNames.TryGetValue(r.LeaveTypeId, out var n) ? n : "Leave type " + r.LeaveTypeId,
                         CarryForwardLeaves = r.CarryForward,
@@ -411,86 +414,110 @@ namespace HRMBT.Web.Controllers
                 .ToList();
         }
 
-        // GET: LMS/Details/5
-        [HttpGet("{id}")]
-        public async Task<IActionResult> Details(int? id)
+        // GET: /leave/5
+        [HttpGet("{id:int}")]
+        public async Task<IActionResult> Details(int id)
         {
             ViewData["Module"] = "LMS";
-            if (id == null) return NotFound();
-
-            var leaveRequest = await _context.LeaveRequests.FirstOrDefaultAsync(m => m.Id == id);
+            var leaveRequest = await _context.LeaveRequests.AsNoTracking().FirstOrDefaultAsync(m => m.Id == id);
             if (leaveRequest == null) return NotFound();
-
-            var emp = await _context.Employees.AsNoTracking()
-                .FirstOrDefaultAsync(e => e.uid == leaveRequest.EmployeeId);
-            ViewBag.EmployeeCode = emp?.EmployeeID ?? "(unknown)";
-            ViewBag.EmployeeName = emp?.EmployeeName;
-
+            await SetRequestEmployeeAsync(leaveRequest);
             return View(leaveRequest);
         }
 
-        // GET: LMS/Create
+        private async Task SetRequestEmployeeAsync(LeaveRequest r)
+        {
+            ViewBag.Employee = await _context.Employees.AsNoTracking().FirstOrDefaultAsync(e => e.uid == r.EmployeeId);
+            ViewBag.Approver = r.ApprovedByUserId == null ? null
+                : await _context.AppUsers.AsNoTracking().Where(u => u.Uid == r.ApprovedByUserId).Select(u => u.Username).FirstOrDefaultAsync();
+        }
+
+        /// <summary>Days a request would charge and anything wrong with it, for the form (saves nothing).</summary>
+        [HttpGet("check")]
+        public async Task<IActionResult> Check(int employeeId, DateTime from, DateTime to, string? leaveType, string? status, int? ignoreId)
+        {
+            var employee = await _context.Employees.AsNoTracking().FirstOrDefaultAsync(e => e.uid == employeeId);
+            if (employee == null || from == default || to == default) return Json(new { found = false });
+            var check = await _rules.CheckAsync(employee, from, to, await ResolveLeaveTypeIdAsync(leaveType), status ?? "Pending", ignoreId);
+            return Json(new
+            {
+                found = true,
+                workDays = check.Days,
+                calendarDays = to >= from ? (to.Date - from.Date).Days + 1 : 0,
+                problems = check.Blocks,
+                warnings = check.Warnings
+            });
+        }
+
+        // GET: /leave/new
         [HttpGet("new")]
-        public async Task<IActionResult> Create()
+        public async Task<IActionResult> Create(int? employeeId)
         {
             ViewData["Module"] = "LMS";
-
-            ViewBag.Employees = await BuildEmployeeUidSelectListAsync();
-            ViewBag.LeaveTypes = await BuildLeaveTypesSelectList();
-            ViewBag.Statuses = new SelectList(new[] { "Pending", "Approved", "Rejected", "Cancelled" }, "Pending");
-
-            var model = new LeaveRequest
+            return await RequestFormAsync(nameof(Create), new LeaveRequest
             {
+                EmployeeId = employeeId ?? 0,
                 FromDate = DateTime.Today,
                 ToDate = DateTime.Today,
                 Status = "Pending"
-            };
-
-            return View(model);
+            });
         }
 
-        // POST: LMS/Create — persists dbo.LeaveRequests
+        private async Task<IActionResult> RequestFormAsync(string view, LeaveRequest model)
+        {
+            ViewBag.Employees = await BuildEmployeeUidSelectListAsync(model.EmployeeId > 0 ? model.EmployeeId : null);
+            ViewBag.LeaveTypes = await BuildLeaveTypesSelectList(model.LeaveType);
+            ViewBag.Statuses = new SelectList(new[] { "Pending", "Approved", "Rejected", "Cancelled" }, model.Status);
+            return View(view, model);
+        }
+
+        /// <summary>Runs the shared leave rules and puts refusals in ModelState. Null when the form itself is incomplete.</summary>
+        private async Task<(HRMBT.Web.Services.LeaveCheck Check, int TypeId)?> ValidateRequestAsync(LeaveRequest model, int? ignoreId)
+        {
+            var employee = model.EmployeeId > 0
+                ? await _context.Employees.AsNoTracking().FirstOrDefaultAsync(e => e.uid == model.EmployeeId)
+                : null;
+            if (employee == null)
+                ModelState.AddModelError(nameof(LeaveRequest.EmployeeId), "Please select an employee.");
+            var typeId = await ResolveLeaveTypeIdAsync(model.LeaveType);
+            if (typeId == null)
+                ModelState.AddModelError(nameof(LeaveRequest.LeaveType), "Please select a valid leave type.");
+            if (employee == null || typeId == null)
+                return null;
+
+            var check = await _rules.CheckAsync(employee, model.FromDate, model.ToDate, typeId, model.Status, ignoreId);
+            foreach (var problem in check.Blocks)
+                ModelState.AddModelError(string.Empty, problem);
+            return (check, typeId.Value);
+        }
+
+        private static string SavedMessage(string what, LeaveRequest r, HRMBT.Web.Services.LeaveCheck check) =>
+            $"{what}: {Fmt.Days(r.TotalDays)} day(s) charged." + (check.Warnings.Count > 0 ? " Check: " + string.Join(" ", check.Warnings) : "");
+
         [HttpPost("new")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("EmployeeId,LeaveType,FromDate,ToDate,Status")] LeaveRequest model)
         {
             ViewData["Module"] = "LMS";
-
-            if (model.EmployeeId <= 0)
-                ModelState.AddModelError(nameof(LeaveRequest.EmployeeId), "Please select an employee.");
-
-            if (model.ToDate.Date < model.FromDate.Date)
-                ModelState.AddModelError(nameof(LeaveRequest.ToDate), "To date must be on or after the from date.");
-            else if (model.ToDate.Year != model.FromDate.Year)
-                ModelState.AddModelError(nameof(LeaveRequest.ToDate), "A leave request cannot cross 31 December. Apply for the two parts separately so each counts in its own year.");
-
             if (string.IsNullOrWhiteSpace(model.Status))
                 model.Status = "Pending";
+            var validated = await ValidateRequestAsync(model, null);
 
-            var leaveTypeId = await ResolveLeaveTypeIdAsync(model.LeaveType);
-            if (leaveTypeId == null)
-                ModelState.AddModelError(nameof(LeaveRequest.LeaveType), "Please select a valid leave type.");
-
-            if (ModelState.IsValid && model.ToDate.Date >= model.FromDate.Date)
+            if (ModelState.IsValid && validated is { } v)
             {
-                var overlap = await FindLeaveOverlapAsync(model.EmployeeId, model.FromDate.Date, model.ToDate.Date, model.Status, null);
-                if (overlap != null)
-                    ModelState.AddModelError(string.Empty, overlap);
-            }
-
-            if (ModelState.IsValid)
-            {
-                model.LeaveTypeId = leaveTypeId!.Value;
+                model.LeaveTypeId = v.TypeId;
                 model.FromDate = model.FromDate.Date;
                 model.ToDate = model.ToDate.Date;
-                model.TotalDays = (model.ToDate - model.FromDate).Days + 1;   // calendar days; weekly offs/holidays excluded once schedules exist (B5)
+                model.TotalDays = v.Check.Days;   // work days only (the employee's schedule)
                 model.CreatedBy = User.Identity?.Name;
+                await _rules.StampApprovalAsync(model, null, User.Identity?.Name);
                 try
                 {
                     _context.Add(model);
                     await _context.SaveChangesAsync();
-                    TempData["SuccessMessage"] = "Leave request saved to LeaveRequests.";
-                    return RedirectToAction(nameof(Index));
+                    await AuditAsync("LeaveRequests", "INSERT", model.Id, model.EmployeeId, null, HRMBT.Web.Services.LeaveRulesService.Snapshot(model));
+                    TempData["SuccessMessage"] = SavedMessage("Leave request saved", model, v.Check);
+                    return RedirectToAction(nameof(Index), new { employeeId = model.EmployeeId });
                 }
                 catch (DbUpdateException)
                 {
@@ -499,80 +526,56 @@ namespace HRMBT.Web.Controllers
                 }
             }
 
-            ViewBag.Employees = await BuildEmployeeUidSelectListAsync(model.EmployeeId);
-            ViewBag.LeaveTypes = await BuildLeaveTypesSelectList(model.LeaveType);
-            ViewBag.Statuses = new SelectList(new[] { "Pending", "Approved", "Rejected", "Cancelled" }, model.Status);
-
-            return View(model);
+            return await RequestFormAsync(nameof(Create), model);
         }
 
-        // GET: LMS/Edit/5
-        [HttpGet("{id}/edit")]
-        public async Task<IActionResult> Edit(int? id)
+        [HttpGet("{id:int}/edit")]
+        public async Task<IActionResult> Edit(int id)
         {
             ViewData["Module"] = "LMS";
-            if (id == null) return NotFound();
-
-            var leaveRequest = await _context.LeaveRequests.FindAsync(id);
+            var leaveRequest = await _context.LeaveRequests.AsNoTracking().FirstOrDefaultAsync(l => l.Id == id);
             if (leaveRequest == null) return NotFound();
-
-            ViewBag.Employees = await BuildEmployeeUidSelectListAsync(leaveRequest.EmployeeId);
-            ViewBag.LeaveTypes = await BuildLeaveTypesSelectList(leaveRequest.LeaveType);
-            ViewBag.Statuses = new SelectList(new[] { "Pending", "Approved", "Rejected", "Cancelled" }, leaveRequest.Status);
-
-            return View(leaveRequest);
+            return await RequestFormAsync(nameof(Edit), leaveRequest);
         }
 
-        // POST: LMS/Edit/5
-        [HttpPost("{id}/edit")]
+        [HttpPost("{id:int}/edit")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("Id,EmployeeId,LeaveType,FromDate,ToDate,Status,RowVersion")] LeaveRequest model)
         {
             ViewData["Module"] = "LMS";
             if (id != model.Id) return NotFound();
 
-            if (model.EmployeeId <= 0)
-                ModelState.AddModelError(nameof(LeaveRequest.EmployeeId), "Please select an employee.");
+            var existing = await _context.LeaveRequests.FirstOrDefaultAsync(l => l.Id == model.Id);
+            if (existing == null) return NotFound();
+            if (string.IsNullOrWhiteSpace(model.Status))
+                model.Status = existing.Status;
+            var validated = await ValidateRequestAsync(model, model.Id);
+            if (existing.IsHalfDay && model.FromDate.Date != model.ToDate.Date)
+                ModelState.AddModelError(string.Empty, "This is a half day, so it must start and end on the same date.");
 
-            if (model.ToDate.Date < model.FromDate.Date)
-                ModelState.AddModelError(nameof(LeaveRequest.ToDate), "To date must be on or after the from date.");
-            else if (model.ToDate.Year != model.FromDate.Year)
-                ModelState.AddModelError(nameof(LeaveRequest.ToDate), "A leave request cannot cross 31 December. Apply for the two parts separately so each counts in its own year.");
-
-            var leaveTypeId = await ResolveLeaveTypeIdAsync(model.LeaveType);
-            if (leaveTypeId == null)
-                ModelState.AddModelError(nameof(LeaveRequest.LeaveType), "Please select a valid leave type.");
-
-            if (ModelState.IsValid && model.ToDate.Date >= model.FromDate.Date)
-            {
-                var current = await _context.LeaveRequests.AsNoTracking().Where(l => l.Id == model.Id).Select(l => l.Status).FirstOrDefaultAsync();
-                var overlap = await FindLeaveOverlapAsync(model.EmployeeId, model.FromDate.Date, model.ToDate.Date,
-                    string.IsNullOrWhiteSpace(model.Status) ? current : model.Status, model.Id);
-                if (overlap != null)
-                    ModelState.AddModelError(string.Empty, overlap);
-            }
-
-            if (ModelState.IsValid)
+            if (ModelState.IsValid && validated is { } v)
             {
                 try
                 {
-                    var existing = await _context.LeaveRequests.FirstOrDefaultAsync(l => l.Id == model.Id);
-                    if (existing == null) return NotFound();
                     if (model.RowVersion != null)
                         _context.Entry(existing).Property(l => l.RowVersion).OriginalValue = model.RowVersion;   // S15
+                    var before = HRMBT.Web.Services.LeaveRulesService.Snapshot(existing);
+                    var previousStatus = existing.Status;
 
                     existing.EmployeeId = model.EmployeeId;
-                    existing.LeaveTypeId = leaveTypeId!.Value;
+                    existing.LeaveTypeId = v.TypeId;
                     existing.FromDate = model.FromDate.Date;
                     existing.ToDate = model.ToDate.Date;
-                    existing.Status = string.IsNullOrWhiteSpace(model.Status) ? existing.Status : model.Status;
+                    existing.Status = model.Status;
                     if (!existing.IsHalfDay)
-                        existing.TotalDays = (existing.ToDate - existing.FromDate).Days + 1;
+                        existing.TotalDays = v.Check.Days;
                     existing.ModifiedAt = DateTime.Now;
                     existing.ModifiedBy = User.Identity?.Name;
+                    await _rules.StampApprovalAsync(existing, previousStatus, User.Identity?.Name);
                     await _context.SaveChangesAsync();
-                    TempData["SuccessMessage"] = "Leave request updated successfully.";
-                    return RedirectToAction(nameof(Index));
+                    await AuditAsync("LeaveRequests", "UPDATE", existing.Id, existing.EmployeeId, before, HRMBT.Web.Services.LeaveRulesService.Snapshot(existing));
+                    TempData["SuccessMessage"] = SavedMessage("Leave request updated", existing, v.Check);
+                    return RedirectToAction(nameof(Index), new { employeeId = existing.EmployeeId });
                 }
                 catch (DbUpdateConcurrencyException)
                 {
@@ -586,46 +589,44 @@ namespace HRMBT.Web.Controllers
                 }
             }
 
-            ViewBag.Employees = await BuildEmployeeUidSelectListAsync(model.EmployeeId);
-            ViewBag.LeaveTypes = await BuildLeaveTypesSelectList(model.LeaveType);
-            ViewBag.Statuses = new SelectList(new[] { "Pending", "Approved", "Rejected", "Cancelled" }, model.Status);
-
-            return View(model);
+            return await RequestFormAsync(nameof(Edit), model);
         }
 
-        // GET: LMS/Delete/5
-        [HttpGet("{id}/delete")]
-        public async Task<IActionResult> Delete(int? id)
+        // Leave history is never deleted (db standards S6, S14): a request is cancelled.
+        [HttpGet("{id:int}/delete")]
+        public IActionResult OldDelete(int id) => RedirectToActionPermanent(nameof(Cancel), new { id });
+
+        [HttpGet("{id:int}/cancel")]
+        public async Task<IActionResult> Cancel(int id)
         {
             ViewData["Module"] = "LMS";
-            if (id == null) return NotFound();
-
-            var leaveRequest = await _context.LeaveRequests.FirstOrDefaultAsync(m => m.Id == id);
+            var leaveRequest = await _context.LeaveRequests.AsNoTracking().FirstOrDefaultAsync(m => m.Id == id);
             if (leaveRequest == null) return NotFound();
-
-            var emp = await _context.Employees.AsNoTracking()
-                .FirstOrDefaultAsync(e => e.uid == leaveRequest.EmployeeId);
-            ViewBag.EmployeeCode = emp?.EmployeeID ?? "(unknown)";
-            ViewBag.EmployeeName = emp?.EmployeeName;
-
+            await SetRequestEmployeeAsync(leaveRequest);
             return View(leaveRequest);
         }
 
-        // POST: LMS/Delete/5
-        [HttpPost("{id}/delete"), ActionName("Delete")]
+        [HttpPost("{id:int}/cancel"), ActionName("Cancel")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(int id)
+        public async Task<IActionResult> CancelConfirmed(int id)
         {
-            ViewData["Module"] = "LMS";
-            var leaveRequest = await _context.LeaveRequests.FindAsync(id);
-            if (leaveRequest != null)
+            var r = await _context.LeaveRequests.FirstOrDefaultAsync(l => l.Id == id);
+            if (r == null) return NotFound();
+            if (!HRMBT.Web.Services.LeaveRulesService.IsOpen(r.Status))
+                TempData["ErrorMessage"] = $"This request is already {r.Status}.";
+            else
             {
-                _context.LeaveRequests.Remove(leaveRequest);
+                var before = HRMBT.Web.Services.LeaveRulesService.Snapshot(r);
+                var previous = r.Status;
+                r.Status = "Cancelled";
+                r.ModifiedAt = DateTime.Now;
+                r.ModifiedBy = User.Identity?.Name;
+                await _rules.StampApprovalAsync(r, previous, User.Identity?.Name);
                 await _context.SaveChangesAsync();
-                TempData["SuccessMessage"] = "Leave request deleted successfully.";
+                await AuditAsync("LeaveRequests", "UPDATE", r.Id, r.EmployeeId, before, HRMBT.Web.Services.LeaveRulesService.Snapshot(r));
+                TempData["SuccessMessage"] = $"Leave request cancelled; its {Fmt.Days(r.TotalDays)} day(s) are no longer charged.";
             }
-
-            return RedirectToAction(nameof(Index));
+            return RedirectToAction(nameof(Index), new { employeeId = r.EmployeeId });
         }
 
         private bool LeaveRequestExists(int id) =>

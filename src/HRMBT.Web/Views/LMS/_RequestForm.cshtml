@@ -1,0 +1,93 @@
+﻿@model HRMBT.Web.Models.LeaveRequest
+@{
+    var isEdit = Model.Id > 0;
+}
+<form asp-action="@(isEdit ? "Edit" : "Create")" asp-route-id="@(isEdit ? Model.Id : (int?)null)" method="post" id="leaveForm" novalidate>
+    @if (isEdit)
+    {
+        <input type="hidden" asp-for="Id" />
+        <input type="hidden" asp-for="RowVersion" />
+    }
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+    <div class="grid-card mb-3">
+        <div class="card-header"><span><i class="bi bi-calendar-plus"></i>@(isEdit ? "Leave request #" + Model.Id : "New leave request")</span></div>
+        <div class="card-body grid-form">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label asp-for="EmployeeId" class="form-label">Employee <span class="text-danger">*</span></label>
+                    <select asp-for="EmployeeId" class="form-select" asp-items="ViewBag.Employees">
+                        <option value="0">Choose employee…</option>
+                    </select>
+                    <span asp-validation-for="EmployeeId" class="text-danger small"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="LeaveType" class="form-label">Leave type <span class="text-danger">*</span></label>
+                    <select asp-for="LeaveType" class="form-select" asp-items="ViewBag.LeaveTypes">
+                        <option value="">Choose type…</option>
+                    </select>
+                    <span asp-validation-for="LeaveType" class="text-danger small"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="FromDate" class="form-label">From date <span class="text-danger">*</span></label>
+                    <input asp-for="FromDate" class="form-control" type="date" />
+                    <span asp-validation-for="FromDate" class="text-danger small"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="ToDate" class="form-label">To date <span class="text-danger">*</span></label>
+                    <input asp-for="ToDate" class="form-control" type="date" />
+                    <span asp-validation-for="ToDate" class="text-danger small"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="Status" class="form-label">Status</label>
+                    <select asp-for="Status" class="form-select" asp-items="ViewBag.Statuses"></select>
+                    <span asp-validation-for="Status" class="text-danger small"></span>
+                </div>
+            </div>
+            <div class="mt-3 small" id="leaveCheck" aria-live="polite"></div>
+        </div>
+    </div>
+
+    <div class="action-bar">
+        <div class="d-flex flex-wrap align-items-center justify-content-end gap-2">
+            <span class="small text-muted me-auto">Days are counted on the employee's work days only.</span>
+            <a asp-action="Index" class="btn btn-action-outline">Back</a>
+            <button type="submit" class="btn btn-action-primary"><i class="bi bi-check2-circle me-1"></i>@(isEdit ? "Save changes" : "Submit request")</button>
+        </div>
+    </div>
+</form>
+
+<script>
+    (function () {
+        var box = document.getElementById('leaveCheck');
+        var fields = ['EmployeeId', 'LeaveType', 'FromDate', 'ToDate', 'Status'].map(function (id) { return document.getElementById(id); });
+        var url = '@Url.Action("Check", "LMS")';
+        var ignoreId = '@(isEdit ? Model.Id.ToString() : "")';
+        var latest = 0;
+        function line(text, cls) {
+            var d = document.createElement('div');
+            d.className = cls;
+            d.textContent = text;
+            box.appendChild(d);
+        }
+        function refresh() {
+            var v = fields.map(function (f) { return f.value; });
+            var mine = ++latest;
+            if (!v[0] || v[0] === '0' || !v[2] || !v[3]) { box.textContent = ''; return; }
+            var q = new URLSearchParams({ employeeId: v[0], leaveType: v[1], from: v[2], to: v[3], status: v[4], ignoreId: ignoreId });
+            fetch(url + '?' + q, { headers: { Accept: 'application/json' } })
+                .then(function (r) { return r.json(); })
+                .then(function (c) {
+                    if (mine !== latest) return;
+                    box.textContent = '';
+                    if (!c.found) return;
+                    line(c.workDays + ' work day(s) of ' + c.calendarDays + ' calendar day(s) will be charged.', 'fw-semibold');
+                    c.problems.forEach(function (p) { line(p, 'text-danger'); });
+                    c.warnings.forEach(function (w) { line(w, 'text-warning-emphasis'); });
+                })
+                .catch(function () { box.textContent = ''; });
+        }
+        fields.forEach(function (f) { f.addEventListener('change', refresh); });
+        refresh();
+    })();
+</script>

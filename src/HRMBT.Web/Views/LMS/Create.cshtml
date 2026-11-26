@@ -1,167 +1,20 @@
-@model HRMBT.Web.Models.LeaveRequest
-
+﻿@model HRMBT.Web.Models.LeaveRequest
 @{
     ViewData["Title"] = "New leave request";
 }
 
-<style>
-    .lms-create-hero {
-        background: linear-gradient(90deg, #00203f 0%, #0b2d52 100%);
-        color: #fff;
-        border-radius: 1rem;
-        padding: 0.9rem 1.25rem;
-        margin-bottom: 1rem;
-        border-bottom: 3px solid #d4af37;
-        box-shadow: 0 0.25rem 1rem rgba(0, 32, 63, 0.18);
-    }
-    .lms-create-hero h1 { color: #fff; font-size: 1.35rem; font-weight: 600; margin: 0 0 .35rem; }
-    .lms-create-hero p { margin: 0; opacity: .9; font-size: .9rem; }
-    .lms-panel {
-        border-radius: 1rem;
-        border: 1px solid rgba(0,0,0,.06);
-        box-shadow: 0 .125rem .5rem rgba(0,0,0,.04);
-    }
-    .lms-summary {
-        position: sticky;
-        top: 1rem;
-    }
-    .lms-summary dt { font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; color: #6c757d; }
-    .lms-summary dd { font-size: .95rem; margin-bottom: .75rem; }
-</style>
+@section Styles {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" crossorigin="anonymous" />
+    <link rel="stylesheet" href="~/css/employee-list.css" asp-append-version="true" />
+}
 
-<div class="container-fluid py-3">
-    <nav aria-label="breadcrumb" class="mb-3">
-        <ol class="breadcrumb mb-0 small">
-            <li class="breadcrumb-item"><a asp-action="Index">Leave Management</a></li>
-            <li class="breadcrumb-item active" aria-current="page">New request</li>
-        </ol>
-    </nav>
-
-    <div class="lms-create-hero">
-        <h1><i class="bi bi-calendar-plus me-2"></i>New leave request</h1>
-        <p>Submit a row to <strong>dbo.LeaveRequests</strong> — employee, leave type, inclusive dates, and status.</p>
+<div class="employee-list-page py-3">
+    <div class="container-fluid px-0">
+        <partial name="_Alerts" />
+        <partial name="_RequestForm" model="Model" />
     </div>
-
-    <form asp-action="Create" method="post" class="row g-4" novalidate>
-        <div asp-validation-summary="ModelOnly" class="alert alert-danger col-12" role="alert"></div>
-
-        <div class="col-lg-8">
-            <div class="card lms-panel mb-4">
-                <div class="card-header"><i class="bi bi-person-badge me-2 text-primary"></i>Employee &amp; leave type</div>
-                <div class="card-body row g-3">
-                    <div class="col-md-6">
-                        <label asp-for="EmployeeId" class="form-label">Employee <span class="text-danger">*</span></label>
-                        <select asp-for="EmployeeId" class="form-select form-select-lg" asp-items="ViewBag.Employees" id="EmployeeId">
-                            <option value="0">Choose employee…</option>
-                        </select>
-                        <span asp-validation-for="EmployeeId" class="text-danger small d-block mt-1"></span>
-                    </div>
-                    <div class="col-md-6">
-                        <label asp-for="LeaveType" class="form-label">Leave type <span class="text-danger">*</span></label>
-                        <select asp-for="LeaveType" class="form-select form-select-lg" asp-items="ViewBag.LeaveTypes" id="LeaveType">
-                            <option value="">Choose type…</option>
-                        </select>
-                        <span asp-validation-for="LeaveType" class="text-danger small d-block mt-1"></span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card lms-panel mb-4">
-                <div class="card-header"><i class="bi bi-calendar-range me-2 text-primary"></i>Dates (inclusive)</div>
-                <div class="card-body row g-3">
-                    <div class="col-md-6">
-                        <label asp-for="FromDate" class="form-label">From date <span class="text-danger">*</span></label>
-                        <input asp-for="FromDate" class="form-control form-control-lg" type="date" id="FromDate" />
-                        <span asp-validation-for="FromDate" class="text-danger small d-block mt-1"></span>
-                    </div>
-                    <div class="col-md-6">
-                        <label asp-for="ToDate" class="form-label">To date <span class="text-danger">*</span></label>
-                        <input asp-for="ToDate" class="form-control form-control-lg" type="date" id="ToDate" />
-                        <span asp-validation-for="ToDate" class="text-danger small d-block mt-1"></span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card lms-panel mb-4">
-                <div class="card-header"><i class="bi bi-flag me-2 text-primary"></i>Workflow</div>
-                <div class="card-body row g-3">
-                    <div class="col-md-6">
-                        <label asp-for="Status" class="form-label">Status</label>
-                        <select asp-for="Status" class="form-select" asp-items="ViewBag.Statuses"></select>
-                        <span asp-validation-for="Status" class="text-danger small d-block mt-1"></span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="action-bar">
-                <div class="d-flex flex-wrap align-items-center justify-content-end gap-2">
-                    <a asp-action="Index" class="btn btn-action-secondary">Cancel</a>
-                    <button type="submit" class="btn btn-action-primary">
-                        <i class="bi bi-check2-circle me-1"></i>Submit request
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-4">
-            <div class="card lms-panel lms-summary">
-                <div class="card-header"><i class="bi bi-info-circle me-2"></i>Summary</div>
-                <div class="card-body">
-                    <dl class="mb-0 lms-summary">
-                        <dt>Calendar days</dt>
-                        <dd id="summaryDays" class="fs-4 fw-semibold text-primary">—</dd>
-                        <dt>Leave type</dt>
-                        <dd id="summaryLeaveType">—</dd>
-                        <dt>Date range</dt>
-                        <dd id="summaryRange" class="text-break">—</dd>
-                    </dl>
-                    <hr class="my-3" />
-                    <p class="small text-muted mb-0">
-                        Maps to columns: <code>EmployeeId</code> (employee uid), <code>LeaveType</code>, <code>FromDate</code>, <code>ToDate</code>, <code>Status</code>.
-                    </p>
-                </div>
-            </div>
-        </div>
-    </form>
 </div>
 
 @section Scripts {
     @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
-    <script>
-        (function () {
-            const fromEl = document.getElementById('FromDate');
-            const toEl = document.getElementById('ToDate');
-            const leaveEl = document.getElementById('LeaveType');
-            const daysEl = document.getElementById('summaryDays');
-            const rangeEl = document.getElementById('summaryRange');
-            const typeEl = document.getElementById('summaryLeaveType');
-
-            function parseLocalDate(s) {
-                if (!s) return null;
-                const p = s.split('-');
-                if (p.length !== 3) return null;
-                return new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
-            }
-
-            function refresh() {
-                const d0 = parseLocalDate(fromEl.value);
-                const d1 = parseLocalDate(toEl.value);
-                if (d0 && d1 && d1 >= d0) {
-                    const days = Math.floor((d1 - d0) / 86400000) + 1;
-                    daysEl.textContent = days;
-                    rangeEl.textContent = fromEl.value + ' → ' + toEl.value;
-                } else {
-                    daysEl.textContent = '—';
-                    rangeEl.textContent = '—';
-                }
-                const opt = leaveEl.options[leaveEl.selectedIndex];
-                typeEl.textContent = (opt && opt.value) ? opt.text : '—';
-            }
-
-            fromEl.addEventListener('change', refresh);
-            toEl.addEventListener('change', refresh);
-            leaveEl.addEventListener('change', refresh);
-            refresh();
-        })();
-    </script>
 }

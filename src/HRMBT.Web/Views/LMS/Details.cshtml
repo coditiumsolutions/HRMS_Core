@@ -1,84 +1,58 @@
-@model HRMBT.Web.Models.LeaveRequest
-
+﻿@model HRMBT.Web.Models.LeaveRequest
 @{
-    ViewData["Title"] = "Leave request details";
-    var empCode = ViewBag.EmployeeCode as string ?? "(unknown)";
-    var empName = ViewBag.EmployeeName as string;
+    var emp = ViewBag.Employee as HRMBT.Web.Models.Employee;
+    var open = HRMBT.Web.Services.LeaveRulesService.IsOpen(Model.Status);
+    ViewData["Title"] = "Leave request";
 }
 
-<div class="container-fluid py-3">
-    <nav aria-label="breadcrumb" class="mb-3">
-        <ol class="breadcrumb mb-0 small">
-            <li class="breadcrumb-item"><a asp-action="Index">Leave Management</a></li>
-            <li class="breadcrumb-item active" aria-current="page">Request #@Model.Id</li>
-        </ol>
-    </nav>
+@section Styles {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" crossorigin="anonymous" />
+    <link rel="stylesheet" href="~/css/employee-list.css" asp-append-version="true" />
+}
 
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="card shadow-sm border-0 rounded-3">
-                <div class="card-header bg-white py-3 border-bottom">
-                    <h3 class="h5 mb-0"><i class="bi bi-file-earmark-text me-2 text-primary"></i>Leave request</h3>
-                    <small class="text-muted">dbo.LeaveRequests</small>
-                </div>
-                <div class="card-body p-4">
-                    <dl class="row mb-0">
-                        <dt class="col-sm-4 text-muted small text-uppercase">Id</dt>
-                        <dd class="col-sm-8">@Model.Id</dd>
-
-                        <dt class="col-sm-4 text-muted small text-uppercase">Employee uid</dt>
-                        <dd class="col-sm-8"><code>@Model.EmployeeId</code></dd>
-
-                        <dt class="col-sm-4 text-muted small text-uppercase">Employee</dt>
-                        <dd class="col-sm-8">
-                            <span class="fw-semibold">@empCode</span>
-                            @if (!string.IsNullOrEmpty(empName))
-                            {
-                                <div class="text-muted">@empName</div>
-                            }
-                        </dd>
-
-                        <dt class="col-sm-4 text-muted small text-uppercase">Leave type</dt>
-                        <dd class="col-sm-8">@Model.LeaveType</dd>
-
-                        <dt class="col-sm-4 text-muted small text-uppercase">From date</dt>
-                        <dd class="col-sm-8">@Fmt.ShortDate(Model.FromDate)</dd>
-
-                        <dt class="col-sm-4 text-muted small text-uppercase">To date</dt>
-                        <dd class="col-sm-8">@Fmt.ShortDate(Model.ToDate)</dd>
-
-                        <dt class="col-sm-4 text-muted small text-uppercase">Calendar days</dt>
-                        <dd class="col-sm-8">
-                            @(Model.ToDate.Date >= Model.FromDate.Date ? (Model.ToDate.Date - Model.FromDate.Date).Days + 1 : 0)
-                        </dd>
-
-                        <dt class="col-sm-4 text-muted small text-uppercase">Status</dt>
-                        <dd class="col-sm-8">
-                            @{
-                                var statusClass = Model.Status switch
-                                {
-                                    "Approved" => "badge bg-success",
-                                    "Rejected" => "badge bg-danger",
-                                    "Cancelled" => "badge bg-secondary",
-                                    _ => "badge bg-warning"
-                                };
-                            }
-                            <span class="@statusClass">@(Model.Status ?? "—")</span>
-                        </dd>
-                    </dl>
-
-                    <div class="d-flex flex-wrap gap-2 mt-4 pt-3 border-top">
-                        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-sm btn-grid-edit">
-                            <i class="bi bi-pencil me-1"></i>Edit
-                        </a>
-                        <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-sm btn-grid-delete">
-                            <i class="bi bi-trash me-1"></i>Delete
-                        </a>
-                        <a asp-action="Index" class="btn btn-outline-secondary ms-auto">
-                            <i class="bi bi-arrow-left"></i> Back to list
-                        </a>
-                    </div>
-                </div>
+<div class="employee-list-page py-3">
+    <div class="container-fluid px-0">
+        <partial name="_Alerts" />
+        <div class="grid-card mb-3">
+            <div class="card-header"><span><i class="bi bi-file-earmark-text"></i>Leave request #@Model.Id</span></div>
+            <div class="card-body grid-form">
+            <dl class="row mb-0">
+                <dt class="col-sm-4">Employee</dt>
+                <dd class="col-sm-8">
+                    @if (emp != null)
+                    {
+                        <a asp-controller="Employee" asp-action="Details" asp-route-id="@emp.uid">@emp.EmployeeName</a>
+                        <span class="text-muted small">· ID @emp.EmployeeID</span>
+                    }
+                    else { <span class="text-muted">Unknown employee</span> }
+                </dd>
+                <dt class="col-sm-4">Leave type</dt>
+                <dd class="col-sm-8">@Model.LeaveType</dd>
+                <dt class="col-sm-4">Dates</dt>
+                <dd class="col-sm-8">@Fmt.ShortDate(Model.FromDate) to @Fmt.ShortDate(Model.ToDate)</dd>
+                <dt class="col-sm-4">Days charged</dt>
+                <dd class="col-sm-8">@Fmt.Days(Model.TotalDays) <span class="text-muted small">(@((Model.ToDate.Date - Model.FromDate.Date).Days + 1) calendar day(s))</span></dd>
+                <dt class="col-sm-4">Status</dt>
+                <dd class="col-sm-8">@(Model.Status ?? "—")</dd>
+                <dt class="col-sm-4">Approved</dt>
+                <dd class="col-sm-8">@(Model.ApprovedAt == null ? "—" : Fmt.DateAndTime(Model.ApprovedAt) + (ViewBag.Approver is string by ? " by " + by : ""))</dd>
+                <dt class="col-sm-4">Entered</dt>
+                <dd class="col-sm-8">@Fmt.DateAndTime(Model.AppliedAt)@(string.IsNullOrWhiteSpace(Model.CreatedBy) ? "" : " by " + Model.CreatedBy)</dd>
+            </dl>
+            </div>
+        </div>
+        <div class="action-bar">
+            <div class="d-flex flex-wrap align-items-center justify-content-end gap-2">
+                <a asp-action="Index" class="btn btn-action-outline me-auto">Back to list</a>
+                @if (emp != null)
+                {
+                    <a asp-controller="EmployeeSchedule" asp-action="Month" asp-route-id="@emp.uid" asp-route-month="@Model.FromDate.ToString("yyyy-MM")" class="btn btn-action-secondary">Month view</a>
+                }
+                @if (open)
+                {
+                    <a asp-action="Cancel" asp-route-id="@Model.Id" class="btn btn-action-danger">Cancel request</a>
+                }
+                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-action-primary">Edit</a>
             </div>
         </div>
     </div>

@@ -3,6 +3,9 @@
 @if (!Model.Managed)
 {
     <div class="dos-leave-note"><i class="fa-solid fa-circle-info"></i> Leave is not managed for this employee's project, so there is no balance to show.</div>
+    <p class="dos-leave-links">
+        <a asp-controller="EmployeeSchedule" asp-action="Month" asp-route-id="@Model.EmployeeId"><i class="fa-solid fa-calendar-days"></i> Month view and work week</a>
+    </p>
     return;
 }
 <div class="dos-leave">
@@ -84,7 +87,10 @@
     }
 
     <p class="dos-leave-links">
-        <a asp-controller="LMS" asp-action="Index" asp-route-search="@Model.EmployeeCode"><i class="fa-solid fa-calendar-check"></i> Leave requests of this employee</a>
-        <a asp-controller="LMS" asp-action="LeaveBalance" asp-route-year="@Model.Year"><i class="fa-solid fa-table-list"></i> LMS balances for @Model.Year</a>
+        <a asp-controller="EmployeeSchedule" asp-action="Month" asp-route-id="@Model.EmployeeId"><i class="fa-solid fa-calendar-days"></i> Month view and work week</a>
+        <a asp-controller="LMS" asp-action="Create" asp-route-employeeId="@Model.EmployeeId"><i class="fa-solid fa-plus"></i> New leave request</a>
+        <a asp-controller="LMS" asp-action="Index" asp-route-employeeId="@Model.EmployeeId"><i class="fa-solid fa-calendar-check"></i> Leave requests of this employee</a>
+        <a asp-controller="EmployeeSchedule" asp-action="Adjustments" asp-route-id="@Model.EmployeeId"><i class="fa-solid fa-plus-minus"></i> Adjust entitlement</a>
+        <a asp-controller="LMS" asp-action="LeaveBalance" asp-route-year="@Model.Year" asp-route-employeeId="@Model.EmployeeId"><i class="fa-solid fa-table-list"></i> LMS balance @Model.Year</a>
     </p>
 </div>

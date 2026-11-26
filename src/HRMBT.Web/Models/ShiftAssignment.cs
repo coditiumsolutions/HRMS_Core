@@ -9,7 +9,8 @@ public class ShiftAssignment
     [Key]
     public int Id { get; set; }
     public int EmployeeId { get; set; }
-    public int ShiftId { get; set; }
+    /// <summary>NULL = the working days are known but shift times are not defined yet.</summary>
+    public int? ShiftId { get; set; }
     public DateTime EffectiveFromDate { get; set; }
     public DateTime? EffectiveToDate { get; set; }
     public byte DaysOfWeekMask { get; set; }

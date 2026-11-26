@@ -335,23 +335,18 @@ namespace HRMBT.Web.Controllers
             Employee? FindEmployee(string id) =>
                 employees.FirstOrDefault(e => string.Equals(e.EmployeeID, id, StringComparison.OrdinalIgnoreCase));
 
-            var uids = employees.Select(e => e.uid).ToList();
-            var existingEmployeeIds = await _context.LeaveRequests.AsNoTracking()
-                .Where(l => uids.Contains(l.EmployeeId)
-                    && l.FromDate >= day && l.FromDate < dayEnd
-                    && l.LeaveTypeInfo!.Name == canonicalType)
-                .Select(l => l.EmployeeId)
-                .ToListAsync();
-            var existingSet = existingEmployeeIds.ToHashSet();
-
             var leaveTypeId = await _context.LeaveTypes.AsNoTracking()
                 .Where(t => t.Name == canonicalType)
                 .Select(t => t.Id)
                 .FirstAsync();
 
+            // the same rules as the leave request screens, so a day cannot be charged twice or on a day off
+            var rules = HttpContext.RequestServices.GetRequiredService<HRMBT.Web.Services.LeaveRulesService>();
+            var approverId = await rules.UserIdAsync(User.Identity?.Name);
             var toAdd = new List<LeaveRequest>();
             var skipped = new List<string>();
             var notFound = new List<string>();
+            var warned = new List<string>();
 
             foreach (var id in selectedEmployeeIds.Distinct())
             {
@@ -362,11 +357,19 @@ namespace HRMBT.Web.Controllers
                     continue;
                 }
 
-                if (existingSet.Contains(emp.uid))
+                if (!string.Equals(emp.EmployeeStatus, "Active", StringComparison.OrdinalIgnoreCase))
                 {
-                    skipped.Add($"{emp.EmployeeName} ({id})");
+                    skipped.Add($"{emp.EmployeeName} ({id}): not active.");
                     continue;
                 }
+
+                var check = await rules.CheckAsync(emp, day, day, leaveTypeId, "Approved", null);
+                if (!check.Ok)
+                {
+                    skipped.Add($"{emp.EmployeeName} ({id}): {check.Blocks[0]}");
+                    continue;
+                }
+                warned.AddRange(check.Warnings.Select(w => $"{emp.EmployeeName} ({id}): {w}"));
 
                 toAdd.Add(new LeaveRequest
                 {
@@ -374,18 +377,19 @@ namespace HRMBT.Web.Controllers
                     LeaveTypeId = leaveTypeId,
                     FromDate = day,
                     ToDate = day,
-                    TotalDays = 1,
+                    TotalDays = check.Days,
                     CreatedBy = User.Identity?.Name,
-                    Status = "Approved"
+                    Status = "Approved",
+                    ApprovedByUserId = approverId,
+                    ApprovedAt = DateTime.Now
                 });
-                existingSet.Add(emp.uid);
             }
 
-            var summaryLine = $"Off-day for {Fmt.ShortDate(day)}, leave type \"{canonicalType}\": {toAdd.Count} new row(s) to save, {skipped.Count} skipped (duplicate), {notFound.Count} unknown ID(s), {selectedEmployeeIds.Count} checkbox(es) posted.";
+            var summaryLine = $"Off day {Fmt.ShortDate(day)}, {canonicalType}: {toAdd.Count} booked, {skipped.Count} skipped"
+                + (notFound.Count > 0 ? $", {notFound.Count} unknown ID(s)" : "") + ".";
 
-            var detailLines = new List<string>();
-            if (skipped.Count > 0)
-                detailLines.AddRange(skipped.Take(20).Select(s => $"Already exists: {s}"));
+            var detailLines = skipped.Take(20).Concat(warned.Take(20).Select(w => "Check " + w)).ToList();
+            if (skipped.Count > 20) detailLines.Add($"... and {skipped.Count - 20} more skipped.");
             if (notFound.Count > 0)
                 detailLines.Add("Not found: " + string.Join(", ", notFound.Take(20)));
 
@@ -395,22 +399,24 @@ namespace HRMBT.Web.Controllers
                 {
                     _context.LeaveRequests.AddRange(toAdd);
                     await _context.SaveChangesAsync();
-                    TempData["SuccessMessage"] = summaryLine + " Database save completed (dbo.LeaveRequests).";
+                    var audit = HttpContext.RequestServices.GetRequiredService<HRMBT.Web.Services.IAuditLogService>();
+                    foreach (var r in toAdd)
+                        await audit.WriteAsync("LeaveRequests", "INSERT", r.Id.ToString(), r.EmployeeId, null,
+                            HRMBT.Web.Services.LeaveRulesService.Snapshot(r), "Attendance (off days)");
+                    TempData["SuccessMessage"] = summaryLine;
                 }
-                catch (Exception ex)
+                catch (DbUpdateException)
                 {
                     _context.ChangeTracker.Clear();
-                    var inner = ex.InnerException?.Message ?? ex.Message;
-                    TempData["ErrorMessage"] = summaryLine + " Save to LeaveRequests failed; no rows were committed.";
-                    TempData["ErrorDetails"] = System.Net.WebUtility.HtmlEncode(inner);
+                    TempData["ErrorMessage"] = "The off days could not be saved; nothing was booked.";
                 }
             }
             else
             {
-                TempData["ErrorMessage"] = summaryLine + " Nothing was written. If every employee was skipped, they already have this leave type on that date. If IDs were not found, the EmployeeID in the grid does not match dbo.Employee. If no checkboxes appeared, set EmployeeStatus to Active.";
-                if (detailLines.Count > 0)
-                    TempData["ErrorDetails"] = string.Join("<br/>", detailLines);
+                TempData["ErrorMessage"] = summaryLine + " Nothing was booked.";
             }
+            if (detailLines.Count > 0)
+                TempData["ErrorDetails"] = string.Join("<br/>", detailLines.Select(System.Net.WebUtility.HtmlEncode));
 
             return RedirectToAction(nameof(OffDay), new { department, page, pageSize });
         }

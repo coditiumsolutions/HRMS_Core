@@ -1,0 +1,181 @@
+﻿@model HRMBT.Web.Models.ViewModels.EmployeeMonthVm
+@using HRMBT.Web.Services
+@{
+    var e = Model.Employee;
+    var key = Model.Month.ToString("yyyy-MM");
+    var title = Model.Month.ToString("MMMM yyyy", System.Globalization.CultureInfo.InvariantCulture);
+    ViewData["Title"] = $"{e.EmployeeName} — {title}";
+    var lead = ((int)Model.Month.DayOfWeek + 6) % 7;   // blank cells before the 1st (weeks start on Monday)
+}
+
+@section Styles {
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" crossorigin="anonymous" />
+    <link rel="stylesheet" href="~/css/employee-create.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/employee-dossier.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/employee-list.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/schedule.css" asp-append-version="true" />
+}
+
+<div class="employee-create-page dossier-page dossier-page--static py-3">
+    <div class="container-fluid px-0">
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb emp-breadcrumb mb-0">
+                <li class="breadcrumb-item"><a asp-controller="Employee" asp-action="Index">Employees</a></li>
+                <li class="breadcrumb-item"><a asp-controller="Employee" asp-action="Details" asp-route-id="@e.uid">@e.EmployeeName</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Schedule and leave</li>
+            </ol>
+        </nav>
+
+        <partial name="~/Views/Employee/_DossierHero.cshtml" model="e" />
+        <partial name="_Alerts" />
+
+        <div class="employee-list-page">
+
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+            <a asp-action="Month" asp-route-id="@e.uid" asp-route-month="@Model.Month.AddMonths(-1).ToString("yyyy-MM")" class="btn btn-sm btn-action-outline" aria-label="Previous month"><i class="bi bi-chevron-left"></i></a>
+            <h2 class="h5 mb-0" style="min-width: 11rem; text-align: center;">@title</h2>
+            <a asp-action="Month" asp-route-id="@e.uid" asp-route-month="@Model.Month.AddMonths(1).ToString("yyyy-MM")" class="btn btn-sm btn-action-outline" aria-label="Next month"><i class="bi bi-chevron-right"></i></a>
+            <form method="get" asp-action="Month" asp-route-id="@e.uid" class="d-flex gap-2 ms-auto m-0">
+                <input type="month" name="month" value="@key" class="form-control form-control-sm" aria-label="Month" />
+                <button type="submit" class="btn btn-sm btn-action-primary">Show</button>
+            </form>
+        </div>
+
+        <div class="month-tiles mb-3">
+            <div class="month-tile"><strong>@Model.WorkDays</strong><span>work days this month</span></div>
+            <div class="month-tile"><strong>@Fmt.Days(Model.LeaveDays)</strong><span>approved leave on work days</span></div>
+            <div class="month-tile"><strong>@Fmt.Days(Model.PendingDays)</strong><span>pending leave on work days</span></div>
+            <div class="month-tile"><strong>@Fmt.Days(Model.WorkDays - Model.LeaveDays)</strong><span>work days without leave</span></div>
+            <div class="month-tile"><strong>@Model.DaysOff</strong><span>days off</span></div>
+        </div>
+        @if (!Model.LeaveManaged)
+        {
+            <div class="alert alert-secondary">Leave is not managed for this employee's project. The schedule still applies.</div>
+        }
+
+        <div class="row g-3">
+            <div class="col-xl-8">
+                <div class="grid-card mb-3">
+                    <div class="card-header"><span><i class="bi bi-calendar3"></i>Month view</span></div>
+                    <div class="card-body p-3">
+                        <div class="month-grid mb-3">
+                            @foreach (var day in WorkWeek.Days)
+                            {
+                                <div class="month-head">@day.ToString().Substring(0, 3)</div>
+                            }
+                            @for (var i = 0; i < lead; i++) { <div></div> }
+                            @foreach (var d in Model.Days)
+                            {
+                                var css = !d.Employed ? "month-day--out"
+                                    : !d.WorkDay ? "month-day--off"
+                                    : d.LeaveStatus == "Approved" ? "month-day--leave"
+                                    : d.LeaveStatus == "Pending" ? "month-day--pending" : "";
+                                var what = !d.Employed ? "Not employed"
+                                    : !d.WorkDay ? "Off"
+                                    : d.LeaveType != null ? d.LeaveType + (d.HalfDay ? " (half)" : "") + (d.LeaveStatus == "Pending" ? " · pending" : "")
+                                    : "Work";
+                                var tip = $"{Fmt.LongDate(d.Date)}: {what}{(d.OverrideReason == null ? "" : " — " + d.OverrideReason)}";
+                                <button type="button" class="month-day @css @(d.Date == DateTime.Today ? "month-day--today" : "") @(d.Override != null ? "month-day--changed" : "")"
+                                        data-date="@d.Date.ToString("yyyy-MM-dd")" title="@tip" aria-label="@tip">
+                                    <span class="num">@d.Date.Day</span>
+                                    <span class="what">@what</span>
+                                </button>
+                            }
+                        </div>
+                        <div class="month-key">
+                            <span><i style="background:#fff"></i>Work day</span>
+                            <span><i style="background:#f1f3f6"></i>Day off</span>
+                            <span><i style="background:#fdf3d8;border-color:#d4af37"></i>Approved leave</span>
+                            <span><i style="background:#fffaf0;border:1px dashed #d4af37"></i>Pending leave</span>
+                            <span>Click a date to change that one day.</span>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2 mt-3">
+                            <a asp-controller="LMS" asp-action="Create" asp-route-employeeId="@e.uid" class="btn btn-sm btn-action-primary"><i class="bi bi-plus-lg me-1"></i>New leave request</a>
+                            <a asp-controller="LMS" asp-action="Index" asp-route-employeeId="@e.uid" class="btn btn-sm btn-action-outline">Leave requests</a>
+                            <a asp-action="Adjustments" asp-route-id="@e.uid" asp-route-year="@Model.Month.Year" class="btn btn-sm btn-action-outline">Entitlement adjustments</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-4">
+                <div class="grid-card mb-3">
+                    <div class="card-header"><span><i class="bi bi-calendar-week"></i>Work week</span></div>
+                    <div class="card-body grid-form">
+                        <p class="mb-2">
+                            Now: <strong>@WorkWeek.Describe(Model.CurrentMask)</strong>
+                            <span class="text-muted small">@(Model.OwnWorkWeek ? "(set for this employee)" : "(company default)")</span>
+                        </p>
+                        <form asp-action="SetWorkWeek" asp-route-id="@e.uid" method="post">
+                            <input type="hidden" name="month" value="@key" />
+                            <partial name="_WorkDayPicker" model="Model.CurrentMask" />
+                            <div class="mt-2">
+                                <label class="form-label" for="from">Starts from</label>
+                                <input type="date" name="from" id="from" class="form-control form-control-sm" value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+                            </div>
+                            <div class="mt-2">
+                                <label class="form-label" for="notes">Note (for example, contract terms)</label>
+                                <input type="text" name="notes" id="notes" class="form-control form-control-sm" maxlength="1000" />
+                            </div>
+                            <button type="submit" class="btn btn-sm btn-action-primary mt-2">Save work week</button>
+                        </form>
+                        @if (Model.History.Count > 0)
+                        {
+                            <ul class="list-unstyled small mt-3 mb-0">
+                                @foreach (var w in Model.History)
+                                {
+                                    <li class="border-top py-1">
+                                        <strong>@WorkWeek.Describe(w.Mask)</strong>
+                                        from @Fmt.ShortDate(w.From)@(w.To == null ? "" : " to " + Fmt.ShortDate(w.To))
+                                        @if (!string.IsNullOrWhiteSpace(w.Notes)) { <div class="text-muted">@w.Notes</div> }
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </div>
+                </div>
+
+                <div class="grid-card mb-3" id="dayCard">
+                    <div class="card-header"><span><i class="bi bi-calendar-event"></i>Change one day</span></div>
+                    <div class="card-body grid-form">
+                        <p class="text-muted small">For rosters and one-off changes, such as a guard's rest day or a day worked that is normally off.</p>
+                        <form asp-action="SetDay" asp-route-id="@e.uid" method="post">
+                            <input type="hidden" name="month" value="@key" />
+                            <label class="form-label" for="date">Date</label>
+                            <input type="date" name="date" id="date" class="form-control form-control-sm" required />
+                            <label class="form-label mt-2" for="setting">Make it</label>
+                            <select name="setting" id="setting" class="form-select form-select-sm">
+                                <option value="off">A day off</option>
+                                <option value="working">A working day</option>
+                                <option value="default">As in the work week</option>
+                            </select>
+                            <label class="form-label mt-2" for="reason">Reason</label>
+                            <input type="text" name="reason" id="reason" class="form-control form-control-sm" maxlength="500" />
+                            <button type="submit" class="btn btn-sm btn-action-primary mt-2">Save day</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            var input = document.getElementById('date');
+            var days = Array.prototype.slice.call(document.querySelectorAll('button.month-day'));
+            days.forEach(function (b) {
+                b.addEventListener('click', function () {
+                    days.forEach(function (x) { x.classList.remove('is-picked'); });
+                    b.classList.add('is-picked');
+                    input.value = b.getAttribute('data-date');
+                    document.getElementById('setting').value = b.classList.contains('month-day--off') ? 'working' : 'off';
+                    document.getElementById('dayCard').scrollIntoView({ block: 'nearest' });
+                });
+            });
+        })();
+    </script>
+}
