@@ -1,3 +1,12 @@
+/*
+---
+status: outdated
+last_verified: 2026-11-26
+outdated_since: 2026-11-24
+reason: "Read-only queries about the old leave tables (some no longer exist) in the old database Payroll2."
+superseded_by: "db.md"
+---
+*/
 -- SQL Script to query LMS table schemas
 -- Run this on Payroll2 database to get exact table structures
 

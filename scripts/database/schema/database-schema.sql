@@ -1,4 +1,13 @@
-﻿IF OBJECT_ID(N'[__EFMigrationsHistory]') IS NULL
+﻿/*
+---
+status: outdated
+last_verified: 2026-11-26
+outdated_since: 2026-11-24
+reason: "Generated from the old EF migrations, with table names the app no longer uses. Do not run it against a database with the redesigned schema (production since 2026-11-24): it creates or alters old-shape tables and columns. Still read by tools/export-database-production.ps1, whose output is therefore old-shape too."
+superseded_by: "scripts/database/redesign/ (run in order) and db.md"
+---
+*/
+IF OBJECT_ID(N'[__EFMigrationsHistory]') IS NULL
 BEGIN
     CREATE TABLE [__EFMigrationsHistory] (
         [MigrationId] nvarchar(150) NOT NULL,

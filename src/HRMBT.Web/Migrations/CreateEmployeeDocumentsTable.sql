@@ -1,3 +1,12 @@
+/*
+---
+status: outdated
+last_verified: 2026-11-26
+outdated_since: 2026-11-24
+reason: "Hand script for the old EmployeeDocuments table; the table now exists in the redesigned shape. Do not run it against a database with the redesigned schema (production since 2026-11-24): it creates or alters old-shape tables and columns."
+superseded_by: "scripts/database/redesign/ (run in order) and db.md"
+---
+*/
 -- Employee document attachments (matches live HRMS schema)
 IF OBJECT_ID(N'[dbo].[EmployeeDocuments]', N'U') IS NULL
 BEGIN

@@ -1,3 +1,12 @@
+/*
+---
+status: outdated
+last_verified: 2026-11-26
+outdated_since: 2026-11-24
+reason: "Patches on top of database-schema.sql for the old schema. Do not run it against a database with the redesigned schema (production since 2026-11-24): it creates or alters old-shape tables and columns. Still read by tools/export-database-production.ps1."
+superseded_by: "scripts/database/redesign/ (run in order) and db.md"
+---
+*/
 /* Post-migration patches aligned with live HRMS (db.md). Idempotent. Run after schema/database-schema.sql */
 
 SET ANSI_NULLS ON;

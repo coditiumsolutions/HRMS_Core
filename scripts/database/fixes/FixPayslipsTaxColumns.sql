@@ -1,3 +1,12 @@
+/*
+---
+status: outdated
+last_verified: 2026-11-26
+outdated_since: 2026-11-24
+reason: "One-off fix for the old Payslips columns. Do not run it against a database with the redesigned schema (production since 2026-11-24): it creates or alters old-shape tables and columns."
+superseded_by: "scripts/database/redesign/ (run in order) and db.md"
+---
+*/
 -- Run against your HRMS database (e.g. SSMS or sqlcmd) if Payroll/Payslips fails with invalid column TaxPercentage/TaxAmount.
 -- Idempotent: safe to run more than once.
 

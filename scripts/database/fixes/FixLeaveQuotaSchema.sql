@@ -1,3 +1,12 @@
+/*
+---
+status: outdated
+last_verified: 2026-11-26
+outdated_since: 2026-11-24
+reason: "One-off fix for the old LeaveQuota columns. Do not run it against a database with the redesigned schema (production since 2026-11-24): it creates or alters old-shape tables and columns."
+superseded_by: "scripts/database/redesign/ (run in order) and db.md"
+---
+*/
 /* Align dbo.LeaveQuota with HRMBT.Web (UID, LeaveTypeName, TotalLeaves, Year nvarchar). Idempotent. */
 
 SET ANSI_NULLS ON;
