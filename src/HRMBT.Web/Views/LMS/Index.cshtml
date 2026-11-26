@@ -6,8 +6,9 @@
     var filterStatus = ViewBag.CurrentStatus as string;
     var filterLeaveType = ViewBag.CurrentLeaveType as string;
     var leaveTypesList = ViewBag.LeaveTypes as List<string>;
-    var editBaseUrl = Url.Action("Edit", "LMS", new { id = "__id__" });
-        var detailsBaseUrl = Url.Action("Details", "LMS", new { id = "__id__" });
+    // Url.Action cannot fill an {id:int} route with a placeholder (it returns nothing), so these are written out
+    var editBaseUrl = Url.Content("~/leave/__id__/edit");
+    var detailsBaseUrl = Url.Content("~/leave/__id__");
 }
 
 @section Styles {
