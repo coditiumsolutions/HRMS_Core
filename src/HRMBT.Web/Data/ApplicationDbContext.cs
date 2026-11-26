@@ -274,6 +274,10 @@ namespace HRMBT.Web.Data
             {
                 entity.ToTable("GazettedHolidays");
                 entity.Property(h => h.HolidayDate).HasColumnType("date");
+                entity.Property(h => h.EndDate).HasColumnType("date");
+                entity.Property(h => h.NoticeDate).HasColumnType("date");
+                entity.Property(h => h.CreatedAt).HasColumnType("datetime2(0)");
+                entity.Property(h => h.ModifiedAt).HasColumnType("datetime2(0)");
             });
 
             modelBuilder.Entity<CarryforwardLeave>(entity =>

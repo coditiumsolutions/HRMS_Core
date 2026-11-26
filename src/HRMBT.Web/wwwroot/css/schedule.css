@@ -33,6 +33,7 @@ button.month-day:focus-visible, .month-day.is-picked { outline: 2px solid #d4af3
 .month-day .num { font-weight: 700; font-size: 0.9rem; }
 .month-day .what { font-size: 0.72rem; line-height: 1.25; overflow-wrap: anywhere; }
 .month-day--off { background: #f1f3f6; color: #8a94a3; }
+.month-day--holiday { background: #e3f1ef; border-color: #2a7d74; color: #14524b; }
 .month-day--leave { background: #fdf3d8; border-color: #d4af37; }
 .month-day--pending { background: #fffaf0; border: 1px dashed #d4af37; }
 .month-day--out { background: transparent; border-style: dashed; color: #b4bcc8; }

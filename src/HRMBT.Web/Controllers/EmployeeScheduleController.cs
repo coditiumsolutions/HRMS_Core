@@ -54,6 +54,9 @@ public class EmployeeScheduleController : Controller
             .ToListAsync();
         var weeks = await _context.ShiftAssignments.AsNoTracking()
             .Where(w => w.EmployeeId == id).OrderByDescending(w => w.EffectiveFromDate).ToListAsync();
+        var holidays = await _context.GazettedHolidays.AsNoTracking()
+            .Where(h => h.ProjectId == null && h.HolidayDate <= last && h.EndDate >= first)
+            .ToListAsync();
         var today = DateTime.Today;
         var current = weeks.FirstOrDefault(w => w.EffectiveFromDate <= today && (w.EffectiveToDate == null || w.EffectiveToDate >= today));
 
@@ -74,6 +77,7 @@ public class EmployeeScheduleController : Controller
             // an approved request wins over a pending one on the same date
             var l = leave.Where(x => x.FromDate <= d && x.ToDate >= d).OrderBy(x => x.Status == "Approved" ? 0 : 1).FirstOrDefault();
             var o = schedule.OverrideOn(d);
+            var h = holidays.Where(x => x.HolidayDate <= d && x.EndDate >= d).OrderBy(x => x.IsOptional).FirstOrDefault();
             vm.Days.Add(new MonthDayVm
             {
                 Date = d,
@@ -81,6 +85,8 @@ public class EmployeeScheduleController : Controller
                 WorkDay = schedule.IsWorkDay(d),
                 Override = o?.OverrideType,
                 OverrideReason = o?.Reason,
+                HolidayName = h?.HolidayName,
+                OptionalHoliday = h?.IsOptional ?? false,
                 LeaveType = l?.LeaveType,
                 LeaveStatus = l?.Status,
                 HalfDay = l?.IsHalfDay ?? false,

@@ -36,14 +36,17 @@ public static class WorkWeek
     }
 }
 
-/// <summary>One employee's schedule over a period: their work week rows and single-day changes.</summary>
+/// <summary>One employee's schedule over a period: their work week rows, single-day changes and the company holidays.</summary>
 public sealed class EmployeeSchedule
 {
     private readonly List<ShiftAssignment> _weeks;
     private readonly Dictionary<DateTime, RosterOverride> _days;
 
-    public EmployeeSchedule(IEnumerable<ShiftAssignment> weeks, IEnumerable<RosterOverride> days)
+    private readonly IReadOnlyList<GazettedHoliday> _holidays;
+
+    public EmployeeSchedule(IEnumerable<ShiftAssignment> weeks, IEnumerable<RosterOverride> days, IReadOnlyList<GazettedHoliday> holidays)
     {
+        _holidays = holidays;
         // higher priority wins, then the latest start
         _weeks = weeks.OrderByDescending(w => w.Priority).ThenByDescending(w => w.EffectiveFromDate).ToList();
         _days = days.ToDictionary(d => d.OverrideDate.Date);
@@ -55,10 +58,16 @@ public sealed class EmployeeSchedule
 
     public RosterOverride? OverrideOn(DateTime date) => _days.GetValueOrDefault(date.Date);
 
+    public bool IsHoliday(DateTime date) =>
+        _holidays.Any(h => h.HolidayDate.Date <= date.Date && h.EndDate.Date >= date.Date);
+
+    /// <summary>A day changed by hand wins (a guard marked as working on Eid); then holidays; then the work week.</summary>
     public bool IsWorkDay(DateTime date)
     {
         if (OverrideOn(date) is { } o)
             return o.OverrideType != "Off";
+        if (IsHoliday(date))
+            return false;
         return (MaskOn(date) & WorkWeek.Bit(date.DayOfWeek)) != 0;
     }
 
@@ -74,6 +83,7 @@ public sealed class EmployeeSchedule
 
 /// <summary>
 /// The one place that says which days an employee works. Leave charging, the month view and (later) attendance read it.
+/// Company holidays are included.
 /// Changing a schedule recalculates the days charged by the open leave requests it affects, so the figures stay in step.
 /// </summary>
 public class WorkScheduleService
@@ -97,7 +107,11 @@ public class WorkScheduleService
                 .Where(o => employeeIds.Contains(o.EmployeeId) && o.OverrideDate >= from && o.OverrideDate <= to)
                 .ToListAsync())
             .ToLookup(o => o.EmployeeId);
-        return employeeIds.Distinct().ToDictionary(id => id, id => new EmployeeSchedule(weeks[id], days[id]));
+        // company-wide and not optional (ProjectId is not used yet)
+        var holidays = await _db.GazettedHolidays.AsNoTracking()
+            .Where(h => h.ProjectId == null && !h.IsOptional && h.HolidayDate <= to && h.EndDate >= from)
+            .ToListAsync();
+        return employeeIds.Distinct().ToDictionary(id => id, id => new EmployeeSchedule(weeks[id], days[id], holidays));
     }
 
     public async Task<EmployeeSchedule> LoadAsync(int employeeId, DateTime from, DateTime to) =>
@@ -184,8 +198,27 @@ public class WorkScheduleService
         return changed;
     }
 
+    /// <summary>
+    /// Saves a change to the holidays and recounts everyone's open leave on the dates it touches, in one transaction.
+    /// <paramref name="change"/> does the saving and returns those dates; it may run again if the connection is retried.
+    /// </summary>
+    public async Task<int> ChangeHolidaysAsync(Func<Task<(DateTime From, DateTime To)>> change, string? actor)
+    {
+        var changed = 0;
+        await InTransactionAsync(async () =>
+        {
+            var (from, to) = await change();
+            var ids = await _db.LeaveRequests.AsNoTracking()
+                .Where(l => (l.Status == "Pending" || l.Status == "Approved") && !l.IsHalfDay && l.FromDate <= to && l.ToDate >= from)
+                .Select(l => l.EmployeeId).Distinct().ToListAsync();
+            changed = await RecalculateLeaveAsync(ids, from, to, actor, "holidays changed");
+        });
+        return changed;
+    }
+
     /// <summary>Re-counts the days of Pending and Approved leave that touches the changed dates. Half days keep 0.5.</summary>
-    private async Task<int> RecalculateLeaveAsync(IReadOnlyCollection<int> employeeIds, DateTime from, DateTime? to, string? actor)
+    private async Task<int> RecalculateLeaveAsync(IReadOnlyCollection<int> employeeIds, DateTime from, DateTime? to, string? actor,
+        string because = "work schedule changed")
     {
         var requests = await _db.LeaveRequests
             .Where(l => employeeIds.Contains(l.EmployeeId) && (l.Status == "Pending" || l.Status == "Approved") && !l.IsHalfDay
@@ -208,7 +241,7 @@ public class WorkScheduleService
         await _db.SaveChangesAsync();
         foreach (var (r, old) in changes)
             await _audit.WriteAsync("LeaveRequests", "UPDATE", r.Id.ToString(), r.EmployeeId,
-                new { TotalDays = old }, new { r.TotalDays, Because = "work schedule changed" }, "Schedule");
+                new { TotalDays = old }, new { r.TotalDays, Because = because }, "Schedule");
         return changes.Count;
     }
 

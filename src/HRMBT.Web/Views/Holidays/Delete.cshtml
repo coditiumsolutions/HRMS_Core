@@ -1,0 +1,37 @@
+@model HRMBT.Web.Models.GazettedHoliday
+@{
+    ViewData["Title"] = "Remove holiday";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" crossorigin="anonymous" />
+    <link rel="stylesheet" href="~/css/employee-list.css" asp-append-version="true" />
+}
+
+<div class="employee-list-page py-3">
+    <div class="container-fluid px-0">
+        <partial name="_Alerts" />
+        <div class="grid-card mb-3">
+            <div class="card-header"><span><i class="bi bi-trash3"></i>Remove holiday</span></div>
+            <div class="card-body grid-form">
+                <p>These dates become work days again, and open leave on them is recounted and charged.</p>
+                <dl class="row mb-0">
+                    <dt class="col-sm-3">Holiday</dt>
+                    <dd class="col-sm-9">@Model.HolidayName</dd>
+                    <dt class="col-sm-3">Dates</dt>
+                    <dd class="col-sm-9">@Fmt.DateRange(Model.HolidayDate, Model.EndDate)</dd>
+                    <dt class="col-sm-3">Notice</dt>
+                    <dd class="col-sm-9">@(Model.NoticeNumber ?? "—")@(Model.NoticeDate == null ? "" : " of " + Fmt.ShortDate(Model.NoticeDate))</dd>
+                </dl>
+            </div>
+        </div>
+        <form asp-action="Delete" asp-route-id="@Model.Id" method="post">
+            <div class="action-bar">
+                <div class="d-flex flex-wrap align-items-center justify-content-end gap-2">
+                    <a asp-action="Index" class="btn btn-action-secondary">Back</a>
+                    <button type="submit" class="btn btn-action-danger">Remove holiday</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>

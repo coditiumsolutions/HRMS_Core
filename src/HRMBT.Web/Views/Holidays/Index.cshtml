@@ -1,0 +1,112 @@
+@model HRMBT.Web.Models.ViewModels.HolidayListVm
+@{
+    ViewData["Title"] = "Holidays";
+    var editBaseUrl = Url.Content("~/holidays/__id__/edit");   // Url.Action cannot fill an {id:int} route with a placeholder
+    var days = Model.Rows.Where(h => !h.IsOptional).Sum(h => (h.EndDate - h.HolidayDate).Days + 1);
+}
+
+@section Styles {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" crossorigin="anonymous" />
+    <link rel="stylesheet" href="~/css/employee-list.css" asp-append-version="true" />
+}
+
+<div class="employee-list-page py-3">
+    <div class="container-fluid px-0">
+        <partial name="_Alerts" />
+
+        <div class="filter-card filter-card-tight mb-3">
+            <div class="card-header"><span><i class="bi bi-funnel"></i>Search &amp; Filters</span></div>
+            <div class="card-body">
+                <form method="get" asp-action="Index" class="row g-2 align-items-end">
+                    <div class="col-12 col-md-3">
+                        <label class="form-label" for="year">Year</label>
+                        <select name="year" id="year" class="form-select form-select-sm">
+                            @foreach (var y in Model.Years)
+                            {
+                                <option value="@y" selected="@(Model.Year == y)">@y</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-auto">
+                        <button type="submit" class="btn btn-filter-apply w-100"><i class="bi bi-funnel-fill me-1"></i>Apply</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="grid-card mb-3">
+            <div class="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
+                <span><i class="bi bi-calendar-event"></i>Holidays @Model.Year <span class="text-muted small ms-1">(@Model.Rows.Count)</span></span>
+                @if (Model.CanManage)
+                {
+                    <a class="btn btn-sm btn-grid-edit" asp-action="Create"><i class="bi bi-plus-lg me-1"></i>Add holiday</a>
+                }
+            </div>
+            <div class="card-body">
+                <p class="grid-note">
+                    Holidays apply to all employees and are not charged as leave. Someone who has to work on one is marked as working for that day on their schedule page.
+                    @days day(s) of company holiday in @Model.Year.
+                </p>
+                @if (Model.Rows.Count > 0)
+                {
+                    <div class="table-wrap table-responsive">
+                        <table class="employee-grid @(Model.CanManage ? "hrms-selectable-grid" : "")" id="holidayGrid" data-edit-base="@editBaseUrl">
+                            <thead>
+                                <tr>
+                                    <th>Holiday</th>
+                                    <th>Dates</th>
+                                    <th class="text-end">Days</th>
+                                    <th>Notice no.</th>
+                                    <th>Notice date</th>
+                                    <th>Type</th>
+                                    @if (Model.CanManage)
+                                    {
+                                        <th class="col-actions text-center" data-align="none" scope="col">Actions</th>
+                                    }
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var h in Model.Rows)
+                                {
+                                    <tr data-record-id="@h.Id" title="@(Model.CanManage ? "Double-click to open" : null)">
+                                        <td>
+                                            <div class="emp-name">@h.HolidayName</div>
+                                            @if (!string.IsNullOrWhiteSpace(h.Description))
+                                            {
+                                                <div class="emp-meta">@h.Description</div>
+                                            }
+                                        </td>
+                                        <td class="text-nowrap">@Fmt.DateRange(h.HolidayDate, h.EndDate)</td>
+                                        <td class="text-end">@((h.EndDate - h.HolidayDate).Days + 1)</td>
+                                        <td>@(h.NoticeNumber ?? "—")</td>
+                                        <td class="text-nowrap">@(h.NoticeDate == null ? "—" : Fmt.ShortDate(h.NoticeDate))</td>
+                                        <td>@(h.IsOptional ? "Optional" : "Company")</td>
+                                        @if (Model.CanManage)
+                                        {
+                                            <td class="col-actions">
+                                                <a class="row-action row-action-edit" asp-action="Edit" asp-route-id="@h.Id" title="Edit holiday" aria-label="Edit @h.HolidayName"><i class="bi bi-pencil-square"></i></a>
+                                                <a class="row-action row-action-delete" asp-action="Delete" asp-route-id="@h.Id" title="Remove holiday" aria-label="Remove @h.HolidayName"><i class="bi bi-trash3"></i></a>
+                                            </td>
+                                        }
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="empty-state">
+                        <i class="bi bi-inboxes"></i>
+                        <h5 class="mb-1">No holidays entered for @Model.Year</h5>
+                        <p class="mb-0">Until they are entered, those days count as work days.</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @await Html.PartialAsync("_HrmsGridSelectionScript")
+}

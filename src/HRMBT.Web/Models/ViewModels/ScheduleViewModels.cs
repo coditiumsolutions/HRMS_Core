@@ -10,6 +10,11 @@ public class MonthDayVm
     /// <summary>"Off" or "ExtraDuty" when this date was changed by hand.</summary>
     public string? Override { get; set; }
     public string? OverrideReason { get; set; }
+    /// <summary>Name of the holiday on this date, if any.</summary>
+    public string? HolidayName { get; set; }
+    public bool OptionalHoliday { get; set; }
+    /// <summary>Not worked because it is a holiday (not optional, and not changed by hand).</summary>
+    public bool OffForHoliday => !WorkDay && Override == null && HolidayName != null && !OptionalHoliday;
     public string? LeaveType { get; set; }
     public string? LeaveStatus { get; set; }
     public bool HalfDay { get; set; }
@@ -38,7 +43,8 @@ public class EmployeeMonthVm
     public bool LeaveManaged { get; set; }
 
     public int WorkDays => Days.Count(d => d.Employed && d.WorkDay);
-    public int DaysOff => Days.Count(d => d.Employed && !d.WorkDay);
+    public int Holidays => Days.Count(d => d.Employed && d.OffForHoliday);
+    public int DaysOff => Days.Count(d => d.Employed && !d.WorkDay && !d.OffForHoliday);
     /// <summary>Approved leave falling on work days (a half day is 0.5). Each date counts once.</summary>
     public decimal LeaveDays => Leave("Approved");
     public decimal PendingDays => Leave("Pending");

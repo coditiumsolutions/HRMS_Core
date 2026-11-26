@@ -8,7 +8,7 @@ namespace HRMBT.Web.Services;
 /// <summary>What entering a leave request would do: the days it charges, reasons it is refused, and things to check.</summary>
 public sealed class LeaveCheck
 {
-    /// <summary>Work days in the range: what the request charges.</summary>
+    /// <summary>Work days in the range (holidays are not work days): what the request charges.</summary>
     public int Days { get; set; }
     public List<string> Blocks { get; } = new();
     public List<string> Warnings { get; } = new();
@@ -85,7 +85,7 @@ public class LeaveRulesService
             result.Blocks.Add($"These dates overlap leave request #{other.Id} ({other.Status}), {Fmt.ShortDate(other.FromDate)} to {Fmt.ShortDate(other.ToDate)}.");
 
         if (result.Days == 0)
-            result.Blocks.Add("There is no work day in these dates for this employee.");
+            result.Blocks.Add("There is no work day in these dates for this employee (days off and holidays are not counted).");
 
         if (result.Ok && leaveTypeId is { } typeId)
         {

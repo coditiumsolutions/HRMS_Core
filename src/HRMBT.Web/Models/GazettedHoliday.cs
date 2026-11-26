@@ -4,8 +4,8 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace HRMBT.Web.Models;
 
 /// <summary>
-/// GazettedHoliday entity representing non-working holidays.
-/// Holidays are excluded from leave day calculation.
+/// One holiday notice (dbo.GazettedHolidays), covering <see cref="HolidayDate"/> to <see cref="EndDate"/>.
+/// A holiday that is not optional is not a work day (<c>WorkScheduleService</c>), so it is not charged as leave.
 /// </summary>
 public class GazettedHoliday
 {
@@ -13,9 +13,7 @@ public class GazettedHoliday
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public int Id { get; set; }
 
-    /// <summary>
-    /// Holiday date
-    /// </summary>
+    /// <summary>First day of the holiday.</summary>
     [Required(ErrorMessage = "Holiday date is required")]
     [Display(Name = "Holiday Date")]
     [DataType(DataType.Date)]
@@ -31,11 +29,19 @@ public class GazettedHoliday
     [Column("HolidayName")]
     public string HolidayName { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Optional description
-    /// </summary>
+    /// <summary>Last day, the same as the first for a one-day holiday.</summary>
+    [DataType(DataType.Date)]
+    public DateTime EndDate { get; set; }
+
+    [StringLength(50)]
+    public string? NoticeNumber { get; set; }
+
+    [DataType(DataType.Date)]
+    public DateTime? NoticeDate { get; set; }
+
+    /// <summary>The text of the notice.</summary>
     [Display(Name = "Description")]
-    [StringLength(255)]
+    [StringLength(1000)]
     [Column("Description")]
     public string? Description { get; set; }
 
@@ -44,4 +50,9 @@ public class GazettedHoliday
 
     [Display(Name = "Optional holiday")]
     public bool IsOptional { get; set; }
+
+    public DateTime CreatedAt { get; set; } = DateTime.Now;
+    public string? CreatedBy { get; set; }
+    public DateTime? ModifiedAt { get; set; }
+    public string? ModifiedBy { get; set; }
 }

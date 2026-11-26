@@ -48,6 +48,7 @@
             <div class="month-tile"><strong>@Fmt.Days(Model.PendingDays)</strong><span>pending leave on work days</span></div>
             <div class="month-tile"><strong>@Fmt.Days(Model.WorkDays - Model.LeaveDays)</strong><span>work days without leave</span></div>
             <div class="month-tile"><strong>@Model.DaysOff</strong><span>days off</span></div>
+            <div class="month-tile"><strong>@Model.Holidays</strong><span>holidays</span></div>
         </div>
         @if (!Model.LeaveManaged)
         {
@@ -68,14 +69,18 @@
                             @foreach (var d in Model.Days)
                             {
                                 var css = !d.Employed ? "month-day--out"
+                                    : d.OffForHoliday ? "month-day--off month-day--holiday"
                                     : !d.WorkDay ? "month-day--off"
                                     : d.LeaveStatus == "Approved" ? "month-day--leave"
                                     : d.LeaveStatus == "Pending" ? "month-day--pending" : "";
                                 var what = !d.Employed ? "Not employed"
+                                    : d.OffForHoliday ? d.HolidayName!
                                     : !d.WorkDay ? "Off"
                                     : d.LeaveType != null ? d.LeaveType + (d.HalfDay ? " (half)" : "") + (d.LeaveStatus == "Pending" ? " · pending" : "")
                                     : "Work";
-                                var tip = $"{Fmt.LongDate(d.Date)}: {what}{(d.OverrideReason == null ? "" : " — " + d.OverrideReason)}";
+                                var note = d.HolidayName == null || d.OffForHoliday ? ""
+                                    : d.OptionalHoliday ? $" — optional holiday: {d.HolidayName}" : $" — holiday: {d.HolidayName}";
+                                var tip = $"{Fmt.LongDate(d.Date)}: {what}{note}{(d.OverrideReason == null ? "" : " — " + d.OverrideReason)}";
                                 <button type="button" class="month-day @css @(d.Date == DateTime.Today ? "month-day--today" : "") @(d.Override != null ? "month-day--changed" : "")"
                                         data-date="@d.Date.ToString("yyyy-MM-dd")" title="@tip" aria-label="@tip">
                                     <span class="num">@d.Date.Day</span>
@@ -86,6 +91,7 @@
                         <div class="month-key">
                             <span><i style="background:#fff"></i>Work day</span>
                             <span><i style="background:#f1f3f6"></i>Day off</span>
+                            <span><i style="background:#e3f1ef;border-color:#2a7d74"></i>Holiday</span>
                             <span><i style="background:#fdf3d8;border-color:#d4af37"></i>Approved leave</span>
                             <span><i style="background:#fffaf0;border:1px dashed #d4af37"></i>Pending leave</span>
                             <span>Click a date to change that one day.</span>
