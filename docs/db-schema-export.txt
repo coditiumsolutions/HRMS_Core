@@ -1,3 +1,5 @@
+OUTDATED: exported 2026-11-16, before the redesign reached production (2026-11-24). Use db.md. Re-running scripts/database/tools/export-db-schema.ps1 overwrites this file.
+
 Database: HRBTK
 Connection: DefaultConnection (environment: Production)
 Generated: 2026-11-16 15:14:59

@@ -1,9 +1,9 @@
 ---
 status: current
-last_verified: 2026-11-24
+last_verified: 2026-11-26
 applies_to: src/HRMBT.Web/Controllers, src/HRMBT.Web/Program.cs, src/HRMBT.Web/Infrastructure/LegacyRouteRedirects.cs
-verified_against: main @ 218de0e plus the uncommitted routing change, checked by crawling the running app (about 250 pages, forms and JSON endpoints) and by requesting old URLs
-note: Production still runs the older build with the old URLs (/Home/Login, /Employee/Details/5). The new URLs exist only in this repository until the next deployment.
+verified_against: "full crawl on 2026-11-24 at main @ 218de0e; payroll, payslip, leave, schedule and setup rows updated and spot-checked on 2026-11-26"
+note: The production app is not live (owner, 2026-11-26), so these URLs exist only in this repository until the next deployment.
 ---
 # Routes and URLs
 
@@ -32,12 +32,13 @@ note: Production still runs the older build with the old URLs (/Home/Login, /Emp
 | Allowances | `/allowances`, `/allowances/new`, `/allowances/bulk` (GET page, POST create many), `/allowances/{id}`, `/allowances/{id}/edit`, `/allowances/{id}/delete`, JSON `/allowances/employee-lookup?q=`, `/allowances/fuel-price` |
 | Deductions | `/deductions`, `/deductions/new`, `/deductions/bulk`, `/deductions/{id}`, `/deductions/{id}/edit`, `/deductions/{id}/delete`, JSON `/deductions/employee-lookup?q=` |
 | Attendance | `/attendance`, `/attendance/new`, `/attendance/off-days`, `/attendance/upload`, `/attendance/monthly-report`, `/attendance/by-department`, `/attendance/{id}`, `/attendance/{id}/edit`, `/attendance/{id}/delete` |
-| Leave | `/leave` (requests), `/leave/new`, `/leave/{id}`, `/leave/{id}/edit`, `/leave/{id}/delete`, `/leave/balances`, `/leave/quotas`, `/leave/quotas/new`, `/leave/quotas/{id}/edit`, `/leave/quotas/{id}/delete` |
+| Leave | `/leave` (requests; `?employeeId=` is the uid), `/leave/new` (`?employeeId=` pre-selects), `/leave/{id}`, `/leave/{id}/edit`, `/leave/{id}/cancel` (history is cancelled, never deleted; `/leave/{id}/delete` redirects), JSON `/leave/check` (work days and problems for a request), `/leave/balances` (`?employeeId=`), `/leave/quotas`, `/leave/quotas/new`, `/leave/quotas/{id}/edit`, `/leave/quotas/{id}/delete`, POST `/leave/quotas/copy` |
+| Schedule | `/employees/{id}/schedule?month=yyyy-MM` (month view), POST `/employees/{id}/schedule/work-week`, POST `/employees/{id}/schedule/day`, `/employees/{id}/leave-adjustments` (list; POST adds), `/work-weeks` (list; POST sets several employees) |
 | Payroll | `/payroll/dashboard`, `/payroll/run` (the one run page: everyone, a department or one employee; `?employeeId=` and `?department=` pre-fill it), POST `/payroll/run/preview` (who would get a payslip, warnings, tick boxes; saves nothing), `/payroll/status`. Redirects: `/payroll` to `/payslips`; `/payroll/{id}` to `/payslips/{id}`; `/payroll/search` to `/payslips`; `/payroll/run/single`, `/payroll/new`, `/payroll/generate`, `/payroll/employees` to `/payroll/run` |
 | Payslips | `/payslips` (the one list), `/payslips/new` (hand-typed payslip, kept until HR answers B20), `/payslips/generate` (redirects to `new`), `/payslips/{id}`, POST `/payslips/{id}/regenerate`, `/payslips/{id}/print`, `/payslips/{id}/delete`, JSON `/payslips/lookup/employees-by-department?department=`, `/payslips/lookup/employees/{uid}` |
 | Reports | `/reports`, `/reports/salaries`, `/reports/employees`, `/reports/allowances`, `/reports/deductions`, `/reports/taxes` |
 | Tax | `/tax-rules` (one card per tax year; `?taxYear=2025-2026` redirects), `/tax-rules/years/{startYear}` (slabs of one year), `/tax-rules/years/new` (a whole tax year with all its slabs), `/tax-rules/new` (`?year=` pre-selects the year), `/tax-rules/{id}`, `/tax-rules/{id}/edit`, `/tax-rules/{id}/delete` |
-| Setup (Admin) | `/setup`, `/setup/users`, `/setup/users/new`, `/setup/users/{id}/edit`, `/setup/users/{id}/delete`, `/setup/config`, `/setup/config/new`, `/setup/config/{id}/edit`, `/setup/config/{id}/delete` |
+| Setup (Admin, HR; users Admin only) | `/setup`, `/setup/users`, `/setup/users/new`, `/setup/users/{id}/edit`, `/setup/users/{id}/delete`, `/setup/config`, `/setup/config/new`, `/setup/config/{id}/edit`, `/setup/config/{id}/delete` |
 | Setup fuel prices (Admin, HR) | `/setup/fuel-prices` (list, POST adds), POST `/setup/fuel-prices/{id}/delete` |
 | Setup lists (Admin, HR) | `/setup/lists/{kind}` where kind is `projects`, `departments`, `subdepartments`, `designations`, `leavetypes`; `/setup/lists/{kind}/new`, `/setup/lists/{kind}/{id}/edit`, POST `/setup/lists/{kind}/{id}/toggle` and `/setup/lists/{kind}/{id}/delete` |
 

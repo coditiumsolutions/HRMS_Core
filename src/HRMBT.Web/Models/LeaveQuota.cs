@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
 namespace HRMBT.Web.Models;
 
-/// <summary>Standard leave policy: days per leave type per year (db_changes.md: LeaveQuota).</summary>
+/// <summary>Standard leave policy: days per leave type per year (db.md: LeaveQuota).</summary>
 [Table("LeaveQuota")]
 public class LeaveQuota
 {

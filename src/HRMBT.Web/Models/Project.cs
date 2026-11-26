@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace HRMBT.Web.Models;
 
-/// <summary>HR-managed project list (db_changes.md: Projects). No project name or count is built into the app.</summary>
+/// <summary>HR-managed project list (db.md: Projects). No project name or count is built into the app.</summary>
 public class Project
 {
     [Key]

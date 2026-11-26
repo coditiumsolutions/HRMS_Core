@@ -1,15 +1,18 @@
 ---
-status: partially-outdated
-last_verified: 2026-11-23
+status: outdated
+superseded_by: ../../db.md
+last_verified: 2026-11-26
 verified_against: main @ 7aa2685 plus the uncommitted security and user-roles changes (code), and the redesigned development database (scripts 01-04, 06, 07 applied)
 outdated_since: 2026-11-23
 outdated_sections: [Tables (dbo), Relationships, Data-type notes]
-reason: These sections describe the production schema as of 2026-11-16, which is still what production runs. The repository and development database use the redesigned schema; the banner at the top lists the differences.
-see_also: ../db/db_changes.md, ../db/prod_rollout.md, ../../db.md
-prod_migration: pending   # db.md v1.10 carries the same warning
+reason: "Static analysis written 2026-11-16 and revised to 2026-11-23. Describes the schema production had before the redesign was applied on 2026-11-24."
+see_also: ../../db.md
+prod_migration: done 2026-11-24
 ---
 # 3. Data Structures
 
+> **Outdated: use `../../db.md`.** The text below, including the next note, was written before the redesign reached production.
+>
 > **Read this first (2026-11-23).** The tables below describe **production as of 2026-11-16**, and production still has this schema. The repository and the local development database use the redesigned schema (`../db/db_changes.md`; how to apply it: `../db/prod_rollout.md`). Main differences:
 >
 > | Production (below) | Redesigned (dev) |

@@ -72,13 +72,13 @@ The Production profile runs the app on your machine against the **live productio
 
 If you pass `--no-launch-profile`, set `ASPNETCORE_ENVIRONMENT` yourself: when it is unset the app defaults to Production and connects to the **production** server.
 
-The local `HRBTK` database needs the redesigned schema; see `docs/db/prod_rollout.md` and `scripts/database/redesign/` for the scripts and the order to run them.
+The local `HRBTK` database needs the redesigned schema: run the scripts in `scripts/database/redesign/` in order. `db.md` describes the schema and says which scripts are not yet on production.
 
 ## Core Modules (MVC Routes)
 
 - Home: `/`
-- Employees: `/Employee`
-- Attendance: `/Attendance`
-- Payroll: `/Payroll`
-- LMS: `/LMS`
+- Employees: `/employees`
+- Attendance: `/attendance`
+- Payroll: `/payroll/run`, `/payslips`
+- Leave: `/leave`, `/work-weeks`
 

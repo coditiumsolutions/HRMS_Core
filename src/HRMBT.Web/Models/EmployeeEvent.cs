@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace HRMBT.Web.Models;
 
-/// <summary>Key employment event (db_changes.md: EmployeeEvents). Append-only: a wrong entry is voided with a reason, never edited or deleted.</summary>
+/// <summary>Key employment event (db.md: EmployeeEvents). Append-only: a wrong entry is voided with a reason, never edited or deleted.</summary>
 public class EmployeeEvent
 {
     public const string Joined = "Joined";

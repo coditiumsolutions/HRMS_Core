@@ -9,7 +9,7 @@ namespace HRMBT.Web.Controllers;
 
 /// <summary>
 /// Setup pages for the HR-managed lists: projects, departments, sub-departments, designations and leave types
-/// (decisions B2, B3, B4; db_changes.md). Nothing here is hard-coded: HR adds, renames, reorders and deactivates rows.
+/// (decisions B2, B3, B4; db.md). Nothing here is hard-coded: HR adds, renames, reorders and deactivates rows.
 /// A row that is in use is deactivated, never deleted (db_standards S6, S14).
 /// </summary>
 [Authorize(Roles = "Admin,HR")]

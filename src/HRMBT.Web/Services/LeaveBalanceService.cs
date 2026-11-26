@@ -52,7 +52,7 @@ public class RolloverRow
 }
 
 /// <summary>
-/// The one place that reads leave balances (dbo.vLeaveBalances, db_changes.md). The employee Leave Balance tab and the LMS Balances page both use it,
+/// The one place that reads leave balances (dbo.vLeaveBalances, db.md). The employee Leave Balance tab and the LMS Balances page both use it,
 /// so they cannot disagree. Leave is tracked in one decimal (half days = 0.5).
 /// </summary>
 public class LeaveBalanceService

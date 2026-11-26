@@ -1,6 +1,6 @@
 namespace HRMBT.Web.Models;
 
-/// <summary>One row of dbo.vLeaveBalances (db_changes.md): balance of one employee, leave type and year. Derived, never stored.</summary>
+/// <summary>One row of dbo.vLeaveBalances (db.md): balance of one employee, leave type and year. Derived, never stored.</summary>
 public class LeaveBalanceRow
 {
     public int EmployeeId { get; set; }

@@ -66,7 +66,7 @@ public class Employee
     [Display(Name = "Gen Status")]
     [StringLength(50)]
     public string? GenStatus { get; set; }
-    // ---- Organisation (db_changes.md: Employee -> Project / Department / SubDepartment / Designation) ----
+    // ---- Organisation (db.md: Employee -> Project / Department / SubDepartment / Designation) ----
     public int ProjectId { get; set; }
     public int DepartmentId { get; set; }
     public int? SubDepartmentId { get; set; }

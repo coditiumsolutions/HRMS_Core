@@ -27,9 +27,9 @@ There are no tests or linters configured. `dotnet ef` is available via the `Micr
 
 ## Database
 
-- Production DB is `HRBTK` (SQL Server 2022 Express) and has the **redesigned schema since 2026-11-24** (33 tables in `dbo`, scripts in `scripts/database/redesign/`). `db.md` (v2.0) is the schema document, generated from the live DB; keep its version/date/Change History current whenever the schema changes. `docs/db-schema-export.txt` is a raw dump to diff against it.
+- Production DB is `HRBTK` (SQL Server 2022 Express) and has the **redesigned schema since 2026-11-24** (34 tables in `dbo`, scripts in `scripts/database/redesign/`). `db.md` is the schema document and the **only** place schema changes are tracked; keep its version/date/Change History current, and mark anything not yet run on production as pending. `docs/db/db_changes.md` is retired: do not update it. (`docs/db-schema-export.txt` is an outdated dump from before the redesign.)
 - **Migrations are not trustworthy.** Six older repo migrations were applied by hand and are missing from `__EFMigrationsHistory`, and one recorded migration has no file. Do not run `dotnet ef database update` against production without reading the "Known issues" in `db.md`. Schema changes are applied via re-runnable SQL in `scripts/database/redesign/` (back up first, `sqlcmd -b -I`).
-- Entities follow the new schema (`Models/`, `Data/ApplicationDbContext.cs`); `db.md` and `docs/db/db_changes.md` explain each column.
+- Entities follow the new schema (`Models/`, `Data/ApplicationDbContext.cs`); `db.md` explains each column.
 - Employees are identified two ways: `Employee.uid` (int) is the FK used by every table (payroll, leave, attendance, users); `Employee.EmployeeID` (string, unique) is the business key shown to users. Project, department, sub-department and designation are foreign keys to managed lists.
 
 ## Architecture
@@ -39,24 +39,26 @@ Controllers call `ApplicationDbContext` directly (`Data/ApplicationDbContext.cs`
 - `Payroll/PayrollCalculationService` - the payroll engine. Gross = basic + active allowances (fuel by quantity uses the `FuelPrices` row in force on the 1st of the payslip month, Setup -> Fuel prices); deductions are percentage-of-gross or fixed (the fixed amount is stored in `Deduction.PercentageValue`); income tax = annual progressive slab method on basic x 12 (`Payroll/IncomeTaxCalculator`; fixed amount + rate on the part over the slab start, monthly = annual / 12 rounded to the rupee; `docs/reference/pk-income-tax.md`), only when `Employee.ApplyTax` is yes/y/true/1. Creates `Payslips` + `PayslipDetails` (a second row of the same allowance or deduction becomes a line named `... (2)`, because line names are unique per payslip); `RegeneratePayslipAsync` replaces the figures of an unlocked payslip in one transaction.
 - Payroll screens: one run page `/payroll/run`, one list `/payslips`, one detail `/payslips/{id}` (decision T10); do not add parallel ones.
 - `Payroll/PayslipLockService` - editing an allowance/deduction locks all of that employee's unlocked payslips and writes an `AuditLogs` row. There is no unlock path.
+- `WorkScheduleService` - the one place that says which days an employee works: Monday-Saturday by default, a per-employee work week from a date (`ShiftAssignments`, weekday bit mask Mon=1..Sun=64, `ShiftId` NULL until shift times exist), single days in `RosterOverrides`. Changing either recounts the open leave it touches. Attendance should use it too.
+- `LeaveRulesService` - the rules every way of entering leave applies (request screens and Attendance -> Off Days): refusals (not managed, outside employment, overlap, no work day, crosses 31 December), balance warning, approver stamp. Leave `TotalDays` = work days in the range. Leave requests are cancelled, never deleted.
 - `AttendanceService` (EPPlus Excel/CSV import), `EmployeeDocumentService` (files under `wwwroot/uploads/employees/{uid}/`, soft delete), `AuditLogService`, `LoginPasswordHasher` (PBKDF2; still accepts legacy SHA-256/plain text).
 
 Routing: attribute routes only, lowercase kebab-case plural URLs (`/employees/143/edit`, `/leave/quotas`, `/payroll/run`); employees in URLs are `uid`; old `/Controller/Action/id` URLs 301-redirect. Every new action needs an `[HttpGet("...")]`/`[HttpPost("...")]` template, and links/forms need `asp-route-id` (a hidden field does not build the URL). Map and rules: `docs/routes.md`.
 
 Navigation: each controller sets `ViewData["Module"]`, and `Views/Shared/_Sidebar.cshtml` picks its menu from that key. Layouts: `_MainLayout` (default via `_ViewStart`), `_LoginLayout`, plus `_SetupLayout`/`_DeductionsLayout` for specific modules.
 
-Config-driven dropdowns (Department, Designation, Project, LeaveTypes, AllowanceNames, ...) come from rows in the `Configuration` table, edited under Setup.
+Projects, departments, sub-departments, designations and leave types are managed lists in their own tables (Setup -> Lists); the remaining dropdowns (for example AllowanceNames, AllowanceTypes) come from rows in the `Configuration` table, edited under Setup.
 
 ## Database redesign (development)
 
-- The redesigned schema (`docs/db/db_changes.md`, standards in `db_standards.md`, decisions in `decisions.md`) is applied to the dev copy and, since 2026-11-24, to production `HRBTK` (how it was done and the results: `docs/db/prod_rollout.md`). Scripts: `scripts/database/redesign/` (01-04 expand, 06 contract, 07 user roles, 08 employee history, 09 leave days one decimal, 10 legacy leave archive, 11 leave balances view v2, 12 tax slabs on the annual method (run on production 2026-11-25); run in order, back up first, `sqlcmd -b -I`). New schema changes are written as new re-runnable scripts, tested on the dev copy first.
+- The redesigned schema (described in `db.md`; standards in `docs/db/db_standards.md`, open questions in `docs/db/decisions.md`) is applied to the dev copy and, since 2026-11-24, to production `HRBTK` (historical record: `docs/db/prod_rollout.md`). Scripts: `scripts/database/redesign/` (01-04 expand, 06 contract, 07 user roles, 08 employee history, 09 leave days one decimal, 10 legacy leave archive, 11 leave balances view v2, 12 tax slabs on the annual method (run on production 2026-11-25); run in order, back up first, `sqlcmd -b -I`). New schema changes are written as new re-runnable scripts, tested on the dev copy first.
 - The app code targets the redesigned schema. Legacy shapes are kept in code through EF value converters and facade properties (payslip month name, tax year label, `Employee.Department`/`Project`/`Designation` names, attendance `TimeIn`/`TimeOut`/`Status`, deduction `PercentageValue`); in LINQ queries use the real columns/navigations (`e.DepartmentInfo!.DepartmentName`, `a.AttendanceDate`, `d.Percentage`/`d.Amount`).
 - Projects, departments, sub-departments, designations and leave types are managed under Setup -> Lists (`LookupsController`, Admin or HR role). Nothing about them is hard-coded.
 - Always run the app with `ASPNETCORE_ENVIRONMENT=Development` when testing; without it the app reads `appsettings.Production.json` and connects to the production server.
 
 ## Security facts to keep in mind
 
-- `FallbackPolicy` requires an authenticated user everywhere; `[AllowAnonymous]` is only on login/logout/error/DbHealth. `SetupController` requires `Admin`; a user can hold several roles (table `UserRoles`, script `07_user_roles.sql`; one role claim per row; manage them with the tick boxes in Setup → Users; the last active Admin cannot be demoted or disabled); `LookupsController` requires `Admin,HR`; employee delete (marks Inactive) requires `Admin`. Other controllers still allow any logged-in user (payroll/salary/reports need a decision on what `HR` may do).
+- `FallbackPolicy` requires an authenticated user everywhere; `[AllowAnonymous]` is only on login/logout/error/DbHealth. `SetupController` requires `Admin` or `HR` (user management `Admin` only); a user can hold several roles (table `UserRoles`, script `07_user_roles.sql`; one role claim per row; manage them with the tick boxes in Setup → Users; the last active Admin cannot be demoted or disabled); `LookupsController` requires `Admin,HR`; employee delete (marks Inactive) requires `Admin`. Other controllers still allow any logged-in user (payroll/salary/reports need a decision on what `HR` may do).
 - A global `AutoValidateAntiforgeryToken` filter covers all POSTs; keep `[ValidateAntiForgeryToken]` on actions anyway. Logout is POST (forms in the layouts).
 - Login errors are neutral, failed logins are throttled (5 per address+username, 15 min), legacy password formats are re-hashed to PBKDF2 (600k) on login. Auth cookie is HttpOnly, SameSite=Lax, Secure outside Development.
 - `/uploads` returns 404 from the web server; documents are served only by `EmployeeDocumentsController.Download`. Set `EmployeeDocuments:StorageBasePath` to store them outside `wwwroot`.
@@ -64,6 +66,7 @@ Config-driven dropdowns (Department, Designation, Project, LeaveTypes, Allowance
 
 ## Known payroll gotchas
 
+- **Run `scripts/database/redesign/14_work_weeks.sql` on a database before deploying this build to it** (done on the dev copy and on production, 2026-11-26).
 - **Run `scripts/database/redesign/13_payslip_line_rates_fuel_prices.sql` on a database before deploying this build to it** (done on the dev copy and on production, 2026-11-26). Without it, payslip pages and payroll fail. A build from before that date still reads the `Configuration` fuel price: if it was changed there before the new build went live, add it under Setup -> Fuel prices.
 - Income tax: `TaxRules` slabs hold ANNUAL income (`MinSalary`/`MaxSalary`) with `FixedAmount` + `TaxPercentage` on the part over `MinSalary`; the tax year is July-June (`TaxYearStart`, decision T6) derived from the payslip (`Month >= 7 ? Year : Year - 1`). Monthly tax = annual tax / 12 rounded to the rupee, on basic x 12 only (allowances are not taxed; the base is open, B17). Script 12 must be run on a database before this build is deployed to it. Source and slab figures: `docs/reference/pk-income-tax.md`.
 - Attendance and leave do not feed payroll yet (`Payslips.WorkingDays/LeaveDays/LeaveBalance` are unused). HR requirements for the planned attendance/schedule/leave rework (hourly pay, 7h minimum day, half days with approval, overnight shifts, per-employee leave quotas, Dastarkhuwan staff without leave) are in the project discussion, not in code; `Attendance`/`EmployeeLeaves` are empty in production.
@@ -74,5 +77,5 @@ Config-driven dropdowns (Department, Designation, Project, LeaveTypes, Allowance
 
 ## Docs
 
-- `docs/analysis/` - static analysis (stack, functionality, data, security, deployment, gaps, UI). `05-deployment.md` is marked outdated in its frontmatter; `docs/deployment.md` is current. Docs with `status: outdated` frontmatter should not be trusted for server/IP details.
+- Doc frontmatter says how far to trust a file: `current`, `partially-outdated` (see the listed sections), `outdated`, `historical` or `retired` (never update the last two). `docs/analysis/` is a November snapshot, mostly outdated; `docs/deployment.md` is the deployment reference.
 - Commit messages in this repo use a `Prefix: summary` style (`Feat(Payroll): ...`, `Chore:`, `Docs:`).

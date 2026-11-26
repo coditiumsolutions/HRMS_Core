@@ -1,11 +1,11 @@
 ---
 status: partially-outdated
-last_verified: 2026-11-23
+last_verified: 2026-11-26
 verified_against: main @ 7aa2685 plus the uncommitted security and user-roles changes (code), and the redesigned development database (scripts 01-04, 06, 07 applied)
 outdated_since: 2026-11-23
 outdated_sections: [Dependency injection (unchanged but incomplete)]
-reason: Routing section updated 2026-11-24 (attribute routes, /login, /error, legacy redirects). Controller list (Debug removed, Lookups added), solution layout, request pipeline (antiforgery filter, HTTPS redirect, /uploads block, memory cache for login throttle) and Configuration were updated on 2026-11-23. The pipeline and DI sections still match Program.cs. Models and services gained entities and rules from the database redesign (see 03-data-structures.md and ../db/db_changes.md).
-see_also: ../deployment.md, ../db/db_changes.md
+reason: "Static analysis written 2026-11-16 and revised to 2026-11-23. Stack, architectural style, request pipeline and configuration still hold. The controller, service and model lists miss later work (payroll consolidation, work schedules and leave rules), and the payslip request flow predates the fuel price history."
+see_also: ../../AGENTS.md, ../routes.md
 ---
 # 1. Tech Stack & Architecture
 

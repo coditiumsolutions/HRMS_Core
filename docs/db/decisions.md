@@ -1,12 +1,13 @@
 # HRMS Database - Pending Decisions
-Version: 2.9 | Date: 2026-11-26 | Related: db_standards.md, db_changes.md (v4.0), db.md (v2.4)
+Version: 3.1 | Date: 2026-11-26 | Related: db_standards.md, db.md (v2.7)
 
 ## How to use this file
-- Only **pending** decisions are listed here. Answered ones are removed and recorded where they apply (rules in db_standards.md, schema in db_changes.md).
+- Only **pending** decisions are listed here. Answered ones are removed and recorded where they apply (rules in db_standards.md, schema in db.md).
 - Each decision has a **Suggested key** (★ = recommended) and an **Answer** block. Write the chosen letter (or "Other: ...") in `Answer`, then who and when; add free text in `Notes`.
-- Part A is technical (the dev team decides). Part B is business logic (HR / management decides); each B-item says what it affects in the schema so the answer can go straight into db_changes.md.
+- Part A is technical (the dev team decides). Part B is business logic (HR / management decides); each B-item says what it affects in the schema so the answer can go straight into db.md. Older notes below that mention `db_changes.md` refer to the redesign draft, retired on 2026-11-26.
 - **Data status (2026-11-18):** the data now in `HRBTK` is **test data**. Counts and findings quoted below (employees, projects, leave balances, duplicates) describe it for design purposes only; they are not requirements, and the checks are re-run on real data before anything is applied.
 - 2026-11-24: the employee Leave Balance tab is built on the LMS tables; B18 is closed (see below); leave days are kept in one decimal.
+- 2026-11-26: work week defined (see the notes under B5 and B8).
 - 2026-11-26: T4, T9 and T10 answered (A) and built, apart from the parts of T10 that wait for HR (see its notes).
 - 2026-11-24: employee history is built (`EmployeeEvents`, see B14, T1, T8, B19 below).
 - 2026-11-25: Payroll review added T9-T11 and B20-B28 and dated notes on B10, B13 and B17. The review itself (findings F1-F19, proposal P1-P10) is kept in `docs/payroll-review.html`.
@@ -298,6 +299,7 @@ Status: Open
 
 **Answer:** ______  **Decided by / date:** ______  **Notes (2-6):** ______
 **Built 2026-11-24 without waiting for the answers:** carry-forward eligibility and the cap are data on `LeaveTypes` (`AllowsCarryForward`, default 1 except Unpaid and Compensation; `MaxCarryForwardDays`, NULL = no cap) and the year-end rollover reads them, so HR's answer to question 4 is a Setup change, not a code change.
+**2026-11-26 (question 5, weekly offs; Rayder):** leave is counted on the employee's **work days** only; weekly days off inside a leave period are not charged. Built. **Still open: gazetted holidays** (today they are charged like any work day; there is no holiday screen) and questions 1-4 and 6. Blocking leave beyond the balance is also undecided: the app warns.
 
 ---
 
@@ -337,6 +339,8 @@ Status: Open
 ## B8. Schedule edge cases
 Status: Open
 **Affects:** `Shifts`, `ShiftAssignments`, `RosterOverrides`.
+
+**2026-11-26 (Rayder), partly settled and built:** the company work week is **Monday to Saturday**; some employees work Monday to Friday by contract, and guards and some other staff differ. Built: a per-employee work week with a start date (`ShiftAssignments`, set per person or for several at once) and single-day changes for rosters (`RosterOverrides`). Shift times, rotation patterns, swaps, Ramadan timings and overnight rules stay open.
 
 **Question.** HR said schedule management is detailed with many edge cases but has not listed them. Which of these apply, and what else: rotating shifts, per-person weekly offs, split shifts, Ramadan timings, swaps, extra duty on an off day, overnight shifts crossing month-end, a holiday on a weekly off?
 

@@ -1,12 +1,12 @@
 ---
-status: partially-outdated
-last_verified: 2026-11-23
+status: outdated
+last_verified: 2026-11-26
 verified_against: main @ 7aa2685 plus the uncommitted security and user-roles changes (code), and the redesigned development database (scripts 01-04, 06, 07 applied)
 outdated_since: 2026-11-23
 outdated_sections: [Intended but not implemented (partly)]
 changed_2026_11_23: [Setup now Admin-only, multi-role users, Employee delete = mark Inactive, Debug/Test removed]
-reason: Updated on 2026-11-23 for the Lookups module, tax-year derivation, the single leave model and attendance upload behaviour. The module map and payroll rules otherwise still match the code.
-see_also: 06-gaps.md, ../db/db_changes.md
+reason: "Static analysis written 2026-11-16 and revised to 2026-11-23. Payroll screens, fuel prices, leave, work weeks, leave adjustments and the employee leave tab have all changed since."
+see_also: ../../AGENTS.md, ../routes.md, ../payroll-review.html
 ---
 # 2. What the Application Does
 

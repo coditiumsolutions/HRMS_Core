@@ -1,3 +1,12 @@
+---
+status: partially-outdated
+last_verified: 2026-11-26
+facts_checked_on_server: 2026-11-16 (not rechecked)
+current_sections: [What runs where, Build and publish, Configuration and secrets, Release checklist]
+outdated_sections: [Known issues and risks]
+reason: "The risk table predates the security fixes: /Setup now needs a login and role, credentials were removed from appsettings.json (they remain in git history) and the app has /db-health. The server facts date from 2026-11-16; on 2026-11-26 the owner said the production app is not live. Before deploying, run any script db.md marks as pending."
+see_also: ../db.md, analysis/04-security.md
+---
 # HRMS Deployment
 
 Last Updated: 2026-11-16

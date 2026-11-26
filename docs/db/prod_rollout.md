@@ -1,3 +1,10 @@
+---
+status: historical
+last_verified: 2026-11-26
+completed_on: 2026-11-24
+reason: Record of how the redesign (scripts 01-04, 06-11) was applied to production, and of the restore that evening. Later scripts (12 onwards) are recorded in db.md Change History. Do not follow it as a plan for new changes.
+superseded_by: ../../db.md
+---
 # Production rollout: applying the database redesign to HRBTK
 Version: 1.5 | Date: 2026-11-25
 Applies to: production database `HRBTK` (SQL Server 2022, server "Teezhost 16GB", https://hr.coditium.com)

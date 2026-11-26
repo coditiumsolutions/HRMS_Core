@@ -1,9 +1,9 @@
 ---
-status: current
-last_verified: 2026-11-23
+status: partially-outdated
+last_verified: 2026-11-26
 verified_against: main @ 7aa2685 plus the uncommitted security and user-roles changes (code), and the redesigned development database (scripts 01-04, 06, 07 applied)
 supersedes_snapshot: 2026-11-16 (commit 2843f59)
-see_also: ../deployment.md, ../db/prod_rollout.md
+see_also: ../deployment.md, ../db/decisions.md
 note_urls: URLs in this file use the attribute routes of 2026-11-24 (old /Home/Login style paths redirect); production still uses the old paths until the next deployment. See ../routes.md.
 note: Each finding carries a status as of the verified date. Production still runs the older build; "Fixed" items exist only in this repository (uncommitted at the verified date) until the next deployment.
 summary: {fixed: 12, partly: 3, deferred: 1}   # 16 tasks
@@ -25,6 +25,7 @@ tasks:
   - {id: 14, title: "Attendance UploadedBy = signed-in user",               status: fixed}
   - {id: 15, title: "Global antiforgery filter",                            status: fixed}
   - {id: 16, title: "Several roles per user (UserRoles, script 07)",        status: fixed, note: "added 2026-11-23; farhan has Admin+HR on the dev copy"}
+reason: "Static analysis written 2026-11-16 and revised to 2026-11-23. The findings are still a useful list, but their not-yet-deployed statements, the task list and the role table were not rechecked. Known change: Setup allows Admin or HR, with user management Admin only."
 ---
 # 4. Security
 

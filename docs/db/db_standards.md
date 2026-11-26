@@ -1,3 +1,11 @@
+---
+status: partially-outdated
+last_verified: 2026-11-26
+current_sections: [Rules S1-S24]
+outdated_sections: ["Current state (db.md v1.9): what is inconsistent today", Idempotency review of the data structure, Carried into the table walkthrough from the answers, Table walkthrough]
+reason: The rules still apply. The other sections describe the database before the redesign went to production (2026-11-24) and mention db_changes.md, which is retired.
+see_also: ../../db.md, decisions.md
+---
 # HRMS Database Standards
 Version: 1.0 | Date: 2026-11-17 | Applies to: HRBTK (SQL Server 2022) | Related: decisions.md, db_changes.md, db.md
 
@@ -182,7 +190,7 @@ Note: `Employee.EmployeeID` stays as is under A (it is the business key and the 
 
 ### S20. Documentation (Status: Closed)
 **Suggested key**
-- A ★ `db.md` stays the single source for the current schema, with dated notes saying why. Proposed changes live in `db_changes.md` until applied. Every standard that is exception-tolerated (e.g. `Employee`, `Attendance` names) is listed in db.md.
+- A ★ `db.md` stays the single source for the current schema, with dated notes saying why. Proposed changes live in `db_changes.md` until applied. (2026-11-26: `db_changes.md` is retired; a change not yet on production is tracked in `db.md` itself, marked pending.) Every standard that is exception-tolerated (e.g. `Employee`, `Attendance` names) is listed in db.md.
 - B Generate docs from the live DB only.
 
 **Answer:** A  **Decided by / date:** Rayder / 17-11-2026

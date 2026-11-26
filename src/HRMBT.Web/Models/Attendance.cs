@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 namespace HRMBT.Web.Models;
 
 /// <summary>
-/// One row per employee per shift date (db_changes.md: Attendance).
+/// One row per employee per shift date (db.md: Attendance).
 /// Stored as CheckInAt/CheckOutAt (full date-times, so overnight shifts work), DayStatus and LateMinutes.
 /// The legacy shape (EmployeeID code, TimeIn/TimeOut, one-letter Status) is kept as NotMapped facade properties
 /// so forms and views keep working; queries must use the real columns (EmployeeId, AttendanceDate, DayStatus...).

@@ -1,11 +1,12 @@
 ---
-status: partially-outdated
-last_verified: 2026-11-23
+status: outdated
+superseded_by: ../ui_standards.md
+last_verified: 2026-11-26
 verified_against: main @ ddc0ef8 plus the uncommitted UI work (Fmt, hrms-theme.css, hrms-grid.js, Employee Details restructure), checked in the running app with headless-Chrome screenshots, and the redesigned development database
 outdated_since: 2026-11-23
 outdated_sections: [Pages by module (partly)]
-reason: Updated on 2026-11-23 for the Lookups views, the shared org-fields partial, the role tick boxes, the Logout button, the display standard and the site-wide restyle (hrms-theme.css, hrms-grid.js). Navigation and per-page sections were not re-verified line by line.
-see_also: 06-gaps.md
+reason: "Static analysis written 2026-11-16 and revised to 2026-11-23. Side menus, payroll and leave pages, action bars and the schedule screens have changed since."
+see_also: ../ui_standards.md, ../routes.md
 ---
 # 7. UI Elements
 

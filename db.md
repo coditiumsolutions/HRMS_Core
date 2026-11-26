@@ -1,5 +1,5 @@
 # HRMS Database Schema
-Version: 2.4 | Last Updated: 2026-11-26
+Version: 2.7 | Last Updated: 2026-11-26
 Database: HRBTK
 Server: Teezhost 16GB (production; hr.coditium.com, SQL Server 2022 16.0.1000.6 Express on port 1433, same machine as the web app). Its connection string is in the git-ignored `src/HRMBT.Web/appsettings.Production.json`. See `docs/deployment.md`.
 
@@ -8,13 +8,16 @@ Server: Teezhost 16GB (production; hr.coditium.com, SQL Server 2022 16.0.1000.6 
     2. Every table's dated inline notes explain WHY a column/table exists or changed - keep new notes dated (YYYY-MM-DD) and specific, don't just describe the column type
     3. A table marked [REMOVED] stays in this file as a historical/legacy record - do not delete those sections, they document what old code may still (incorrectly) reference
     4. Add an entry to Change History for every schema change, and keep the matching EF migration / SQL script named in it
+    5. This file alone tracks schema changes (2026-11-26; docs/db/db_changes.md is retired). A script not yet run on production is noted in a "Pending on production" banner and its columns are marked [PENDING script N] until it is run
 ---
 
-> **2026-11-24: the redesigned schema is live on production.** Scripts 01-04 and 06-11 (`scripts/database/redesign/`) were run on `HRBTK` on 2026-11-24 after a full backup; the old schema (v1.10 of this file) no longer exists, apart from the archive tables below. The reasoning behind the redesign (why each column, decisions, standards) is in `docs/db/db_changes.md`, `db_standards.md` and `decisions.md`; how it was applied is in `docs/db/prod_rollout.md`. The pre-migration state is kept in the backups `HRBTK_pre_redesign_20261124.bak` and `HRBTK_after04_20261124.bak` in the SQL Server default backup folder on the server.
+> **2026-11-24: the redesigned schema is live on production.** Scripts 01-04 and 06-11 (`scripts/database/redesign/`) were run on `HRBTK` on 2026-11-24 after a full backup; the old schema (v1.10 of this file) no longer exists, apart from the archive tables below. Standards are in `docs/db/db_standards.md` and open questions in `docs/db/decisions.md`. The redesign design draft (`docs/db/db_changes.md`, retired) and the rollout record (`docs/db/prod_rollout.md`) are historical. The pre-migration state is kept in the backups `HRBTK_pre_redesign_20261124.bak` and `HRBTK_after04_20261124.bak` in the SQL Server default backup folder on the server.
 
-Source of truth for the structure: the live database, read with catalog queries on 2026-11-24 right after the migration (33 tables in `dbo`, 2 views, plus 2 in `mig`). Column notes were carried over from `db_changes.md` ("was ..." = the old definition). EF entities are in `src/HRMBT.Web/Models/`, mapped in `Data/ApplicationDbContext.cs`. Reference SQL: `scripts/database/redesign/` (run in order; scripts 02-04 cannot be re-run once 06 has dropped the old columns) and `scripts/database/tools/`.
+Source of truth for the structure: the live database, read with catalog queries on 2026-11-24 right after the migration (33 tables in `dbo` then, 34 since `FuelPrices` was added on 2026-11-26; 2 views, plus 2 in `mig`). Column notes were carried over from the retired `db_changes.md` ("was ..." = the old definition). EF entities are in `src/HRMBT.Web/Models/`, mapped in `Data/ApplicationDbContext.cs`. Reference SQL: `scripts/database/redesign/` (run in order; scripts 02-04 cannot be re-run once 06 has dropped the old columns) and `scripts/database/tools/`.
 
 > **2026-11-26: script `13_payslip_line_rates_fuel_prices.sql` run on production** (after backup `HRBTK_pre_script13_20261126.bak`). It adds `PayslipDetails.Quantity`, `UnitAmount`, `Note` and the table `FuelPrices`. The build deployed before that date ignores them and still reads the `FuelPrice` row in `Configuration`.
+
+> **2026-11-26: script `14_work_weeks.sql` run on production** (copy-only backups: `HRBTK_pre_script14_20261126.bak` before, `HRBTK_after_script14_20261126.bak` after). It makes `ShiftAssignments.ShiftId` nullable and lets an `ExtraDuty` roster day have no shift. No script is pending on production.
 
 ## Standards in short (db_standards.md)
 - Primary key `Id int IDENTITY` (`bigint` for `AttendancePunches` and `AuditLogs`); `Employee` and `Users` keep `uid`. Foreign key columns are `<Entity>Id`; employee references are `EmployeeId` -> `Employee.uid`. Constraint names: `PK_`, `FK_<Child>_<Parent>`, `IX_`, `UX_` (unique), `CK_`, `DF_`.
@@ -918,7 +921,7 @@ Rows on 2026-11-24 (right after the migration): 0.
 | EmployeeId | int | NOT NULL |  | FK -> Employee.uid. |
 | OverrideDate | date | NOT NULL |  | Shift date affected. |
 | OverrideType | varchar(15) | NOT NULL |  | `ShiftChange`, `Off`, `Swap`, `ExtraDuty`. |
-| ShiftId | int | NULL |  | FK -> Shifts.Id. Required for ShiftChange, ExtraDuty and Swap; NULL for Off. |
+| ShiftId | int | NULL |  | FK -> Shifts.Id. Required for ShiftChange, ExtraDuty and Swap; NULL for Off. 2026-11-26 (script 14): ExtraDuty may be NULL, a normally-off day worked before shift times exist. |
 | SwapWithEmployeeId | int | NULL |  | FK -> Employee.uid. Colleague for a Swap (each side gets a row). |
 | Reason | nvarchar(500) | NULL |  |  |
 | Notes | nvarchar(1000) | NULL |  | S24, T7: HR's short note. |
@@ -939,12 +942,13 @@ Keys and indexes
 - `FK_RosterOverrides_Employee_Swap` - foreign key (SwapWithEmployeeId) -> Employee(uid), no action.
 - `FK_RosterOverrides_Shifts` - foreign key (ShiftId) -> Shifts(Id), no action.
 - `FK_RosterOverrides_Users` - foreign key (ApprovedByUserId) -> Users(uid), no action.
-- `CK_RosterOverrides_Shift` - check ([OverrideType]='Off' AND [ShiftId] IS NULL OR [OverrideType]<>'Off' AND [ShiftId] IS NOT NULL).
+- `CK_RosterOverrides_Shift` - check ([OverrideType]='Off' AND [ShiftId] IS NULL OR [OverrideType]='ExtraDuty' OR ([OverrideType]='Swap' OR [OverrideType]='ShiftChange') AND [ShiftId] IS NOT NULL).
 - `CK_RosterOverrides_Swap` - check ([OverrideType]<>'Swap' OR [SwapWithEmployeeId] IS NOT NULL).
 - `CK_RosterOverrides_Type` - check ([OverrideType]='ExtraDuty' OR [OverrideType]='Swap' OR [OverrideType]='Off' OR [OverrideType]='ShiftChange').
 
 ## Table: dbo.ShiftAssignments
 Which shift an employee works, on which weekdays, over which date range. Attendance follows the schedule; weekly offs differ per person. B8.
+- 2026-11-26: the company work week is Monday to Saturday (mask 63) and applies when an employee has no row. A row is added only for a different or explicitly set week; leave days are counted from it.
 Rows: new table.
 - 2026-11-16: Day bitmask Mon=1, Tue=2, Wed=4, Thu=8, Fri=16, Sat=32, Sun=64 (Mon-Fri = 31, Mon-Sat = 63). Day bit for a date `d` = `POWER(2, DATEDIFF(day, '19000101', d) % 7)` (1900-01-01 was a Monday; independent of `SET DATEFIRST`).
 - 2026-11-16: When two assignments cover the same date, the higher `Priority` wins (e.g. a Ramadan timing over the regular shift). Same start date and same priority is blocked by the unique key below; other overlaps at the same priority are blocked in the save transaction under `sp_getapplock` (S22).
@@ -954,7 +958,7 @@ Rows on 2026-11-24 (right after the migration): 0.
 |---|---|---|---|---|
 | Id | int | NOT NULL |  | PK, identity. |
 | EmployeeId | int | NOT NULL |  | FK -> Employee.uid. |
-| ShiftId | int | NOT NULL |  | FK -> Shifts.Id. |
+| ShiftId | int | NULL |  | FK -> Shifts.Id. was NOT NULL. 2026-11-26 (script 14): a row records an employee's work week (weekday masks and dates) before any shift times are defined; NULL = days known, times not. |
 | EffectiveFromDate | date | NOT NULL |  |  |
 | EffectiveToDate | date | NULL |  | NULL = open-ended. |
 | DaysOfWeekMask | tinyint | NOT NULL |  | Days this shift is worked. |
@@ -1112,7 +1116,7 @@ Keys and indexes
 - 2026-11-24: Employee History: the backfill wrote each employee's **current** project, department and designation into the `Joined` row because the original position was never recorded.
 - 2026-11-24: Leave Balance needs `LeaveQuota` rows for the current year (3 exist for 2026: Annual 10, Casual 10, Sick 15). `Unpaid Leave` is marked unpaid; payroll does not apply the paid/unpaid flag yet.
 - 2026-11-24: Overlapping leave requests are not blocked by the database (only exact duplicates are, plus the app's overlap check). Employees 325 and 376 still have two active `Fuel Allowance` rows each (no unique key on active name; payroll decides).
-- 2026-11-24: `__EFMigrationsHistory` now also holds the ten redesign entries (`2026112...`). The six older hand-applied migrations and the recorded-but-missing `20260110114250_LMSModule` are still not reconciled, so do not run `dotnet ef database update` without reading the migration notes in `docs/db/db_changes.md`.
+- 2026-11-24: `__EFMigrationsHistory` now also holds the ten redesign entries (`2026112...`). The six older hand-applied migrations and the recorded-but-missing `20260110114250_LMSModule` are still not reconciled, so do not run `dotnet ef database update` against this database. (The six: `20260105120000`, `20260512100000`, `20260515120000`, `20260515140000`, `20260520100000`, `20260918120000`.) Schema changes are applied with the re-runnable scripts instead.
 - 2026-11-24: Connection strings are not committed. The old `sa` password is still in git history (rotation is deferred to the owner).
 - 2026-11-25: Income tax is now the annual progressive slab method (`TaxRules.FixedAmount`, annual `MinSalary`/`MaxSalary`; script 12). Script 12 has been run on production (2026-11-25), so the new app build can be deployed (it reads `FixedAmount`). Tax years other than 2025 and 2026 keep old monthly bands and must be re-entered by HR.
 
@@ -1124,3 +1128,6 @@ Keys and indexes
 - 2026-11-25: **Tax slabs on the annual method (v2.1).** `TaxRules.FixedAmount` added; `MinSalary`/`MaxSalary` are annual income; slabs of tax years 2025 and 2026 replaced by the salaried slabs (script `12_tax_slabs_annual.sql`, migration `20261125000012_Redesign_Phase12_TaxSlabsAnnual`). Run on the dev copy, then on production the same day. Source and method: `docs/reference/pk-income-tax.md`.
 - 2026-11-26: **Payslip line rates and fuel price history (v2.3), development copy only.** Script `13_payslip_line_rates_fuel_prices.sql` (migration `20261126000013_Redesign_Phase13_LineRatesFuelPrices`), run twice on the dev copy (the second run changed nothing). Not yet run on production.
 - 2026-11-26: **Script 13 run on production (v2.4).** Full copy-only backup with checksum first (`HRBTK_pre_script13_20261126.bak`, verified with `RESTORE VERIFYONLY`). Run twice (the second run changed nothing). `FuelPrices` seeded with 380.00 from 2000-01-01; 848 employees, 99 payslips and 132 lines unchanged; no untrusted foreign keys. A second verified backup was taken after the script (`HRBTK_after_script13_20261126.bak`); both are in the SQL Server default backup folder on the server.
+- 2026-11-26: **Work weeks (v2.5), development copy only.** Script `14_work_weeks.sql` (migration `20261126000014_Redesign_Phase14_WorkWeeks`), run twice on the dev copy. Not yet run on production.
+- 2026-11-26: Documentation only (v2.6): this file is now the single tracking file for the schema; `docs/db/db_changes.md` retired.
+- 2026-11-26: **Script 14 run on production (v2.7).** Backups first and after (copy-only, checksum, verified with `RESTORE VERIFYONLY`: `HRBTK_pre_script14_20261126.bak` before, `HRBTK_after_script14_20261126.bak` after). Run twice (the second run changed nothing); both schedule tables were empty, 23 leave requests and 848 employees unchanged, no untrusted foreign keys or checks. This file was then compared with the live catalog: 34 tables, 2 views, columns, types, nullability, keys, indexes and constraints.

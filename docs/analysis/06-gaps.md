@@ -1,9 +1,10 @@
 ---
-status: current
-last_verified: 2026-11-23
+status: outdated
+superseded_by: ../db/decisions.md
+last_verified: 2026-11-26
 verified_against: main @ 7aa2685 plus the uncommitted security and user-roles changes (code), and the redesigned development database (scripts 01-04, 06, 07 applied)
 supersedes_snapshot: 2026-11-16 (commit 2843f59)
-see_also: 04-security.md, ../db/db_changes.md, ../db/prod_rollout.md, ../db/decisions.md
+see_also: ../db/decisions.md, ../payroll-review.html, 04-security.md
 note: Items are marked Open, Partly, Deferred, Fixed, or Done in dev (done in the repository and the local development database, not yet on production). Production still runs the old build and the old schema until the rollout in ../db/prod_rollout.md.
 deployed_to_production: false
 next_step: "Commit and push the security + user-roles work, then deploy it together with the database rollout (script 01-04, 06, 07)."
@@ -35,6 +36,7 @@ tasks:
   engineering:
     - {title: "Tests and CI",                              status: open}
     - {title: "Split fat controllers, remove duplicate code", status: open}
+reason: "Static analysis written 2026-11-16 and revised to 2026-11-23. The production rollout it lists as open is done, and many gaps in payroll and leave have since been closed. Do not rely on its task list."
 ---
 # 6. Gaps, Risks & Recommendations
 

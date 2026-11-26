@@ -39,7 +39,7 @@ namespace HRMBT.Web.Data
         public DbSet<EmployeeDocument> EmployeeDocuments { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
 
-        // Schedule, attendance processing, notes and leave entitlements (db_changes.md)
+        // Schedule, attendance processing, notes and leave entitlements (db.md)
         public DbSet<Shift> Shifts { get; set; }
         public DbSet<ShiftAssignment> ShiftAssignments { get; set; }
         public DbSet<RosterOverride> RosterOverrides { get; set; }
