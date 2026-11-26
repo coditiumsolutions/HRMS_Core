@@ -14,4 +14,6 @@ public class LmsLeaveRowVm
     public string? Status { get; set; }
     /// <summary>Days charged to the balance (work days of the employee's schedule).</summary>
     public decimal TotalDays { get; set; }
+    /// <summary>Sent back by Approve/Reject so a request changed in the meantime is not decided.</summary>
+    public byte[]? RowVersion { get; set; }
 }

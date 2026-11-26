@@ -685,6 +685,9 @@ body .row-action {
 body button.row-action { background: transparent; cursor: pointer; padding: 0; }
 body table td.col-actions form { display: inline; margin: 0; }
 body table th.col-actions--3, body table td.col-actions--3 { width: 7.5rem; }
+body table th.col-actions--4, body table td.col-actions--4 { width: 9.5rem; }
+body .row-action-approve { color: #15803d; }
+body .row-action-approve:hover, body .row-action-approve:focus-visible { background: #e8f6ed; border-color: #b7e1c3; color: #166534; }
 body .row-action-edit, body .row-action-view { color: #00203f; }
 body .row-action-edit:hover, body .row-action-edit:focus-visible,
 body .row-action-view:hover, body .row-action-view:focus-visible { background: #fff3c4; border-color: var(--hr-brass-500); color: #00203f; }
@@ -812,3 +815,12 @@ body .ts-wrapper.is-invalid .ts-control, body .ts-wrapper.input-validation-error
 @media print { .action-bar { display: none !important; } }
 .action-bar .btn.btn-action-danger { background: #fff; border: 1px solid #dc3545; color: #b02a37; }
 .action-bar .btn.btn-action-danger:hover { background: #dc3545; color: #fff; }
+
+/* dated notes on a record */
+.record-note { border-top: 1px solid #edf0f4; padding: 0.6rem 0; }
+.record-note__text { white-space: pre-line; overflow-wrap: anywhere; }
+.record-note__meta { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0.2rem 1rem; font-size: 0.78rem; color: #6a7688; margin-top: 0.2rem; }
+.record-note__meta form { margin: 0; }
+.record-note__edit summary { cursor: pointer; color: #00203f; }
+.record-note__edit[open] { flex-basis: 100%; order: 3; }
+.record-note__remove { background: none; border: 0; padding: 0; color: #b91c1c; font-size: inherit; }

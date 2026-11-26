@@ -112,7 +112,8 @@ namespace HRMBT.Web.Controllers
                     FromDate = x.lr.FromDate,
                     ToDate = x.lr.ToDate,
                     TotalDays = x.lr.TotalDays,
-                    Status = x.lr.Status
+                    Status = x.lr.Status,
+                    RowVersion = x.lr.RowVersion
                 })
                 .ToListAsync();
 
@@ -422,7 +423,163 @@ namespace HRMBT.Web.Controllers
             var leaveRequest = await _context.LeaveRequests.AsNoTracking().FirstOrDefaultAsync(m => m.Id == id);
             if (leaveRequest == null) return NotFound();
             await SetRequestEmployeeAsync(leaveRequest);
+            // what approving would say, so it is seen before the decision rather than after
+            if (IsPending(leaveRequest) && ViewBag.Employee is Employee employee)
+                ViewBag.Check = await _rules.CheckAsync(employee, leaveRequest.FromDate, leaveRequest.ToDate,
+                    leaveRequest.LeaveTypeId, "Approved", leaveRequest.Id);
+            if (User.IsInRole("Admin") || User.IsInRole("HR"))
+                ViewBag.Notes = new RecordNotesVm
+                {
+                    BaseUrl = Url.Content($"~/leave/{id}/notes"),
+                    ButtonClass = "btn-grid-edit",
+                    Hint = "Add a note (seen by Admin and HR; does not change days or balances)",
+                    Notes = await HRMBT.Web.Services.RecordNoteQueries.LoadNotesAsync(_context, n => n.LeaveRequestId == id)
+                };
             return View(leaveRequest);
+        }
+
+        private static bool IsPending(LeaveRequest r) => string.Equals(r.Status, "Pending", StringComparison.OrdinalIgnoreCase);
+
+        // ---------- approve / reject a pending request (access as for Edit, until HR answers B13) ----------
+
+        [HttpPost("{id:int}/approve")]
+        [ValidateAntiForgeryToken]
+        public Task<IActionResult> Approve(int id, string? rowVersion, string? returnUrl) => DecideAsync(id, "Approved", rowVersion, returnUrl);
+
+        [HttpPost("{id:int}/reject")]
+        [ValidateAntiForgeryToken]
+        public Task<IActionResult> Reject(int id, string? rowVersion, string? returnUrl) => DecideAsync(id, "Rejected", rowVersion, returnUrl);
+
+        private async Task<IActionResult> DecideAsync(int id, string status, string? rowVersion, string? returnUrl)
+        {
+            var r = await _context.LeaveRequests.FirstOrDefaultAsync(l => l.Id == id);
+            if (r == null) return NotFound();
+            IActionResult Back() => !string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl)
+                ? LocalRedirect(returnUrl)
+                : RedirectToAction(nameof(Details), new { id });
+
+            const string changed = "This leave request was changed after the page was loaded. Check it and try again.";
+            var seen = new byte[8];
+            if (!Convert.TryFromBase64String(rowVersion ?? "", seen, out var length) || length != seen.Length)
+            {
+                TempData["ErrorMessage"] = changed;
+                return Back();
+            }
+            if (!IsPending(r))
+            {
+                TempData["ErrorMessage"] = $"Leave request #{r.Id} is already {r.Status}.";
+                return Back();
+            }
+
+            var employee = await _context.Employees.AsNoTracking().FirstOrDefaultAsync(e => e.uid == r.EmployeeId);
+            if (employee == null) return NotFound();
+            HRMBT.Web.Services.LeaveCheck? check = null;
+            if (status == "Approved")
+            {
+                check = await _rules.CheckAsync(employee, r.FromDate, r.ToDate, r.LeaveTypeId, status, r.Id);
+                if (!check.Ok)
+                {
+                    TempData["ErrorMessage"] = $"Leave request #{r.Id} cannot be approved. " + string.Join(" ", check.Blocks);
+                    return Back();
+                }
+            }
+
+            var before = HRMBT.Web.Services.LeaveRulesService.Snapshot(r);
+            var previous = r.Status;
+            _context.Entry(r).Property(l => l.RowVersion).OriginalValue = seen;   // S15
+            r.Status = status;
+            if (check != null && !r.IsHalfDay)
+                r.TotalDays = check.Days;
+            r.ModifiedAt = DateTime.Now;
+            r.ModifiedBy = User.Identity?.Name;
+            await _rules.StampApprovalAsync(r, previous, User.Identity?.Name);
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                TempData["ErrorMessage"] = changed;
+                return Back();
+            }
+            await AuditAsync("LeaveRequests", "UPDATE", r.Id, r.EmployeeId, before, HRMBT.Web.Services.LeaveRulesService.Snapshot(r));
+            var warnings = check?.Warnings.Count > 0 ? " Check: " + string.Join(" ", check.Warnings) : "";
+            TempData["SuccessMessage"] =
+                $"{employee.EmployeeName}: leave {Fmt.DateRange(r.FromDate, r.ToDate)} {status.ToLowerInvariant()}.{warnings}";
+            return Back();
+        }
+
+        // ---------- who is on leave ----------
+
+        [HttpGet("calendar")]
+        public async Task<IActionResult> Calendar(string? month, string? project, string? department,
+            [FromServices] HRMBT.Web.Services.WorkScheduleService schedules)
+        {
+            ViewData["Module"] = "LMS";
+            var first = DateTime.TryParseExact(month, "yyyy-MM", System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.None, out var m) && m.Year is >= 2000 and <= 2100
+                ? m
+                : new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+            var last = first.AddMonths(1).AddDays(-1);
+
+            var query = _context.LeaveRequests.AsNoTracking()
+                .Where(l => (l.Status == "Approved" || l.Status == "Pending") && l.FromDate <= last && l.ToDate >= first)
+                .Join(_context.Employees.AsNoTracking(), l => l.EmployeeId, e => e.uid, (l, e) => new { l, e });
+            if (!string.IsNullOrWhiteSpace(project))
+                query = query.Where(x => x.e.ProjectInfo!.Name == project);
+            if (!string.IsNullOrWhiteSpace(department))
+                query = query.Where(x => x.e.DepartmentInfo!.DepartmentName == department);
+            var leave = await query.Select(x => new
+            {
+                x.l.Id, x.l.EmployeeId, x.l.FromDate, x.l.ToDate, x.l.Status, x.l.IsHalfDay,
+                LeaveType = x.l.LeaveTypeInfo!.Name,
+                x.e.EmployeeID, x.e.EmployeeName, Designation = x.e.DesignationInfo!.Name
+            }).ToListAsync();
+
+            var byEmployee = await schedules.LoadAsync(leave.Select(l => l.EmployeeId).Distinct().ToList(), first, last);
+            var holidays = await _context.GazettedHolidays.AsNoTracking()
+                .Where(h => h.ProjectId == null && !h.IsOptional && h.HolidayDate <= last && h.EndDate >= first)
+                .ToListAsync();
+
+            var vm = new LeaveCalendarVm
+            {
+                Month = first,
+                Project = project,
+                Department = department,
+                Projects = await _context.Projects.AsNoTracking().OrderBy(p => p.SortOrder).ThenBy(p => p.Name).Select(p => p.Name).ToListAsync(),
+                Departments = (await GetDepartmentsFromConfigurationAsync()).Distinct().ToList()
+            };
+            for (var d = first; d <= last; d = d.AddDays(1))
+                vm.Days.Add(new LeaveCalendarDayVm { Date = d, Holiday = holidays.FirstOrDefault(h => h.HolidayDate <= d && h.EndDate >= d)?.HolidayName });
+
+            foreach (var person in leave.GroupBy(l => l.EmployeeId).OrderBy(g => g.First().EmployeeID))
+            {
+                var info = person.First();
+                var row = new LeaveCalendarRowVm
+                {
+                    Uid = person.Key, EmployeeCode = info.EmployeeID, Name = info.EmployeeName, Designation = info.Designation,
+                    Cells = new LeaveCalendarCellVm?[vm.Days.Count]
+                };
+                for (var i = 0; i < vm.Days.Count; i++)
+                {
+                    var day = vm.Days[i];
+                    // an approved request wins over a pending one on the same date
+                    var l = person.Where(x => x.FromDate <= day.Date && x.ToDate >= day.Date)
+                        .OrderBy(x => x.Status == "Approved" ? 0 : 1).FirstOrDefault();
+                    if (l == null) continue;
+                    var cell = new LeaveCalendarCellVm
+                    {
+                        LeaveRequestId = l.Id, LeaveType = l.LeaveType, Approved = l.Status == "Approved", HalfDay = l.IsHalfDay,
+                        WorkDay = byEmployee[person.Key].IsWorkDay(day.Date)
+                    };
+                    row.Cells[i] = cell;
+                    if (!cell.WorkDay) continue;
+                    if (cell.Approved) day.Approved++;
+                    else day.Pending++;
+                }
+                vm.Rows.Add(row);
+            }
+            return View(vm);
         }
 
         private async Task SetRequestEmployeeAsync(LeaveRequest r)

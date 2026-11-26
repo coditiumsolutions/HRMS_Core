@@ -2,17 +2,28 @@
 @{
     var emp = ViewBag.Employee as HRMBT.Web.Models.Employee;
     var open = HRMBT.Web.Services.LeaveRulesService.IsOpen(Model.Status);
+    var pending = string.Equals(Model.Status, "Pending", StringComparison.OrdinalIgnoreCase);
+    var check = ViewBag.Check as HRMBT.Web.Services.LeaveCheck;
+    var rowVersion = Model.RowVersion == null ? "" : Convert.ToBase64String(Model.RowVersion);
     ViewData["Title"] = "Leave request";
 }
 
 @section Styles {
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" crossorigin="anonymous" />
     <link rel="stylesheet" href="~/css/employee-list.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/schedule.css" asp-append-version="true" />
 }
 
 <div class="employee-list-page py-3">
     <div class="container-fluid px-0">
         <partial name="_Alerts" />
+        @if (check != null && (check.Blocks.Count > 0 || check.Warnings.Count > 0))
+        {
+            <div class="alert @(check.Blocks.Count > 0 ? "alert-danger" : "alert-warning")">
+                <strong>@(check.Blocks.Count > 0 ? "This request cannot be approved as it stands." : "Check before approving.")</strong>
+                @string.Join(" ", check.Blocks.Concat(check.Warnings))
+            </div>
+        }
         <div class="grid-card mb-3">
             <div class="card-header"><span><i class="bi bi-file-earmark-text"></i>Leave request #@Model.Id</span></div>
             <div class="card-body grid-form">
@@ -41,6 +52,15 @@
             </dl>
             </div>
         </div>
+        @if (ViewBag.Notes is HRMBT.Web.Models.ViewModels.RecordNotesVm notes)
+        {
+            <div class="grid-card mb-3" id="notes">
+                <div class="card-header"><span><i class="bi bi-journal-text"></i>Notes <span class="text-muted small ms-1">(@notes.Notes.Count)</span></span></div>
+                <div class="card-body grid-form">
+                    <partial name="_RecordNotes" model="notes" />
+                </div>
+            </div>
+        }
         <div class="action-bar">
             <div class="d-flex flex-wrap align-items-center justify-content-end gap-2">
                 <a asp-action="Index" class="btn btn-action-outline me-auto">Back to list</a>
@@ -50,9 +70,20 @@
                 }
                 @if (open)
                 {
-                    <a asp-action="Cancel" asp-route-id="@Model.Id" class="btn btn-action-danger">Cancel request</a>
+                    <a asp-action="Cancel" asp-route-id="@Model.Id" class="btn @(pending ? "btn-action-outline" : "btn-action-danger")">Cancel request</a>
                 }
-                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-action-primary">Edit</a>
+                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn @(pending ? "btn-action-secondary" : "btn-action-primary")">Edit</a>
+                @if (pending)
+                {
+                    <form method="post" asp-action="Reject" asp-route-id="@Model.Id" class="d-inline m-0" onsubmit="return confirm('Reject this leave request?');">
+                        <input type="hidden" name="rowVersion" value="@rowVersion" />
+                        <button type="submit" class="btn btn-action-danger">Reject</button>
+                    </form>
+                    <form method="post" asp-action="Approve" asp-route-id="@Model.Id" class="d-inline m-0" onsubmit="return confirm('Approve this leave request?');">
+                        <input type="hidden" name="rowVersion" value="@rowVersion" />
+                        <button type="submit" class="btn btn-action-primary" disabled="@(check is { Ok: false })">Approve</button>
+                    </form>
+                }
             </div>
         </div>
     </div>

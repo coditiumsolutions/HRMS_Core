@@ -42,7 +42,31 @@ button.month-day:focus-visible, .month-day.is-picked { outline: 2px solid #d4af3
 .month-key { display: flex; flex-wrap: wrap; gap: 0.9rem; font-size: 0.78rem; color: #6a7688; }
 .month-key i { display: inline-block; width: 0.8rem; height: 0.8rem; margin-right: 0.3rem; border: 1px solid #e4e8ee; border-radius: 0.2rem; vertical-align: -0.1rem; }
 
+/* who is on leave: one row per person, one column per day; name columns stay put while the days scroll */
+.leave-cal-wrap { overflow-x: auto; }
+.leave-cal { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 0.8rem; }
+.leave-cal th, .leave-cal td { border-bottom: 1px solid #edf0f4; padding: 0.25rem 0; vertical-align: middle; }
+.leave-cal thead th { color: #6a7688; font-size: 0.72rem; }
+.leave-cal .leave-cal__id, .leave-cal .leave-cal__name { position: sticky; z-index: 1; background: #fff; text-align: left; }
+.leave-cal .leave-cal__id { left: 0; width: 4rem; min-width: 4rem; padding-left: 0.7rem; }
+.leave-cal .leave-cal__name { left: 4rem; width: 9.5rem; min-width: 9.5rem; max-width: 9.5rem; padding-right: 0.4rem; border-right: 1px solid #e4e8ee; }
+.leave-cal__person { display: block; color: inherit; text-decoration: none; }
+.leave-cal__person span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.leave-cal .leave-cal__day { min-width: 1.4rem; text-align: center; }
+.leave-cal__day > span { display: block; font-weight: 400; }
+.leave-cal .is-holiday { background: #e3f1ef; }
+.leave-cal thead .is-today { box-shadow: inset 0 -3px 0 #d4af37; }
+.leave-cal__mark { display: block; margin: 0 auto; width: 1.25rem; line-height: 1.35rem; border-radius: 0.25rem; font-weight: 700; text-decoration: none; border: 1px solid transparent; }
+.leave-cal__mark:hover, .leave-cal__mark:focus-visible { outline: 2px solid #00203f; outline-offset: 1px; }
+.leave-cal__mark.is-approved, .leave-cal__key--approved { background: #d4af37; color: #00203f; }
+.leave-cal__mark.is-pending, .leave-cal__key--pending { background: #fffaf0; border: 1px dashed #b8942a; color: #6d550a; }
+.leave-cal__mark.is-off, .leave-cal__key--off { background: #eef0f3; color: #8a94a3; }
+.leave-cal tfoot th, .leave-cal tfoot td { font-weight: 700; color: #00203f; }
+.leave-cal__pending-count { color: #8a6d0b; font-weight: 400; }
+
 @media (max-width: 40rem) {
+  .leave-cal .leave-cal__id { display: none; }
+  .leave-cal .leave-cal__name { left: 0; width: 8rem; min-width: 8rem; max-width: 8rem; padding-left: 0.5rem; }
   .month-day { min-height: 3.2rem; padding: 0.2rem; }
   .month-day .what { font-size: 0.6rem; }
   .month-day--changed::after { content: "•"; }

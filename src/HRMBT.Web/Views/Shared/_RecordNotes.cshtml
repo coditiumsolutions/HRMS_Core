@@ -1,0 +1,29 @@
+@model HRMBT.Web.Models.ViewModels.RecordNotesVm
+@* Add, edit and remove dated notes. The page supplies the surrounding card or tab. *@
+
+<form method="post" action="@Model.BaseUrl" asp-antiforgery="true" class="mb-2">
+    <input type="hidden" name="requestId" value="@Guid.NewGuid()" />
+    <label class="form-label small mb-1" for="newNote">@Model.Hint</label>
+    <textarea name="note" id="newNote" class="form-control form-control-sm" rows="2" maxlength="1000" required></textarea>
+    <div class="text-end mt-2"><button type="submit" class="btn btn-sm @Model.ButtonClass">Add note</button></div>
+</form>
+
+@foreach (var n in Model.Notes)
+{
+    <div class="record-note">
+        <div class="record-note__text">@n.Note</div>
+        <div class="record-note__meta">
+            <span>@(n.CreatedBy ?? "—"), @Fmt.DateAndTime(n.CreatedAt)@(n.EditedAt == null ? "" : $" · edited by {n.EditedBy ?? "—"}, {Fmt.DateAndTime(n.EditedAt)}")</span>
+            <details class="record-note__edit">
+                <summary>Edit</summary>
+                <form method="post" action="@Model.BaseUrl/@n.Id" asp-antiforgery="true">
+                    <textarea name="note" class="form-control form-control-sm" rows="3" maxlength="1000" required aria-label="Note text">@n.Note</textarea>
+                    <div class="text-end mt-2"><button type="submit" class="btn btn-sm @Model.ButtonClass">Save note</button></div>
+                </form>
+            </details>
+            <form method="post" action="@Model.BaseUrl/@n.Id/remove" asp-antiforgery="true" onsubmit="return confirm('Remove this note?');">
+                <button type="submit" class="record-note__remove">Remove</button>
+            </form>
+        </div>
+    </div>
+}

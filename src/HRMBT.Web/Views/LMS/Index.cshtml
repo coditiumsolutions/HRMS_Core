@@ -9,6 +9,8 @@
     // Url.Action cannot fill an {id:int} route with a placeholder (it returns nothing), so these are written out
     var editBaseUrl = Url.Content("~/leave/__id__/edit");
     var detailsBaseUrl = Url.Content("~/leave/__id__");
+    // Approve and Reject come back to the list as it was filtered
+    var here = Context.Request.PathBase + Context.Request.Path + Context.Request.QueryString;
 }
 
 @section Styles {
@@ -92,7 +94,7 @@
                                     <th>To</th>
                                     <th>Days charged</th>
                                     <th>Status</th>
-                                    <th class="col-actions text-center" data-align="none" scope="col">Actions</th>
+                                    <th class="col-actions col-actions--4 text-center" data-align="none" scope="col">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -116,7 +118,22 @@
                                         <td class="text-nowrap">@Fmt.ShortDate(item.ToDate)</td>
                                         <td>@Fmt.Days(item.TotalDays)</td>
                                         <td><span class="status-pill @statusClass">@(item.Status ?? "—")</span></td>
-                                        <td class="col-actions">
+                                        <td class="col-actions col-actions--4">
+                                            @if (item.Status == "Pending" && item.RowVersion != null)
+                                            {
+                                                var rowVersion = Convert.ToBase64String(item.RowVersion);
+                                                var who = item.EmployeeName ?? item.EmployeeCode;
+                                                <form method="post" asp-controller="LMS" asp-action="Approve" asp-route-id="@item.Id" data-confirm="Approve leave for @who, @Fmt.DateRange(item.FromDate, item.ToDate)?">
+                                                    <input type="hidden" name="rowVersion" value="@rowVersion" />
+                                                    <input type="hidden" name="returnUrl" value="@here" />
+                                                    <button type="submit" class="row-action row-action-approve" title="Approve" aria-label="Approve leave of @who"><i class="bi bi-check-lg"></i></button>
+                                                </form>
+                                                <form method="post" asp-controller="LMS" asp-action="Reject" asp-route-id="@item.Id" data-confirm="Reject leave for @who, @Fmt.DateRange(item.FromDate, item.ToDate)?">
+                                                    <input type="hidden" name="rowVersion" value="@rowVersion" />
+                                                    <input type="hidden" name="returnUrl" value="@here" />
+                                                    <button type="submit" class="row-action row-action-delete" title="Reject" aria-label="Reject leave of @who"><i class="bi bi-slash-circle"></i></button>
+                                                </form>
+                                            }
                                             <a class="row-action row-action-edit" asp-controller="LMS" asp-action="Edit" asp-route-id="@item.Id" title="Edit leave request" aria-label="Edit leave request"><i class="bi bi-pencil-square"></i></a>
                                             @if (item.Status is "Pending" or "Approved")
                                             {
@@ -144,4 +161,9 @@
 
 @section Scripts {
     @await Html.PartialAsync("_HrmsGridSelectionScript")
+    <script>
+        document.querySelectorAll('form[data-confirm]').forEach(function (form) {
+            form.addEventListener('submit', function (e) { if (!confirm(form.dataset.confirm)) e.preventDefault(); });
+        });
+    </script>
 }

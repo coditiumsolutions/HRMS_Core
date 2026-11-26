@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace HRMBT.Web.Models;
 
-/// <summary>Dated, signed, append-only note against an attendance day, an employee or a leave request (exactly one is set).</summary>
+/// <summary>Dated, signed note (editable; removal only hides it) against an attendance day, an employee or a leave request (exactly one is set).</summary>
 public class RecordNote
 {
     [Key]
