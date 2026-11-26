@@ -1,5 +1,5 @@
 # HRMS Database - Pending Decisions
-Version: 3.2 | Date: 2026-11-26 | Related: db_standards.md, db.md (v2.9)
+Version: 3.3 | Date: 2026-11-26 | Related: db_standards.md, db.md (v2.10)
 
 ## How to use this file
 - Only **pending** decisions are listed here. Answered ones are removed and recorded where they apply (rules in db_standards.md, schema in db.md).
@@ -9,6 +9,7 @@ Version: 3.2 | Date: 2026-11-26 | Related: db_standards.md, db.md (v2.9)
 - 2026-11-24: the employee Leave Balance tab is built on the LMS tables; B18 is closed (see below); leave days are kept in one decimal.
 - 2026-11-26: work week defined (see the notes under B5 and B8).
 - 2026-11-26: holiday screen built; the choices it had to make are T12 and B29-B31.
+- 2026-11-26: built: notes on leave requests and employees (T7), Approve/Reject (see B13), the who-is-on-leave calendar, and marking several people to work a holiday (see B30).
 - 2026-11-26: T4, T9 and T10 answered (A) and built, apart from the parts of T10 that wait for HR (see its notes).
 - 2026-11-24: employee history is built (`EmployeeEvents`, see B14, T1, T8, B19 below).
 - 2026-11-25: Payroll review added T9-T11 and B20-B28 and dated notes on B10, B13 and B17. The review itself (findings F1-F19, proposal P1-P10) is kept in `docs/payroll-review.html`.
@@ -138,6 +139,7 @@ Status: Closed
 **Answer:** A
 **Decided by / date:** Rayder / 25-11-2026
 **Notes:** 1. go with suggested. 2. Yes they should be editable, they are notes, not permenant data. 3. no need for categorisation. 4. everyone, i.e HR and admin
+**2026-11-26:** built for leave requests and employees (`RecordNotes`). Attendance notes wait for the attendance rework (Rayder). Payslip notes were suggested and left for later.
 
 ---
 
@@ -432,6 +434,8 @@ Status: Open
 
 **Questions.** Who approves leave, half days, attendance corrections and shift overrides? Is there a supervisor per department or project, or does HR approve everything? Can someone approve their own request?
 
+**As built (2026-11-26):** any signed-in user can approve or reject a pending leave request, including their own, which is what editing the status already allowed. This must be answered before staff other than HR get logins.
+
 **Suggested key**
 - A ★ HR approves everything for now; roles Admin and HR only; self-approval blocked.
 - B Supervisor approves for their department, HR for the rest (adds a supervisor link on `Departments` or `Employee`).
@@ -698,7 +702,7 @@ Status: Open (added 2026-11-26, Holidays; **built on A so it can be used**, conf
 Status: Open (added 2026-11-26, Holidays)
 **Affects:** `GazettedHolidays.ProjectId` and `IsOptional`, `RosterOverrides`, pay (B12).
 
-**Context.** Built: every holiday applies to all employees of all projects. Guards or others who must work one are marked as working for that day, one person at a time, on their schedule page. An **optional** holiday is only recorded: it stays a work day and leave on it is charged.
+**Context.** Built: every holiday applies to all employees of all projects. Guards or others who must work one are marked as working: one person on their schedule page, or several at once from the holiday (**built 2026-11-26 as option A, to be confirmed**; Admin and HR). A mark belongs to a person and a date, so it stays if the holiday is moved or removed; the screens warn about this. An **optional** holiday is only recorded: it stays a work day and leave on it is charged.
 
 **Questions.** Do any projects, departments or religions have holidays the others do not? How are optional holidays meant to work (a limit per person per year, approval)? Are whole groups (guards) expected to work holidays, so that HR needs to mark many people at once? Is working a holiday paid extra or given back as a day off (B12)?
 

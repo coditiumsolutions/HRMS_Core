@@ -1,5 +1,5 @@
 # HRMS Database Schema
-Version: 2.9 | Last Updated: 2026-11-26
+Version: 2.10 | Last Updated: 2026-11-26
 Database: HRBTK
 Server: Teezhost 16GB (production; hr.coditium.com, SQL Server 2022 16.0.1000.6 Express on port 1433, same machine as the web app). Its connection string is in the git-ignored `src/HRMBT.Web/appsettings.Production.json`. See `docs/deployment.md`.
 
@@ -886,7 +886,8 @@ Keys and indexes
 - `UX_Projects_Name` - unique, nonclustered, (Name)
 
 ## Table: dbo.RecordNotes
-Dated, signed notes HR writes against a record, for the edge cases HR tracks: a forgotten check-out told to HR, a late arrival with its reason, a special arrangement. Append-only: a note is never edited; a wrong one is retracted with `IsDeleted` (S14), kept in the table and hidden from the screen. T7.
+Dated, signed notes HR writes against a record, for the edge cases HR tracks: a forgotten check-out told to HR, a late arrival with its reason, a special arrangement. A note can be edited (T7 answer, 2026-11-25: notes are not permanent records); a removed one is retracted with `IsDeleted` (S14), kept in the table and hidden from the screen. Every add, edit and removal is in `AuditLogs` with the old text, which is also where "edited by" comes from (no column for it).
+- 2026-11-26: in use for leave requests (`LeaveRequestId`, from the request page) and employees (`EmployeeId`, the Notes tab of the employee page), Admin and HR only. Attendance notes are not built. The separate `Employee.Notes` column (one short note, overwritten) is shown on the employee page to Admin and HR.
 Rows: new table.
 - 2026-11-17 (S5): there is no generic `TableName`/`RecordId` pair, because that cannot be a foreign key. Each target is its own nullable FK column and exactly one is set per note. The targets drafted are the attendance day, the employee and the leave request; another target later is one more nullable FK column, its index and a term in the CHECK.
 - 2026-11-17: Context only. A note never feeds processing or payroll; a change to a day's status or pay is an `AttendanceCorrections` row (or a half-day or leave request) with the note as extra explanation.
@@ -1140,3 +1141,5 @@ Keys and indexes
 - 2026-11-26: **Script 14 run on production (v2.7).** Backups first and after (copy-only, checksum, verified with `RESTORE VERIFYONLY`: `HRBTK_pre_script14_20261126.bak` before, `HRBTK_after_script14_20261126.bak` after). Run twice (the second run changed nothing); both schedule tables were empty, 23 leave requests and 848 employees unchanged, no untrusted foreign keys or checks. This file was then compared with the live catalog: 34 tables, 2 views, columns, types, nullability, keys, indexes and constraints.
 - 2026-11-26: **Holiday notices (v2.8), development copy only.** Script `15_holiday_notices.sql` (migration `20261126000015_Redesign_Phase15_HolidayNotices`), run twice on the dev copy; `GazettedHolidays` was empty. Not yet run on production.
 - 2026-11-26: **Script 15 run on production (v2.9).** Backups first and after (copy-only, checksum, verified with `RESTORE VERIFYONLY`: `HRBTK_pre_script15_20261126.bak` before, `HRBTK_after_script15_20261126.bak` after). Run twice (the second run changed nothing); `GazettedHolidays` was empty, 23 leave requests (95 days) and 848 employees unchanged, no untrusted foreign keys or checks.
+- 2026-11-26: **Documentation only (v2.10), no schema change.** `RecordNotes` is now used by the app (notes on leave requests and employees) and its description corrected: notes can be edited (T7).
+- 2026-11-26: **Production checked against v2.10 (read only):** tables, columns, keys, indexes, checks and views match, with no differences; no script is pending (last migration `20261126000015_Redesign_Phase15_HolidayNotices`). Nothing was changed on production, so no backup was taken.
