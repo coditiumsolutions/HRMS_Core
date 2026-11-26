@@ -26,6 +26,9 @@
     var photoId = docsVmForHero?.PhotoDocumentId;
     var heroMeta = string.Join("  ·  ", new[] { Model.Designation, Model.Department, Model.Project }.Where(x => !string.IsNullOrWhiteSpace(x)));
 
+    // set only for Admin and HR
+    var notes = ViewBag.Notes as HRMBT.Web.Models.ViewModels.RecordNotesVm;
+
     var displayTitle = string.IsNullOrWhiteSpace(Model.EmployeeName)
         ? "Employee Details"
         : $"{Model.EmployeeName}{(string.IsNullOrWhiteSpace(Model.EmployeeID) ? "" : $" ({Model.EmployeeID})")}";
@@ -79,6 +82,14 @@
                                     <i class="fa-solid fa-paperclip"></i><span>Attachments</span>
                                 </button>
                             </li>
+                            @if (notes != null)
+                            {
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="tab-notes-btn" data-bs-toggle="tab" data-bs-target="#tab-notes" type="button" role="tab" aria-controls="tab-notes" aria-selected="false" data-tab-key="notes">
+                                        <i class="fa-solid fa-note-sticky"></i><span>Notes@(notes.Notes.Count > 0 ? $" ({notes.Notes.Count})" : "")</span>
+                                    </button>
+                                </li>
+                            }
                         </ul>
                     </div>
 
@@ -153,6 +164,13 @@
                                                 <th scope="row" class="emp-label-cell align-top pt-3"><span class="info-label">@Html.DisplayNameFor(m => m.Details)</span></th>
                                                 <td class="emp-field-cell" colspan="3"><span class="info-value @(string.IsNullOrWhiteSpace(Model.Details) ? "text-empty" : "")">@Show(Model.Details)</span></td>
                                             </tr>
+                                            @if (notes != null)
+                                            {
+                                                <tr class="emp-form-row">
+                                                    <th scope="row" class="emp-label-cell align-top pt-3"><span class="info-label">Short note</span></th>
+                                                    <td class="emp-field-cell" colspan="3"><span class="info-value @(string.IsNullOrWhiteSpace(Model.Notes) ? "text-empty" : "")">@Show(Model.Notes)</span></td>
+                                                </tr>
+                                            }
                                             <tr class="emp-form-row">
                                                 <th scope="row" class="emp-label-cell"><span class="info-label">@Html.DisplayNameFor(m => m.ModifiedBy)</span></th>
                                                 <td class="emp-field-cell"><span class="info-value @(string.IsNullOrWhiteSpace(Model.ModifiedBy) ? "text-empty" : "")">@Show(Model.ModifiedBy)</span></td>
@@ -362,6 +380,19 @@
                                     }
                                 </div>
                             </div>
+
+                            @if (notes != null)
+                            {
+                                <div class="tab-pane fade" id="tab-notes" role="tabpanel" aria-labelledby="tab-notes-btn" tabindex="0">
+                                    <div class="emp-tab-pane-inner">
+                                        <h2 class="emp-section-header"><i class="fa-solid fa-note-sticky"></i> Notes</h2>
+                                        <p class="emp-section-sub">Dated notes HR keeps about this employee, newest first.</p>
+                                        @if (TempData["NoteOk"] is string noteOk) { <div class="alert alert-success py-2" role="status">@noteOk</div> }
+                                        @if (TempData["NoteError"] is string noteError) { <div class="alert alert-danger py-2" role="alert">@noteError</div> }
+                                        <partial name="_RecordNotes" model="notes" />
+                                    </div>
+                                </div>
+                            }
 
                         </div>
                     </div>

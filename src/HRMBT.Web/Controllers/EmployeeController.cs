@@ -294,6 +294,14 @@ public class EmployeeController : Controller
             .ThenBy(d => d.DeductionType)
             .ThenBy(d => d.DeductionName)
             .ToListAsync();
+        if (User.IsInRole("Admin") || User.IsInRole("HR"))
+            ViewBag.Notes = new HRMBT.Web.Models.ViewModels.RecordNotesVm
+            {
+                BaseUrl = Url.Content($"~/employees/{employee.uid}/notes"),
+                ButtonClass = "dos-event-btn",
+                Hint = "Add a note about this employee (seen by Admin and HR; does not change the record or pay)",
+                Notes = await HRMBT.Web.Services.RecordNoteQueries.LoadNotesAsync(_context, n => n.EmployeeId == employee.uid)
+            };
         return View(employee);
     }
 
